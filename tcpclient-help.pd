@@ -1,0 +1,72 @@
+#N canvas 89 21 1092 501 12;
+#X msg 61 93 disconnect;
+#X obj 78 222 unpack 0 0 0 0;
+#X floatatom 78 245 3 0 0 0 - - -;
+#X floatatom 113 245 3 0 0 0 - - -;
+#X floatatom 149 245 3 0 0 0 - - -;
+#X floatatom 185 245 3 0 0 0 - - -;
+#X text 35 244 from;
+#X msg 45 30 connect 132.205.142.12 80;
+#X obj 45 170 tcpclient;
+#X msg 55 53 send 71 69 84 32 104 116 116 112 58 47 47 47 105 110 100
+101 120 46 104 116 109 108 13 10;
+#X text 566 53 GET http:///index.html CRLF;
+#X obj 112 196 tgl 15 0 empty empty connected 18 7 0 8 -24198 -241291
+-1 0 1;
+#X msg 160 115 dump \$1;
+#X obj 160 96 tgl 15 0 empty empty empty 0 -6 0 8 -262144 -1 -1 0 1
+;
+#X msg 231 139 receive;
+#X msg 295 139 recv;
+#X text 214 -21 connect with an IP address and port number;
+#X msg 23 5 connect www.concordia.ca 80;
+#X text 231 114 print received messages to main window in hexdump format
+;
+#X text 131 171 tcpclient opens a tcp socket to send and receive bytes
+on;
+#X text 276 263 See also:;
+#X obj 354 263 netclient;
+#X msg 10 -20 connect 127.0.0.1 9997;
+#X obj 354 286 tcpreceive;
+#X text 574 285 can receive messages from tcpclient;
+#X text 442 263 is what tcpclient is based on;
+#X text 21 325 Received messages are output as a list of bytes;
+#X text 20 343 Attempting to print long messages output can hang pd!
+;
+#X text 343 132 get any received data (not useful unless you need it
+faster than once per 20ms);
+#X text 445 93 semicolon-terminated string for netserver or netreceive
+;
+#X msg 249 93 send 49 127 128 51 59;
+#X obj -86 317 textfile;
+#X msg -86 213 clear;
+#X msg -67 285 write tcpclientreceived.txt;
+#X obj -73 254 prepend add;
+#X obj -86 186 loadbang;
+#X text 575 342 2006/05/12 Martin Peach;
+#X obj 482 286 tcpserver;
+#X text 448 285 and;
+#X text -71 -82 tcpclient can connect to a server and send and receive
+messages as lists of bytes. Any integer value between 0 and 255 can
+be transmitted or received.;
+#X connect 0 0 8 0;
+#X connect 1 0 2 0;
+#X connect 1 1 3 0;
+#X connect 1 2 4 0;
+#X connect 1 3 5 0;
+#X connect 7 0 8 0;
+#X connect 8 0 34 0;
+#X connect 8 1 1 0;
+#X connect 8 2 11 0;
+#X connect 9 0 8 0;
+#X connect 12 0 8 0;
+#X connect 13 0 12 0;
+#X connect 14 0 8 0;
+#X connect 15 0 8 0;
+#X connect 17 0 8 0;
+#X connect 22 0 8 0;
+#X connect 30 0 8 0;
+#X connect 32 0 31 0;
+#X connect 33 0 31 0;
+#X connect 34 0 31 0;
+#X connect 35 0 32 0;
