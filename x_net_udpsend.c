@@ -13,6 +13,7 @@
 #ifdef MSW
 #include <winsock2.h>
 #else
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>

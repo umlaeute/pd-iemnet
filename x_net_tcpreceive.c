@@ -10,6 +10,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h> /* for socklen_t */
 #else
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
