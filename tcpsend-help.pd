@@ -1,16 +1,28 @@
-#N canvas 0 0 555 316 12;
-#X msg 177 158 disconnect;
-#X msg 171 96 connect 127.0.0.1 9997;
-#X obj 171 207 tgl 15 0 empty empty empty 0 -6 0 8 -262144 -1 -1 0
-1;
-#X obj 171 184 tcpsend;
-#X text 375 97 <--first;
-#X msg 67 129 send 0 1 2 3;
-#X text 10 38 tcpsend sends bytes over a tcp connection.;
-#X text 10 61 Used in conjunction with packOSC will send OSC over tcp
+#N canvas 407 433 559 320 12;
+#X msg 92 191 disconnect;
+#X msg 169 65 connect 127.0.0.1 9997;
+#X obj 60 253 tgl 15 0 empty empty connected 20 7 0 8 -24198 -241291
+-1 0 1;
+#X obj 60 230 tcpsend;
+#X text 373 66 <--first;
+#X msg 30 97 send 0 1 2 3;
+#X text 8 7 tcpsend sends bytes over a tcp connection.;
+#X text 8 30 Used in conjunction with packOSC will send OSC over tcp
 ;
-#X text 236 259 Martin Peach 2006/04/21;
+#X msg 97 131 send ../doc/5.reference/test.txt;
+#X obj 340 175 openpanel;
+#X msg 340 199 send \$1;
+#X obj 340 156 bng 15 250 50 0 empty empty empty 17 7 0 10 -24198 -241291
+-1;
+#X text 363 130 send a file;
+#X text 422 174 ...any file;
+#X text 135 95 send raw data;
+#X text 291 260 Martin Peach 2006/11/07;
 #X connect 0 0 3 0;
 #X connect 1 0 3 0;
 #X connect 3 0 2 0;
 #X connect 5 0 3 0;
+#X connect 8 0 3 0;
+#X connect 9 0 10 0;
+#X connect 10 0 3 0;
+#X connect 11 0 9 0;
