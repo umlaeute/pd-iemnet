@@ -36,9 +36,6 @@ typedef struct _udpreceive
     char      x_msginbuf[MAX_UDP_RECEIVE];
 } t_udpreceive;
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void udpreceive_setup(void);
 static void udpreceive_free(t_udpreceive *x);
 static void *udpreceive_new(t_floatarg fportno);
@@ -148,9 +145,6 @@ static void udpreceive_free(t_udpreceive *x)
     }
 }
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void udpreceive_setup(void)
 {
     udpreceive_class = class_new(gensym("udpreceive"),
