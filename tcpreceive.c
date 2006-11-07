@@ -46,9 +46,6 @@ typedef struct _tcpreceive
     char            x_msginbuf[MAX_UDP_RECEIVE];
 } t_tcpreceive;
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void tcpreceive_setup(void);
 static void tcpreceive_free(t_tcpreceive *x);
 static void *tcpreceive_new(t_floatarg fportno);
@@ -300,9 +297,6 @@ static void tcpreceive_free(t_tcpreceive *x)
     tcpreceive_closeall(x);
 }
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void tcpreceive_setup(void)
 {
     tcpreceive_class = class_new(gensym("tcpreceive"),

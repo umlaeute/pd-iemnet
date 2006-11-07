@@ -37,7 +37,7 @@
 //#include <fcntl.h>
 //#include <errno.h>
 //#include <string.h>
-//#include <stdio.h>
+#include <stdio.h>
 //#include <pthread.h>
 #if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
@@ -111,9 +111,6 @@ static void tcpserver_connectpoll(t_tcpserver *x);
 static void tcpserver_print(t_tcpserver *x);
 static void *tcpserver_new(t_floatarg fportno);
 static void tcpserver_free(t_tcpserver *x);
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void tcpserver_setup(void);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, t_tcpserver_socketnotifier notifier,
@@ -246,7 +243,7 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *argv)
 {
     static char     byte_buf[MAX_UDP_RECEIVE];// arbitrary maximum similar to max IP packet size
-    int             i, d;
+    int             i, j, d;
     unsigned char   c;
     float           f, e;
     char            *bp;
@@ -258,11 +255,13 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
     double          timeafter;
     int             late;
     int             sockfd = x->x_fd[client];
+    char            fpath[MAX_PATH];
+    FILE            *fptr;
 
     /* process & send data */
     if(sockfd >= 0)
     {
-        for (i = 0; i < argc; ++i)
+        for (i = j = 0; i < argc; ++i)
         {
             if (argv[i].a_type == A_FLOAT)
             {
@@ -286,15 +285,48 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
 #ifdef DEBUG
                 post("%s: argv[%d]: %d", objName, i, c);
 #endif
-                byte_buf[i] = c;
+                byte_buf[j++] = c;
+            }
+            else if (argv[i].a_type == A_SYMBOL)
+            {
+
+                atom_string(&argv[i], fpath, MAX_PATH);
+#ifdef DEBUG
+                post ("%s: fname: %s", objName, fpath);
+#endif
+                fptr = fopen(fpath, "rb");
+                if (fptr == NULL)
+                {
+                    post("%s: unable to open \"%s\"", objName, fpath);
+                    return;
+                }
+                rewind(fptr);
+#ifdef DEBUG
+                post("%s: d is %d", objName, d);
+#endif
+                while ((d = fgetc(fptr)) != EOF)
+                {
+                    byte_buf[j++] = (char)(d & 0x0FF);
+#ifdef DEBUG
+                    post("%s: byte_buf[%d] = %d", objName, j-1, byte_buf[j-1]);
+#endif
+                    if (j >= MAX_UDP_RECEIVE)
+                    {
+                        post ("%s: file too long, truncating at %lu", objName, MAX_UDP_RECEIVE);
+                        break;
+                    }
+                }
+                fclose(fptr);
+                fptr = NULL;
+                post("%s: read \"%s\" length %d byte%s", objName, fpath, j, ((d==1)?"":"s"));
             }
             else
             {
-                error("%s: item %d is not a float", objName, i);
+                error("%s: item %d is not a float or a file name", objName, i);
                 return;
             }
         }
-        length = i;
+        length = j;
         if (length > 0)
         {
             for (bp = byte_buf, sent = 0; sent < length;)
@@ -603,9 +635,6 @@ static void tcpserver_free(t_tcpserver *x)
     binbuf_free(inbinbuf);
 }
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void tcpserver_setup(void)
 {
     tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new, (t_method)tcpserver_free,

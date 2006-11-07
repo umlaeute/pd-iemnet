@@ -28,9 +28,6 @@ typedef struct _udpsend
     int      x_fd;
 } t_udpsend;
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void udpsend_setup(void);
 static void udpsend_free(t_udpsend *x);
 static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv);
@@ -107,8 +104,10 @@ static void udpsend_disconnect(t_udpsend *x)
 
 static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
-    static char    byte_buf[65536];// arbitrary maximum similar to max IP packet size
-    int            i, d;
+#define BYTE_BUF_LEN 65536 // arbitrary maximum similar to max IP packet size
+    static char    byte_buf[BYTE_BUF_LEN];
+    int            d;
+    int            i, j;
     char           c;
     float          f, e;
     char           *bp;
@@ -119,12 +118,14 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     double         timebefore;
     double         timeafter;
     int            late;
+    char           fpath[MAX_PATH];
+    FILE           *fptr;
 
 #ifdef DEBUG
     post("s: %s", s->s_name);
     post("argc: %d", argc);
 #endif
-    for (i = 0; i < argc; ++i)
+    for (i = j = 0; i < argc; ++i)
     {
         if (argv[i].a_type == A_FLOAT)
         {
@@ -145,16 +146,49 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
 #ifdef DEBUG
 	        post("udpsend_send: argv[%d]: %d", i, c);
 #endif
-	        byte_buf[i] = c;
+	        byte_buf[j++] = c;
+        }
+        else if (argv[i].a_type == A_SYMBOL)
+        {
+
+            atom_string(&argv[i], fpath, MAX_PATH);
+#ifdef DEBUG
+            post ("udpsend fname: %s", fpath);
+#endif
+            fptr = fopen(fpath, "rb");
+            if (fptr == NULL)
+            {
+                post("udpsend: unable to open \"%s\"", fpath);
+                return;
+            }
+            rewind(fptr);
+#ifdef DEBUG
+            post("udpsend: d is %d", d);
+#endif
+            while ((d = fgetc(fptr)) != EOF)
+            {
+                byte_buf[j++] = (char)(d & 0x0FF);
+#ifdef DEBUG
+                post("udpsend: byte_buf[%d] = %d", j-1, byte_buf[j-1]);
+#endif
+                if (j >= BYTE_BUF_LEN)
+                {
+                    post ("udpsend: file too long, truncating at %lu", BYTE_BUF_LEN);
+                    break;
+                }
+            }
+            fclose(fptr);
+            fptr = NULL;
+            post("udpsend: read \"%s\" length %d byte%s", fpath, j, ((d==1)?"":"s"));
         }
         else
-	    {
-            error("udpsend_send: item %d is not a float", i);
+        {
+            error("udpsend_send: item %d is not a float or a file name", i);
             return;
         }
     }
 
-    length = i;
+    length = j;
     if ((x->x_fd >= 0) && (length > 0))
     {
         for (bp = byte_buf, sent = 0; sent < length;)
@@ -195,9 +229,6 @@ static void udpsend_free(t_udpsend *x)
     udpsend_disconnect(x);
 }
 
-#ifdef MSW
-__declspec(dllexport)
-#endif
 void udpsend_setup(void)
 {
     udpsend_class = class_new(gensym("udpsend"), (t_newmethod)udpsend_new,
