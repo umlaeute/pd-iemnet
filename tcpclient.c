@@ -1,6 +1,6 @@
-/* x_net_tcp_client.c Martin Peach 20060508, working version 20060512 */
+/* tcpclient.c Martin Peach 20060508, working version 20060512 */
 /* linux version 20060515 */
-/* x_net_tcp_client.c is based on netclient: */
+/* tcpclient.c is based on netclient: */
 /* --------------------------  netclient  ------------------------------------- */
 /*                                                                              */
 /* Extended 'netsend', connects to 'netserver'.                                 */
@@ -229,7 +229,7 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
     double         timebefore;
     double         timeafter;
     int            late;
-    char           fpath[MAX_PATH];
+    char           fpath[FILENAME_MAX];
     FILE           *fptr;
 
 #ifdef DEBUG
@@ -266,7 +266,7 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
         else if (argv[i].a_type == A_SYMBOL)
         {
 
-            atom_string(&argv[i], fpath, MAX_PATH);
+            atom_string(&argv[i], fpath, FILENAME_MAX);
 #ifdef DEBUG
             post ("%s_send fname: %s", objName, fpath);
 #endif
@@ -470,4 +470,4 @@ void tcpclient_setup(void)
     class_addmethod(tcpclient_class, (t_method)tcpclient_dump, gensym("dump"), A_FLOAT, 0);
 }
 
-/* end of x_net_tcp.c */
+/* end of tcpclient.c */
