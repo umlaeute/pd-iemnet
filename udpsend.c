@@ -1,4 +1,4 @@
-/* x_net_udpsend.c 20060424. Martin Peach did it based on x_net.c. x_net.c header follows: */
+/* udpsend.c 20060424. Martin Peach did it based on x_net.c. x_net.c header follows: */
 /* Copyright (c) 1997-1999 Miller Puckette.
 * For information on usage and redistribution, and for a DISCLAIMER OF ALL
 * WARRANTIES, see the file, "LICENSE.txt," in this distribution.  */
@@ -118,7 +118,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     double         timebefore;
     double         timeafter;
     int            late;
-    char           fpath[MAX_PATH];
+    char           fpath[FILENAME_MAX];
     FILE           *fptr;
 
 #ifdef DEBUG
@@ -151,7 +151,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
         else if (argv[i].a_type == A_SYMBOL)
         {
 
-            atom_string(&argv[i], fpath, MAX_PATH);
+            atom_string(&argv[i], fpath, FILENAME_MAX);
 #ifdef DEBUG
             post ("udpsend fname: %s", fpath);
 #endif
@@ -242,5 +242,5 @@ void udpsend_setup(void)
         A_GIMME, 0);
 }
 
-/* end x_net_udpsend.c*/
+/* end udpsend.c*/
 

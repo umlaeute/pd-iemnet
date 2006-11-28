@@ -1,4 +1,4 @@
-/* x_net_tcpsend.c 20060424 Martin Peach did it based on x_net.c. x_net.c header follows: */
+/* tcpsend.c 20060424 Martin Peach did it based on x_net.c. x_net.c header follows: */
 /* Copyright (c) 1997-1999 Miller Puckette.
 * For information on usage and redistribution, and for a DISCLAIMER OF ALL
 * WARRANTIES, see the file, "LICENSE.txt," in this distribution.  */
@@ -125,7 +125,7 @@ static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
     double         timebefore;
     double         timeafter;
     int            late;
-    char           fpath[MAX_PATH];
+    char           fpath[FILENAME_MAX];
     FILE           *fptr;
 
 #ifdef DEBUG
@@ -158,7 +158,7 @@ static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
         else if (argv[i].a_type == A_SYMBOL)
         {
 
-            atom_string(&argv[i], fpath, MAX_PATH);
+            atom_string(&argv[i], fpath, FILENAME_MAX);
 #ifdef DEBUG
             post ("tcpsend fname: %s", fpath);
 #endif
@@ -249,4 +249,4 @@ void tcpsend_setup(void)
         A_GIMME, 0);
 }
 
-/* end x_net_tcpsend.c*/
+/* end tcpsend.c */

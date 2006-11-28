@@ -1,6 +1,6 @@
-/* x_net_tcpserver.c Martin Peach 20060511 working version 20060512 */
+/* tcpserver.c Martin Peach 20060511 working version 20060512 */
 /* 20060515 works on linux too... */
-/* x_net_tcpserver.c is based on netserver: */
+/* tcpserver.c is based on netserver: */
 /* --------------------------  netserver  ------------------------------------- */
 /*                                                                              */
 /* A server for bidirectional communication from within Pd.                     */
@@ -255,7 +255,7 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
     double          timeafter;
     int             late;
     int             sockfd = x->x_fd[client];
-    char            fpath[MAX_PATH];
+    char            fpath[FILENAME_MAX];
     FILE            *fptr;
 
     /* process & send data */
@@ -290,7 +290,7 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
             else if (argv[i].a_type == A_SYMBOL)
             {
 
-                atom_string(&argv[i], fpath, MAX_PATH);
+                atom_string(&argv[i], fpath, FILENAME_MAX);
 #ifdef DEBUG
                 post ("%s: fname: %s", objName, fpath);
 #endif
@@ -645,4 +645,4 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
 }
 
-/* end of x_net_tcpserver.c */
+/* end of tcpserver.c */
