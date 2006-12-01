@@ -46,6 +46,10 @@
 #include <winsock2.h>
 #endif
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
+
 #define DEFPOLLTIME 20  /* check for input every 20 ms */
 
 static t_class *tcpclient_class;
@@ -107,23 +111,13 @@ static void tcp_client_hexdump(unsigned char *buf, long len)
         {
             if (k < len)
             {
-#ifdef MSW
-                sprintf_s(&hexStr[j], 4, "%02X ", buf[k]);
-                sprintf_s(&ascStr[i], 2, "%c", ((buf[k] >= 32) && (buf[k] <= 126))? buf[k]: '.');
-#else
                 snprintf(&hexStr[j], 4, "%02X ", buf[k]);
                 snprintf(&ascStr[i], 2, "%c", ((buf[k] >= 32) && (buf[k] <= 126))? buf[k]: '.');
-#endif
             }
             else
             { // the last line
-#ifdef MSW
-                sprintf_s(&hexStr[j], 4, "   ");
-                sprintf_s(&ascStr[i], 2, " ");
-#else
                 snprintf(&hexStr[j], 4, "   ");
                 snprintf(&ascStr[i], 2, " ");
-#endif
             }
         }
         post ("%s%s", hexStr, ascStr);
