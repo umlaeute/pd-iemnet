@@ -108,7 +108,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     static char    byte_buf[BYTE_BUF_LEN];
     int            d;
     int            i, j;
-    char           c;
+    unsigned char  c;
     float          f, e;
     char           *bp;
     int            length, sent;
