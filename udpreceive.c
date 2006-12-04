@@ -72,7 +72,7 @@ static void udpreceive_read(t_udpreceive *x, int sockfd)
         for (i = 0; i < read; ++i)
         {
             /* convert the bytes in the buffer to floats in a list */
-            x->x_msgoutbuf[i].a_w.w_float = (float)x->x_msginbuf[i];
+            x->x_msgoutbuf[i].a_w.w_float = (float)(unsigned char)x->x_msginbuf[i];
         }
         /* send the list out the outlet */
         if (read > 1) outlet_list(x->x_msgout, &s_list, read, x->x_msgoutbuf);
