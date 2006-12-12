@@ -443,14 +443,12 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
     int     client;
-
     /* enumerate through the clients and send each the message */
     for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
     {
         if(x->x_fd[client] >= 0)
         { /* socket exists for this client */
             tcp_server_send_bytes(client, x, argc, argv);
-            break;
         }
     }
 }
