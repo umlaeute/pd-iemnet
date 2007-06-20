@@ -240,6 +240,7 @@ void udpsend_setup(void)
         gensym("disconnect"), 0);
     class_addmethod(udpsend_class, (t_method)udpsend_send, gensym("send"),
         A_GIMME, 0);
+    class_addlist(udpsend_class, (t_method)udpsend_send);
 }
 
 /* end udpsend.c*/

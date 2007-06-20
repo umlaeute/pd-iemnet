@@ -247,6 +247,7 @@ void tcpsend_setup(void)
         gensym("disconnect"), 0);
     class_addmethod(tcpsend_class, (t_method)tcpsend_send, gensym("send"),
         A_GIMME, 0);
+    class_addlist(tcpsend_class, (t_method)tcpsend_send);
 }
 
 /* end tcpsend.c */

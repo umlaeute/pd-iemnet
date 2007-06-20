@@ -462,6 +462,7 @@ void tcpclient_setup(void)
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("receive"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("rcv"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_dump, gensym("dump"), A_FLOAT, 0);
+    class_addlist(tcpclient_class, (t_method)tcpclient_send);
 }
 
 /* end of tcpclient.c */

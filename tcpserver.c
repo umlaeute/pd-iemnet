@@ -641,6 +641,7 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_send, gensym("send"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_send, gensym("client"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
+    class_addlist(tcpserver_class, (t_method)tcpserver_send);
 }
 
 /* end of tcpserver.c */
