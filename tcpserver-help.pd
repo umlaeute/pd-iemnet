@@ -1,4 +1,4 @@
-#N canvas 268 239 1119 648 12;
+#N canvas 74 160 1119 648 12;
 #X msg 18 -6 print;
 #X obj 136 109 tcpserver 9997;
 #X floatatom 171 237 5 0 0 0 - - -;
@@ -16,7 +16,6 @@
 #X text 69 -6 list of connections;
 #X text 226 19 send to all clients;
 #X text 249 45 send to client 1;
-#X text 347 254 2006/05/11 Martin Peach;
 #X text 199 191 on socket;
 #X msg 140 71 send 504 1 2 3;
 #X text 273 71 send to client on socket 504;
@@ -45,13 +44,17 @@
 #X msg 558 89 client 1 230 231 232 233 234 235 236 237 238 239 240
 241 242 243 244 245 246 247 248 249;
 #X msg 558 134 client 1 250 251 252 253 254 255;
-#X obj 305 -219 openpanel;
-#X obj 305 -238 bng 15 250 50 0 empty empty empty 17 7 0 10 -24198
--241291 -1;
-#X text 325 -262 send a file;
-#X text 387 -220 ...any file;
+#X obj 91 -216 openpanel;
+#X obj 91 -235 bng 15 250 50 0 empty empty empty 17 7 0 10 -24198 -241291
+-1;
+#X text 391 -262 send a file;
+#X text 173 -217 ...any file;
 #X msg 58 -261 client 1 ../doc/5.reference/test.txt;
-#X msg 305 -195 client 1 \$1;
+#X msg 91 -192 client 1 \$1;
+#X msg 160 -89 10 1 2 43;
+#X text 252 -88 'send' prefix is optional;
+#X text 167 -68 (the first number is socket number);
+#X text 347 254 2007/06/20 Martin Peach;
 #X connect 0 0 1 0;
 #X connect 1 0 11 0;
 #X connect 1 1 2 0;
@@ -63,7 +66,8 @@
 #X connect 4 3 8 0;
 #X connect 12 0 1 0;
 #X connect 13 0 1 0;
-#X connect 19 0 1 0;
+#X connect 18 0 1 0;
+#X connect 20 0 1 0;
 #X connect 21 0 1 0;
 #X connect 22 0 1 0;
 #X connect 23 0 1 0;
@@ -76,8 +80,8 @@
 #X connect 30 0 1 0;
 #X connect 31 0 1 0;
 #X connect 32 0 1 0;
-#X connect 33 0 1 0;
-#X connect 34 0 39 0;
-#X connect 35 0 34 0;
+#X connect 33 0 38 0;
+#X connect 34 0 33 0;
+#X connect 37 0 1 0;
 #X connect 38 0 1 0;
 #X connect 39 0 1 0;
