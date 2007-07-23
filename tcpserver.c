@@ -62,7 +62,6 @@
 /* ----------------------------- tcpserver ------------------------- */
 
 static t_class *tcpserver_class;
-static t_binbuf *inbinbuf;
 static char objName[] = "tcpserver";
 
 typedef void (*t_tcpserver_socketnotifier)(void *x);
@@ -587,7 +586,6 @@ static void *tcpserver_new(t_floatarg fportno)
         x->x_connectout = outlet_new(&x->x_obj, &s_float); /* 2nd outlet for number of connected clients */
         x->x_sockout = outlet_new(&x->x_obj, &s_float); /* 3rd outlet for socket number of current client */
         x->x_addrout = outlet_new(&x->x_obj, &s_list); /* 4th outlet for ip address of current client */
-        inbinbuf = binbuf_new();
     }
     x->x_connectsocket = sockfd;
     x->x_nconnections = 0;
@@ -630,7 +628,6 @@ static void tcpserver_free(t_tcpserver *x)
         sys_closesocket(x->x_connectsocket);
     }
 
-    binbuf_free(inbinbuf);
 }
 
 void tcpserver_setup(void)
