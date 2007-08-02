@@ -104,6 +104,8 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcp_server_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
+static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient);
+static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_notify(t_tcpserver *x);
 static void tcpserver_connectpoll(t_tcpserver *x);
@@ -404,6 +406,42 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
     tcp_server_send_bytes(client, x, argc-1, &argv[1]);
 }
 
+/* disconnect a client by socket */
+static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket)
+{
+    int sock = (int)fsocket;
+
+    if(x->x_nconnections < 0)
+    {
+        post("%s: no clients connected", objName);
+        return;
+    }
+    x->x_sock_fd = sock;
+    tcpserver_notify(x);
+}
+
+
+/* disconnect a client by number */
+static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
+{
+    int client = (int)fclient;
+
+    if(x->x_nconnections < 0)
+    {
+        post("%s: no clients connected", objName);
+        return;
+    }
+    if (!((client > 0) && (client < MAX_CONNECT)))
+    {
+        post("%s: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
+        return;
+    }
+    --client;/* zero based index*/
+    x->x_sock_fd = x->x_fd[client];
+    tcpserver_notify(x);
+}
+
+
 /* send message to client using client number
    note that the client numbers might change in case a client disconnects! */
 /* clients start at 1 but our index starts at 0 */
@@ -637,6 +675,8 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_print, gensym("print"), 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_send, gensym("send"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_send, gensym("client"), A_GIMME, 0);
+    class_addmethod(tcpserver_class, (t_method)tcpserver_client_disconnect, gensym("disconnectclient"), A_DEFFLOAT, 0);
+    class_addmethod(tcpserver_class, (t_method)tcpserver_socket_disconnect, gensym("disconnectsocket"), A_DEFFLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
     class_addlist(tcpserver_class, (t_method)tcpserver_send);
 }
