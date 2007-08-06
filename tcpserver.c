@@ -104,6 +104,7 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcp_server_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
+static void tcpserver_disconnect(t_tcpserver *x);
 static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient);
 static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
@@ -406,6 +407,30 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
     tcp_server_send_bytes(client, x, argc-1, &argv[1]);
 }
 
+/* disconnect the client at x_sock_fd */
+static void tcpserver_disconnect(t_tcpserver *x)
+{
+    int i, fd;
+    t_tcpserver_socketreceiver *y;
+
+    if (x->x_sock_fd >= 0)
+    {
+        /* find the socketreceiver for this socket */
+        for(i = 0; i < x->x_nconnections; i++)
+        {
+            if(x->x_fd[i] == x->x_sock_fd)
+            {
+                y = x->x_sr[i];
+                fd = x->x_fd[i];
+                if (y->sr_notifier) (*y->sr_notifier)(x);
+                sys_rmpollfn(fd);
+                sys_closesocket(fd);
+                x->x_sock_fd = -1;
+            }
+        }
+    }
+}
+
 /* disconnect a client by socket */
 static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket)
 {
@@ -417,9 +442,8 @@ static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket)
         return;
     }
     x->x_sock_fd = sock;
-    tcpserver_notify(x);
+    tcpserver_disconnect(x);
 }
-
 
 /* disconnect a client by number */
 static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
@@ -438,7 +462,7 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
     }
     --client;/* zero based index*/
     x->x_sock_fd = x->x_fd[client];
-    tcpserver_notify(x);
+    tcpserver_disconnect(x);
 }
 
 
