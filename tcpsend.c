@@ -113,20 +113,21 @@ static void tcpsend_disconnect(t_tcpsend *x)
 static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
 #define BYTE_BUF_LEN 65536 // arbitrary maximum similar to max IP packet size
-    static char    byte_buf[BYTE_BUF_LEN];
-    int            i, j, d;
-    char           c;
-    float          f, e;
-    char           *bp;
-    int            length, sent;
-    int            result;
-    static double  lastwarntime;
-    static double  pleasewarn;
-    double         timebefore;
-    double         timeafter;
-    int            late;
-    char           fpath[FILENAME_MAX];
-    FILE           *fptr;
+    static char     byte_buf[BYTE_BUF_LEN];
+    int             i, j;
+    unsigned int    d;
+    unsigned char   c;
+    float           f, e;
+    char            *bp;
+    int             length, sent;
+    int             result;
+    static double   lastwarntime;
+    static double   pleasewarn;
+    double          timebefore;
+    double          timeafter;
+    int             late;
+    char            fpath[FILENAME_MAX];
+    FILE            *fptr;
 
 #ifdef DEBUG
     post("s: %s", s->s_name);
@@ -137,7 +138,7 @@ static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
         if (argv[i].a_type == A_FLOAT)
         {
             f = argv[i].a_w.w_float;
-            d = (int)f;
+            d = (unsigned int)f;
             e = f - d;
             if (e != 0)
             {
