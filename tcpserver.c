@@ -31,7 +31,7 @@
 #include "m_imp.h"
 #include "s_stuff.h"
 
-//#include <sys/types.h>
+#include <sys/types.h>
 //#include <stdarg.h>
 //#include <signal.h>
 //#include <fcntl.h>
@@ -53,6 +53,10 @@
 //#include <io.h>
 //#include <fcntl.h>
 #include <winsock2.h>
+#endif
+
+#ifdef _MSC_VER
+#define snprintf sprintf_s
 #endif
 
 #define MAX_CONNECT 32 /* maximum number of connections */
@@ -84,6 +88,7 @@ typedef struct _tcpserver
     t_outlet                    *x_connectout;
     t_outlet                    *x_sockout;
     t_outlet                    *x_addrout;
+    t_int                       x_dump; // 1 = hexdump received bytes
     t_symbol                    *x_host[MAX_CONNECT];
     t_int                       x_fd[MAX_CONNECT];
     u_long                      x_addr[MAX_CONNECT];
@@ -114,6 +119,41 @@ static void tcpserver_print(t_tcpserver *x);
 static void *tcpserver_new(t_floatarg fportno);
 static void tcpserver_free(t_tcpserver *x);
 void tcpserver_setup(void);
+static void tcpserver_dump(t_tcpserver *x, t_float dump);
+static void tcpserver_hexdump(unsigned char *buf, long len);
+
+static void tcpserver_dump(t_tcpserver *x, t_float dump)
+{
+    x->x_dump = (dump == 0)?0:1;
+}
+
+static void tcpserver_hexdump(unsigned char *buf, long len)
+{
+#define BYTES_PER_LINE 16
+    char hexStr[(3*BYTES_PER_LINE)+1];
+    char ascStr[BYTES_PER_LINE+1];
+    long i, j, k = 0L;
+#ifdef DEBUG
+    post("tcpserver_hexdump %d", len);
+#endif
+    while (k < len)
+    {
+        for (i = j = 0; i < BYTES_PER_LINE; ++i, ++k, j+=3)
+        {
+            if (k < len)
+            {
+                snprintf(&hexStr[j], 4, "%02X ", buf[k]);
+                snprintf(&ascStr[i], 2, "%c", ((buf[k] >= 32) && (buf[k] <= 126))? buf[k]: '.');
+            }
+            else
+            { // the last line
+                snprintf(&hexStr[j], 4, "   ");
+                snprintf(&ascStr[i], 2, " ");
+            }
+        }
+        post ("%s%s", hexStr, ascStr);
+    }
+}
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, t_tcpserver_socketnotifier notifier,
     t_tcpserver_socketreceivefn socketreceivefn)
@@ -162,6 +202,9 @@ static int tcpserver_socketreceiver_doread(t_tcpserver_socketreceiver *x)
         c = *bp++ = inbuf[indx];
         y->x_msgoutbuf[i].a_w.w_float = (float)c;
     }
+
+    if (y->x_dump)tcpserver_hexdump(&inbuf[intail], i);
+
     if (i > 1) outlet_list(y->x_msgout, &s_list, i, y->x_msgoutbuf);
     else outlet_float(y->x_msgout, y->x_msgoutbuf[0].a_w.w_float);
 
@@ -701,6 +744,7 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_send, gensym("client"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_disconnect, gensym("disconnectclient"), A_DEFFLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_socket_disconnect, gensym("disconnectsocket"), A_DEFFLOAT, 0);
+    class_addmethod(tcpserver_class, (t_method)tcpserver_dump, gensym("dump"), A_FLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
     class_addlist(tcpserver_class, (t_method)tcpserver_send);
 }
