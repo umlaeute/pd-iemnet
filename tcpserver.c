@@ -108,6 +108,7 @@ static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd)
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcp_server_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
+static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_disconnect(t_tcpserver *x);
 static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient);
@@ -291,14 +292,8 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
     int             i, j, d;
     unsigned char   c;
     float           f, e;
-    char            *bp;
-    int             length, sent;
-    int             result;
-    static double   lastwarntime;
-    static double   pleasewarn;
-    double          timebefore;
-    double          timeafter;
-    int             late;
+    int             length;
+    size_t          flen;
     int             sockfd = x->x_fd[client];
     char            fpath[FILENAME_MAX];
     FILE            *fptr;
@@ -357,13 +352,14 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
 #endif
                     if (j >= MAX_UDP_RECEIVE)
                     {
-                        post ("%s: file too long, truncating at %lu", objName, MAX_UDP_RECEIVE);
-                        break;
+                        flen += tcpserver_send_buf(client, sockfd, byte_buf, j);
+                        j = 0;
                     }
                 }
+                flen += j;
                 fclose(fptr);
                 fptr = NULL;
-                post("%s: read \"%s\" length %d byte%s", objName, fpath, j, ((d==1)?"":"s"));
+                post("%s: read \"%s\" length %d byte%s", objName, fpath, flen, ((d==1)?"":"s"));
             }
             else
             {
@@ -374,38 +370,53 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
         length = j;
         if (length > 0)
         {
-            for (bp = byte_buf, sent = 0; sent < length;)
-            {
-                timebefore = sys_getrealtime();
-                result = send(sockfd, byte_buf, length-sent, 0);
-                timeafter = sys_getrealtime();
-                late = (timeafter - timebefore > 0.005);
-                if (late || pleasewarn)
-                {
-                    if (timeafter > lastwarntime + 2)
-                    {
-                        post("%s: send blocked %d msec", objName,
-                            (int)(1000 * ((timeafter - timebefore) + pleasewarn)));
-                        pleasewarn = 0;
-                        lastwarntime = timeafter;
-                    }
-                    else if (late) pleasewarn += timeafter - timebefore;
-                }
-                if (result <= 0)
-                {
-                    sys_sockerror("tcpserver: send");
-                    post("%s: could not send data to client %d", objName, client);
-                    break;
-                }
-                else
-                {
-                    sent += result;
-                    bp += result;
-                }
-            }
+            tcpserver_send_buf(client, sockfd, byte_buf, length);
         }
     }
     else post("%s: not a valid socket number (%d)", objName, sockfd);
+}
+
+static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length)
+{
+    char            *bp;
+    size_t          sent;
+    double          timebefore;
+    static double   lastwarntime;
+    static double   pleasewarn;
+    int             result;
+    int             late;
+    double          timeafter;
+
+    for (bp = byte_buf, sent = 0; sent < length;)
+    {
+        timebefore = sys_getrealtime();
+        result = send(sockfd, byte_buf, (int)(length-sent), 0);
+        timeafter = sys_getrealtime();
+        late = (timeafter - timebefore > 0.005);
+        if (late || pleasewarn)
+        {
+            if (timeafter > lastwarntime + 2)
+            {
+                post("%s: send blocked %d msec", objName,
+                    (int)(1000 * ((timeafter - timebefore) + pleasewarn)));
+                pleasewarn = 0;
+                lastwarntime = timeafter;
+            }
+            else if (late) pleasewarn += timeafter - timebefore;
+        }
+        if (result <= 0)
+        {
+            sys_sockerror("tcpserver: send");
+            post("%s: could not send data to client %d", objName, client);
+            break;
+        }
+        else
+        {
+            sent += result;
+            bp += result;
+        }
+    }
+    return sent;
 }
 
 /* send message to client using socket number */
