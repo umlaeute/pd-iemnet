@@ -29,7 +29,7 @@ typedef struct _udpreceive
 {
     t_object  x_obj;
     t_outlet  *x_msgout;
-	t_outlet  *x_addrout;
+    t_outlet  *x_addrout;
     int       x_connectsocket;
     t_atom    x_addrbytes[4];
     t_atom    x_msgoutbuf[MAX_UDP_RECEIVE];
@@ -46,14 +46,14 @@ static void udpreceive_read(t_udpreceive *x, int sockfd)
     int                 i, read = 0;
     struct sockaddr_in  from;
     socklen_t           fromlen = sizeof(from);
-	long                addr;
+    long                addr;
 
-	read = recvfrom(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0, (struct sockaddr *)&from, &fromlen);
+    read = recvfrom(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0, (struct sockaddr *)&from, &fromlen);
 #ifdef DEBUG
     post("udpreceive_read: read %lu x->x_connectsocket = %d",
         read, x->x_connectsocket);
 #endif
-	/* get the sender's ip */
+    /* get the sender's ip */
     addr = ntohl(from.sin_addr.s_addr);
     x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
     x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
@@ -61,7 +61,7 @@ static void udpreceive_read(t_udpreceive *x, int sockfd)
     x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
     outlet_list(x->x_addrout, &s_list, 4L, x->x_addrbytes);
 
-	if (read < 0)
+    if (read < 0)
     {
         sys_sockerror("udpreceive_read");
         sys_closesocket(x->x_connectsocket);
@@ -87,7 +87,7 @@ static void *udpreceive_new(t_floatarg fportno)
     int                sockfd, portno = fportno;
     int                intarg, i;
 
-	/* create a socket */
+    /* create a socket */
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 #ifdef DEBUG
     post("udpreceive_new: socket %d port %d", sockfd, portno);
@@ -100,7 +100,8 @@ static void *udpreceive_new(t_floatarg fportno)
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
 
-    /* ask OS to allow another Pd to repoen this port after we close it. */
+    /* enable delivery of all multicast or broadcast (but not unicast)
+    * UDP datagrams to all sockets bound to the same port */
     intarg = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
         (char *)&intarg, sizeof(intarg)) < 0)
@@ -113,7 +114,7 @@ static void *udpreceive_new(t_floatarg fportno)
     if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
         sys_sockerror("udpreceive: bind");
-    	sys_closesocket(sockfd);
+        sys_closesocket(sockfd);
         return (0);
     }
     x = (t_udpreceive *)pd_new(udpreceive_class);
@@ -123,10 +124,10 @@ static void *udpreceive_new(t_floatarg fportno)
 
     /* convert the bytes in the buffer to floats in a list */
     for (i = 0; i < MAX_UDP_RECEIVE; ++i)
-	{
-		x->x_msgoutbuf[i].a_type = A_FLOAT;
-		x->x_msgoutbuf[i].a_w.w_float = 0;
-	}
+    {
+        x->x_msgoutbuf[i].a_type = A_FLOAT;
+        x->x_msgoutbuf[i].a_w.w_float = 0;
+    }
     for (i = 0; i < 4; ++i)
     {
         x->x_addrbytes[i].a_type = A_FLOAT;
@@ -152,5 +153,4 @@ void udpreceive_setup(void)
         sizeof(t_udpreceive), CLASS_NOINLET, A_DEFFLOAT, 0);
 }
 
-/* end x_net_udpreceive.c */
-
+/* end udpreceive.c */
