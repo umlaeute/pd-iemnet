@@ -50,6 +50,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     struct hostent      *hp;
     int                 sockfd;
     int                 portno = fportno;
+    int                 broadcast = 1;/* nonzero is true */
 
     if (x->x_fd >= 0)
     {
@@ -67,6 +68,15 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
         sys_sockerror("udpsend: socket");
         return;
     }
+/* Based on zmoelnig's patch 2221504:
+Enable sending of broadcast messages (if hostname is a broadcast address)*/
+#ifdef SO_BROADCAST
+    if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
+    {
+        pd_error(x, "couldn't switch to broadcast mode");
+    }
+#endif /* SO_BROADCAST */
+
     /* connect socket using hostname provided in command line */
     server.sin_family = AF_INET;
     hp = gethostbyname(hostname->s_name);
