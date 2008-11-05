@@ -31,7 +31,7 @@ typedef struct _udpreceive
     t_outlet  *x_msgout;
     t_outlet  *x_addrout;
     int       x_connectsocket;
-    t_atom    x_addrbytes[4];
+    t_atom    x_addrbytes[5];
     t_atom    x_msgoutbuf[MAX_UDP_RECEIVE];
     char      x_msginbuf[MAX_UDP_RECEIVE];
 } t_udpreceive;
@@ -47,6 +47,7 @@ static void udpreceive_read(t_udpreceive *x, int sockfd)
     struct sockaddr_in  from;
     socklen_t           fromlen = sizeof(from);
     long                addr;
+    unsigned short      port;
 
     read = recvfrom(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0, (struct sockaddr *)&from, &fromlen);
 #ifdef DEBUG
@@ -55,11 +56,14 @@ static void udpreceive_read(t_udpreceive *x, int sockfd)
 #endif
     /* get the sender's ip */
     addr = ntohl(from.sin_addr.s_addr);
+    port = ntohs(from.sin_port);
+
     x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
     x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
     x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
     x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-    outlet_list(x->x_addrout, &s_list, 4L, x->x_addrbytes);
+    x->x_addrbytes[4].a_w.w_float = port;
+    outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
 
     if (read < 0)
     {
@@ -128,7 +132,7 @@ static void *udpreceive_new(t_floatarg fportno)
         x->x_msgoutbuf[i].a_type = A_FLOAT;
         x->x_msgoutbuf[i].a_w.w_float = 0;
     }
-    for (i = 0; i < 4; ++i)
+    for (i = 0; i < 5; ++i)
     {
         x->x_addrbytes[i].a_type = A_FLOAT;
         x->x_addrbytes[i].a_w.w_float = 0;
