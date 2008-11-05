@@ -28,8 +28,9 @@ static t_class *tcpreceive_class;
 
 typedef struct _tcpconnection
 {
-    long      addr;
-    int       socket;
+    long            addr;
+    unsigned short  port;
+    int             socket;
 } t_tcpconnection;
 
 typedef struct _tcpreceive
@@ -41,7 +42,7 @@ typedef struct _tcpreceive
     int             x_connectsocket;
     int             x_nconnections;
 	t_tcpconnection x_connection[MAX_CONNECTIONS];
-    t_atom          x_addrbytes[4];
+    t_atom          x_addrbytes[5];
     t_atom          x_msgoutbuf[MAX_UDP_RECEIVE];
     char            x_msginbuf[MAX_UDP_RECEIVE];
 } t_tcpreceive;
@@ -51,15 +52,17 @@ static void tcpreceive_free(t_tcpreceive *x);
 static void *tcpreceive_new(t_floatarg fportno);
 static void tcpreceive_read(t_tcpreceive *x, int sockfd);
 static void tcpreceive_connectpoll(t_tcpreceive *x);
-static int tcpreceive_addconnection(t_tcpreceive * x, int fd, long addr);
+static int tcpreceive_addconnection(t_tcpreceive * x, int fd, long addr, unsigned short port);
 static int tcpreceive_removeconnection(t_tcpreceive * x, int fd);
 static void tcpreceive_closeall(t_tcpreceive *x);
 static long tcpreceive_getconnection(t_tcpreceive * x, int fd);
+static unsigned short tcpreceive_getconnectionport(t_tcpreceive * x, int fd);
 
 static void tcpreceive_read(t_tcpreceive *x, int sockfd)
 {
-    int  i, read = 0;
-    long addr;
+    int             i, read = 0;
+    long            addr;
+    unsigned short  port;
 
 //	read = recvfrom(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0, (struct sockaddr *)&from, &fromlen);
 	read = recv(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0);
@@ -92,11 +95,13 @@ static void tcpreceive_read(t_tcpreceive *x, int sockfd)
         }
         /* find sender's ip address and output it */
 		addr = tcpreceive_getconnection(x, sockfd);
+        port = tcpreceive_getconnectionport(x, sockfd);
         x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
         x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
         x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
         x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-        outlet_list(x->x_addrout, &s_list, 4L, x->x_addrbytes);
+        x->x_addrbytes[4].a_w.w_float = port;
+        outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
         /* send the list out the outlet */
         if (read > 1) outlet_list(x->x_msgout, &s_list, read, x->x_msgoutbuf);
         else outlet_float(x->x_msgout, x->x_msgoutbuf[0].a_w.w_float);
@@ -153,6 +158,7 @@ static void *tcpreceive_new(t_floatarg fportno)
 	{
 		x->x_connection[i].socket = -1;
 		x->x_connection[i].addr = 0L;
+		x->x_connection[i].port = 0;
     }
 	/* convert the bytes in the buffer to floats in a list */
     for (i = 0; i < MAX_UDP_RECEIVE; ++i)
@@ -160,7 +166,7 @@ static void *tcpreceive_new(t_floatarg fportno)
 		x->x_msgoutbuf[i].a_type = A_FLOAT;
 		x->x_msgoutbuf[i].a_w.w_float = 0;
 	}
-    for (i = 0; i < 4; ++i)
+    for (i = 0; i < 5; ++i)
     {
         x->x_addrbytes[i].a_type = A_FLOAT;
         x->x_addrbytes[i].a_w.w_float = 0;
@@ -191,6 +197,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
     struct sockaddr_in  from;
     socklen_t           fromlen = sizeof(from);
 	long                addr;
+    unsigned short      port;
     int                 fd;
 
     fd = accept(x->x_connectsocket, (struct sockaddr *)&from, &fromlen);
@@ -203,7 +210,8 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
 
         /* get the sender's ip */
         addr = ntohl(from.sin_addr.s_addr);
-		if (tcpreceive_addconnection(x, fd, addr))
+        port = ntohs(from.sin_port);
+		if (tcpreceive_addconnection(x, fd, addr, port))
 		{
             sys_addpollfn(fd, (t_fdpollfn)tcpreceive_read, x);
             outlet_float(x->x_connectout, ++x->x_nconnections);
@@ -211,7 +219,8 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
             x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
             x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
             x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-            outlet_list(x->x_addrout, &s_list, 4L, x->x_addrbytes);
+            x->x_addrbytes[4].a_w.w_float = port;
+            outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
         }
         else
         {
@@ -223,7 +232,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
 
 /* tcpreceive_addconnection tries to add the socket fd to the list */
 /* returns 1 on success, else 0 */
-static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr)
+static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr, unsigned short port)
 {
 	int i;
 	for (i = 0; i < MAX_CONNECTIONS; ++i)
@@ -232,6 +241,7 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr)
         {
             x->x_connection[i].socket = fd;
             x->x_connection[i].addr = addr;
+            x->x_connection[i].port = port;
             return 1;
         }
     }
@@ -252,6 +262,7 @@ static void tcpreceive_closeall(t_tcpreceive *x)
             sys_closesocket(x->x_connection[i].socket);
             x->x_connection[i].socket = -1;
             x->x_connection[i].addr = 0L;
+            x->x_connection[i].port = 0;
             outlet_float(x->x_connectout, --x->x_nconnections);
         }
     }
@@ -268,8 +279,22 @@ static int tcpreceive_removeconnection(t_tcpreceive *x, int fd)
         {
             x->x_connection[i].socket = -1;
             x->x_connection[i].addr = 0L;
+            x->x_connection[i].port = 0;
             return 1;
         }
+    }
+    return 0;
+}
+
+/* tcpreceive_getconnectionport tries to find the socket fd in the list */
+/* returns port on success, else 0 */
+static u_short tcpreceive_getconnectionport(t_tcpreceive *x, int fd)
+{
+    int i;
+    for (i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (x->x_connection[i].socket == fd)
+            return x->x_connection[i].port;
     }
     return 0;
 }
