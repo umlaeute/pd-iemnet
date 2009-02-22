@@ -42,6 +42,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <errno.h>
 #define SOCKET_ERROR -1
 #else
 #include <winsock2.h>
