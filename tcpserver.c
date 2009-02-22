@@ -32,13 +32,7 @@
 #include "s_stuff.h"
 
 #include <sys/types.h>
-//#include <stdarg.h>
-//#include <signal.h>
-//#include <fcntl.h>
-//#include <errno.h>
-//#include <string.h>
 #include <stdio.h>
-//#include <pthread.h>
 #if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -50,8 +44,6 @@
 #include <sys/time.h>
 #define SOCKET_ERROR -1
 #else
-//#include <io.h>
-//#include <fcntl.h>
 #include <winsock2.h>
 #endif
 
@@ -381,11 +373,7 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
     char            *bp;
     size_t          sent = 0;
     double          timebefore;
-//    static double   lastwarntime;
-//    static double   pleasewarn;
     int             result;
-//    int             late;
-//    double          timeafter;
     fd_set          wfds;
     struct timeval  timeout;
     
@@ -410,7 +398,7 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
         if (result <= 0)
         {
             sys_sockerror("tcpserver: send");
-            post("%s: could not send data to client %d", objName, client+1);
+            post("%s_send_buf: could not send data to client %d", objName, client+1);
             break;
         }
         else
