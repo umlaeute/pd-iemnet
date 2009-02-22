@@ -107,7 +107,7 @@ static int tcpserver_socketreceiver_doread(t_tcpserver_socketreceiver *x);
 static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd);
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
-static void tcp_server_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
+static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_disconnect(t_tcpserver *x);
@@ -286,7 +286,7 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 
 /* ---------------- main tcpserver (send) stuff --------------------- */
 
-static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *argv)
+static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *argv)
 {
     static char     byte_buf[MAX_UDP_RECEIVE];// arbitrary maximum similar to max IP packet size
     int             i, j, d;
@@ -379,35 +379,38 @@ static void tcp_server_send_bytes(int client, t_tcpserver *x, int argc, t_atom *
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length)
 {
     char            *bp;
-    size_t          sent;
+    size_t          sent = 0;
     double          timebefore;
-    static double   lastwarntime;
-    static double   pleasewarn;
+//    static double   lastwarntime;
+//    static double   pleasewarn;
     int             result;
-    int             late;
-    double          timeafter;
-
+//    int             late;
+//    double          timeafter;
+    fd_set          wfds;
+    struct timeval  timeout;
+    
+    FD_ZERO(&wfds);
+    FD_SET(sockfd, &wfds);
+    timeout.tv_sec = 1; /* give it one second to clear buffer */
+    timeout.tv_usec = 0;
+    result = select(1, NULL, &wfds, NULL, &timeout);
+    if (result == -1)
+    {
+        post("%s_send_buf: select returned error %d", objName, errno);
+        return sent;
+    }
+    if (!FD_ISSET(sockfd, &wfds))
+    {
+        post("%s_send_buf: client %d not writeable", objName, client+1);
+        return sent;
+    }
     for (bp = byte_buf, sent = 0; sent < length;)
     {
-        timebefore = sys_getrealtime();
         result = send(sockfd, byte_buf, (int)(length-sent), 0);
-        timeafter = sys_getrealtime();
-        late = (timeafter - timebefore > 0.005);
-        if (late || pleasewarn)
-        {
-            if (timeafter > lastwarntime + 2)
-            {
-                post("%s: send blocked %d msec", objName,
-                    (int)(1000 * ((timeafter - timebefore) + pleasewarn)));
-                pleasewarn = 0;
-                lastwarntime = timeafter;
-            }
-            else if (late) pleasewarn += timeafter - timebefore;
-        }
         if (result <= 0)
         {
             sys_sockerror("tcpserver: send");
-            post("%s: could not send data to client %d", objName, client);
+            post("%s: could not send data to client %d", objName, client+1);
             break;
         }
         else
@@ -427,12 +430,12 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 
     if(x->x_nconnections < 0)
     {
-        post("%s: no clients connected", objName);
+        post("%s_send: no clients connected", objName);
         return;
     }
     if(argc < 2)
     {
-        post("%s: nothing to send", objName);
+        post("%s_send: nothing to send", objName);
         return;
     }
     /* get socket number of connection (first element in list) */
@@ -449,16 +452,16 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
         }
         if(client == -1)
         {
-            post("%s: no connection on socket %d", objName, sockfd);
+            post("%s_send: no connection on socket %d", objName, sockfd);
             return;
         }
     }
     else
     {
-        post("%s: no socket specified", objName);
+        post("%s_send: no socket specified", objName);
         return;
     }
-    tcp_server_send_bytes(client, x, argc-1, &argv[1]);
+    tcpserver_send_bytes(client, x, argc-1, &argv[1]);
 }
 
 /* disconnect the client at x_sock_fd */
@@ -551,7 +554,7 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
         return;
     }
     --client;/* zero based index*/
-    tcp_server_send_bytes(client, x, argc-1, &argv[1]);
+    tcpserver_send_bytes(client, x, argc-1, &argv[1]);
 }
 
 /* broadcasts a message to all connected clients */
@@ -563,7 +566,7 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
     {
         if(x->x_fd[client] >= 0)
         { /* socket exists for this client */
-            tcp_server_send_bytes(client, x, argc, argv);
+            tcpserver_send_bytes(client, x, argc, argv);
         }
     }
 }
