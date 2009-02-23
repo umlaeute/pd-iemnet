@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <sys/select.h>
 #define SOCKET_ERROR -1
 #else
 #include <winsock2.h>
@@ -286,7 +287,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     unsigned char   c;
     float           f, e;
     int             length;
-    size_t          flen;
+    size_t          flen = 0;
     int             sockfd = x->x_fd[client];
     char            fpath[FILENAME_MAX];
     FILE            *fptr;
@@ -382,7 +383,7 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
     FD_SET(sockfd, &wfds);
     timeout.tv_sec = 1; /* give it one second to clear buffer */
     timeout.tv_usec = 0;
-    result = select(1, NULL, &wfds, NULL, &timeout);
+    result = select(sockfd+1, NULL, &wfds, NULL, &timeout);
     if (result == -1)
     {
         post("%s_send_buf: select returned error %d", objName, errno);
