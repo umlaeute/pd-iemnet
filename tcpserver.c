@@ -82,6 +82,7 @@ typedef struct _tcpserver
     t_outlet                    *x_connectout;
     t_outlet                    *x_sockout;
     t_outlet                    *x_addrout;
+        t_outlet       *x_status_outlet;
     t_int                       x_dump; // 1 = hexdump received bytes
     t_symbol                    *x_host[MAX_CONNECT];
     t_int                       x_fd[MAX_CONNECT];
@@ -291,6 +292,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     int             sockfd = x->x_fd[client];
     char            fpath[FILENAME_MAX];
     FILE            *fptr;
+    t_atom          output_atom[2];
 
     /* process & send data */
     if(sockfd >= 0)
@@ -364,10 +366,13 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
         length = j;
         if (length > 0)
         {
-            tcpserver_send_buf(client, sockfd, byte_buf, length);
+            flen += tcpserver_send_buf(client, sockfd, byte_buf, length);
         }
     }
     else post("%s: not a valid socket number (%d)", objName, sockfd);
+    SETFLOAT(&output_atom[0], client+1);
+    SETFLOAT(&output_atom[1], flen);
+    outlet_anything( x->x_status_outlet, gensym("sent"), 2, output_atom);
 }
 
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length)
@@ -379,34 +384,32 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
     fd_set          wfds;
     struct timeval  timeout;
     
-    FD_ZERO(&wfds);
-    FD_SET(sockfd, &wfds);
-    timeout.tv_sec = 1; /* give it one second to clear buffer */
-    timeout.tv_usec = 0;
-    result = select(sockfd+1, NULL, &wfds, NULL, &timeout);
-    if (result == -1)
-    {
-        post("%s_send_buf: select returned error %d", objName, errno);
-        return sent;
-    }
-    if (!FD_ISSET(sockfd, &wfds))
-    {
-        post("%s_send_buf: client %d not writeable", objName, client+1);
-        return sent;
-    }
     for (bp = byte_buf, sent = 0; sent < length;)
     {
-        result = send(sockfd, byte_buf, (int)(length-sent), 0);
-        if (result <= 0)
+        FD_ZERO(&wfds);
+        FD_SET(sockfd, &wfds);
+        timeout.tv_sec = 0; /* give it no time to clear buffer */
+        timeout.tv_usec = 0;
+        result = select(sockfd+1, NULL, &wfds, NULL, &timeout);
+        if (result == -1)
         {
-            sys_sockerror("tcpserver: send");
-            post("%s_send_buf: could not send data to client %d", objName, client+1);
+            post("%s_send_buf: select returned error %d", objName, errno);
             break;
         }
-        else
+        if (FD_ISSET(sockfd, &wfds))
         {
-            sent += result;
-            bp += result;
+            result = send(sockfd, byte_buf, (int)(length-sent), 0);
+            if (result <= 0)
+            {
+                sys_sockerror("tcpserver: send");
+                post("%s_send_buf: could not send data to client %d", objName, client+1);
+                break;
+            }
+            else
+            {
+                sent += result;
+                bp += result;
+            }
         }
     }
     return sent;
@@ -418,7 +421,7 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
     int     i, sockfd;
     int     client = -1;
 
-    if(x->x_nconnections < 0)
+    if(x->x_nconnections <= 0)
     {
         post("%s_send: no clients connected", objName);
         return;
@@ -473,9 +476,11 @@ static void tcpserver_disconnect(t_tcpserver *x)
                 sys_rmpollfn(fd);
                 sys_closesocket(fd);
                 x->x_sock_fd = -1;
+                return;
             }
         }
     }
+    post("%s__disconnect: no connection on socket %d", objName, x->x_sock_fd);
 }
 
 /* disconnect a client by socket */
@@ -483,9 +488,9 @@ static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket)
 {
     int sock = (int)fsocket;
 
-    if(x->x_nconnections < 0)
+    if(x->x_nconnections <= 0)
     {
-        post("%s: no clients connected", objName);
+        post("%s_socket_disconnect: no clients connected", objName);
         return;
     }
     x->x_sock_fd = sock;
@@ -497,9 +502,9 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
 {
     int client = (int)fclient;
 
-    if(x->x_nconnections < 0)
+    if(x->x_nconnections <= 0)
     {
-        post("%s: no clients connected", objName);
+        post("%s_client_disconnect: no clients connected", objName);
         return;
     }
     if (!((client > 0) && (client < MAX_CONNECT)))
@@ -518,33 +523,57 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
 /* clients start at 1 but our index starts at 0 */
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-    int     client;
+    int     client = -1;
+    t_atom  output_atom[3];
 
-    if(x->x_nconnections < 0)
+    if(x->x_nconnections <= 0)
     {
-        post("%s: no clients connected", objName);
+        post("%s_client_send: no clients connected", objName);
         return;
     }
-    if(argc < 2)
+    if(argc > 0)
     {
-        post("%s: nothing to send", objName);
+        /* get number of client (first element in list) */
+        if(argv[0].a_type == A_FLOAT)
+            client = atom_getfloatarg(0, argc, argv);
+        else
+        {
+            post("%s_client_send: specify client by number", objName);
+            return;
+        }
+        if (!((client > 0) && (client < MAX_CONNECT)))
+        {
+            post("%s_client_send: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
+            return;
+        }
+    }
+    if (argc > 2)
+    {
+        --client;/* zero based index*/
+        tcpserver_send_bytes(client, x, argc-1, &argv[1]);
         return;
     }
-    /* get number of client (first element in list) */
-    if(argv[0].a_type == A_FLOAT)
-        client = atom_getfloatarg(0, argc, argv);
+    if (client == -1)
+    {
+        /* output parameters of all connections via status outlet */
+        for(client = 0; client < x->x_nconnections; client++)
+        {
+            SETFLOAT(&output_atom[0], client+1);
+            SETFLOAT(&output_atom[1], x->x_fd[client]);
+            output_atom[2].a_type = A_SYMBOL;
+            output_atom[2].a_w.w_symbol = x->x_host[client];
+            outlet_anything( x->x_status_outlet, gensym("client"), 3, output_atom);
+        }
+    }
     else
     {
-        post("%s: no client specified", objName);
-        return;
+        /* output client parameters via status outlet */
+        SETFLOAT(&output_atom[0], client);
+        SETFLOAT(&output_atom[1], x->x_fd[client-1]);
+        output_atom[2].a_type = A_SYMBOL;
+        output_atom[2].a_w.w_symbol = x->x_host[client-1];
+        outlet_anything( x->x_status_outlet, gensym("client"), 3, output_atom);
     }
-    if (!((client > 0) && (client < MAX_CONNECT)))
-    {
-        post("%s: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
-        return;
-    }
-    --client;/* zero based index*/
-    tcpserver_send_bytes(client, x, argc-1, &argv[1]);
 }
 
 /* broadcasts a message to all connected clients */
@@ -682,7 +711,7 @@ static void *tcpserver_new(t_floatarg fportno)
     }
     x = (t_tcpserver *)pd_new(tcpserver_class);
     x->x_msgout = outlet_new(&x->x_obj, &s_anything); /* 1st outlet for received data */
-    /* streaming protocol */
+   /* streaming protocol */
     if (listen(sockfd, 5) < 0)
     {
         sys_sockerror("tcpserver: listen");
@@ -695,6 +724,7 @@ static void *tcpserver_new(t_floatarg fportno)
         x->x_connectout = outlet_new(&x->x_obj, &s_float); /* 2nd outlet for number of connected clients */
         x->x_sockout = outlet_new(&x->x_obj, &s_float); /* 3rd outlet for socket number of current client */
         x->x_addrout = outlet_new(&x->x_obj, &s_list); /* 4th outlet for ip address of current client */
+        x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);/* 5th outlet for everything else */
     }
     x->x_connectsocket = sockfd;
     x->x_nconnections = 0;
