@@ -86,6 +86,7 @@ typedef struct _tcpserver
     t_int                       x_dump; // 1 = hexdump received bytes
     t_symbol                    *x_host[MAX_CONNECT];
     t_int                       x_fd[MAX_CONNECT];
+    t_int                       x_fdbuf[MAX_CONNECT];
     u_long                      x_addr[MAX_CONNECT];
     t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT];
     t_atom                      x_addrbytes[4];
@@ -105,6 +106,9 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
+static int tcpserver_get_socket_send_buf_size(int sockfd);
+static int tcpserver_set_socket_send_buf_size(int sockfd, int size);
+static void tcpserver_buf_size(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_disconnect(t_tcpserver *x);
 static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient);
 static void tcpserver_socket_disconnect(t_tcpserver *x, t_floatarg fsocket);
@@ -524,7 +528,7 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
     int     client = -1;
-    t_atom  output_atom[3];
+    t_atom  output_atom[4];
 
     if(x->x_nconnections <= 0)
     {
@@ -547,7 +551,7 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
             return;
         }
     }
-    if (argc > 2)
+    if (argc > 1)
     {
         --client;/* zero based index*/
         tcpserver_send_bytes(client, x, argc-1, &argv[1]);
@@ -558,22 +562,102 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
         /* output parameters of all connections via status outlet */
         for(client = 0; client < x->x_nconnections; client++)
         {
+            x->x_fdbuf[client] = tcpserver_get_socket_send_buf_size(x->x_fd[client]);
             SETFLOAT(&output_atom[0], client+1);
             SETFLOAT(&output_atom[1], x->x_fd[client]);
             output_atom[2].a_type = A_SYMBOL;
             output_atom[2].a_w.w_symbol = x->x_host[client];
-            outlet_anything( x->x_status_outlet, gensym("client"), 3, output_atom);
+            SETFLOAT(&output_atom[3], x->x_fdbuf[client]);
+            outlet_anything( x->x_status_outlet, gensym("client"), 4, output_atom);
         }
     }
     else
     {
+        client -= 1;/* zero-based client index conflicts with 1-based user index !!! */
         /* output client parameters via status outlet */
-        SETFLOAT(&output_atom[0], client);
-        SETFLOAT(&output_atom[1], x->x_fd[client-1]);
+        x->x_fdbuf[client] = tcpserver_get_socket_send_buf_size(x->x_fd[client]);
+        SETFLOAT(&output_atom[0], client+1);/* user sees client 0 as 1 */
+        SETFLOAT(&output_atom[1], x->x_fd[client]);
         output_atom[2].a_type = A_SYMBOL;
-        output_atom[2].a_w.w_symbol = x->x_host[client-1];
-        outlet_anything( x->x_status_outlet, gensym("client"), 3, output_atom);
+        output_atom[2].a_w.w_symbol = x->x_host[client];
+        SETFLOAT(&output_atom[3], x->x_fdbuf[client]);
+        outlet_anything( x->x_status_outlet, gensym("client"), 4, output_atom);
     }
+}
+
+/* Return the send buffer size of socket */
+static int tcpserver_get_socket_send_buf_size(int sockfd)
+{
+    int                 optVal = 0;
+    int                 optLen = sizeof(int);
+#ifdef MSW
+    if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
+        post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, WSAGetLastError());
+#else
+    if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == -1)
+        post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, errno);
+#endif
+    return  optVal;
+}
+
+/* Set the send buffer size of socket, returns actual size */
+static int tcpserver_set_socket_send_buf_size(int sockfd, int size)
+{
+    int                 optVal = size;
+    int                 optLen = sizeof(int);
+#ifdef MSW
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == SOCKET_ERROR)
+        post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, WSAGetLastError());
+#else
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == -1)
+        post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, errno);
+#endif
+    else return (tcpserver_get_socket_send_buf_size(sockfd));
+}
+
+/* Get/set the send buffer of client socket */
+static void tcpserver_buf_size(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+{
+    int     client = -1;
+    float   buf_size = 0;
+    t_atom  output_atom[3];
+
+    if(x->x_nconnections <= 0)
+    {
+        post("%s_buf_size: no clients connected", objName);
+        return;
+    }
+    /* get number of client (first element in list) */
+    if (argc > 0)
+    {
+        if (argv[0].a_type == A_FLOAT)
+            client = atom_getfloatarg(0, argc, argv);
+        else
+        {
+            post("%s_buf_size: specify client by number", objName);
+            return;
+        }
+        if (!((client > 0) && (client < MAX_CONNECT)))
+        {
+            post("%s__buf_size: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
+            return;
+        }
+    }
+    if (argc > 1)
+    {
+        if (argv[1].a_type != A_FLOAT)
+        {
+            post("%s_buf_size: specify buffer size with a float", objName);
+            return;
+        }
+        buf_size = atom_getfloatarg(1, argc, argv);
+        --client;/* zero based index*/
+        x->x_fdbuf[client] = tcpserver_set_socket_send_buf_size(x->x_fd[client], (int)buf_size);
+        post("%s_buf_size: client %d set to %d", objName, client+1, x->x_fdbuf[client]);
+        return;
+    }
+    post("%s_buf_size: specify client and buffer size", objName);
+    return;
 }
 
 /* broadcasts a message to all connected clients */
@@ -625,6 +709,8 @@ static void tcpserver_connectpoll(t_tcpserver *x)
     int                 sockaddrl = (int) sizeof( struct sockaddr );
     int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
     int                 i;
+    int                 optVal;
+    int                 optLen = sizeof(int);
 
     if (fd < 0) post("%s: accept failed", objName);
     else
@@ -648,6 +734,23 @@ static void tcpserver_connectpoll(t_tcpserver *x)
 		x->x_sr[i] = y;
         post("%s: accepted connection from %s on socket %d",
             objName, x->x_host[i]->s_name, x->x_fd[i]);
+/* see how big the send buffer is on this socket */
+        x->x_fdbuf[i] = 0;
+#ifdef MSW
+        if (getsockopt(x->x_fd[i], SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) != SOCKET_ERROR)
+        {
+            /* post("%s_connectpoll: send buffer is %ld\n", objName, optVal); */
+            x->x_fdbuf[i] = optVal;
+        }
+        else post("%s_connectpoll: getsockopt returned %d\n", objName, WSAGetLastError());
+#else
+        if (getsockopt(x->x_fd[i], SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == 0)
+        {
+            /* post("%s_connectpoll: send buffer is %ld\n", objName, optVal); */
+            x->x_fdbuf[i] = optVal;
+        }
+        else post("%s_connectpoll: getsockopt returned %d\n", objName, errno);
+#endif
         outlet_float(x->x_connectout, x->x_nconnections);
         outlet_float(x->x_sockout, x->x_fd[i]);	/* the socket number */
         x->x_addr[i] = ntohl(incomer_address.sin_addr.s_addr);
@@ -776,6 +879,7 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_print, gensym("print"), 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_send, gensym("send"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_send, gensym("client"), A_GIMME, 0);
+    class_addmethod(tcpserver_class, (t_method)tcpserver_buf_size, gensym("clientbuf"), A_GIMME, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_client_disconnect, gensym("disconnectclient"), A_DEFFLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_socket_disconnect, gensym("disconnectsocket"), A_DEFFLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_dump, gensym("dump"), A_FLOAT, 0);
