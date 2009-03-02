@@ -402,7 +402,7 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
         }
         if (FD_ISSET(sockfd, &wfds))
         {
-            result = send(sockfd, byte_buf, (int)(length-sent), 0);
+            result = send(sockfd, bp, 1, 0);/*(sockfd, bp, (int)(length-sent), 0);*/
             if (result <= 0)
             {
                 sys_sockerror("tcpserver: send");
