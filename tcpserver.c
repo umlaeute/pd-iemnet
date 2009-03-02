@@ -415,6 +415,7 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
                 bp += result;
             }
         }
+        else return sent;/* abandon any further attempts to send so we don't block */
     }
     return sent;
 }
@@ -607,11 +608,15 @@ static int tcpserver_set_socket_send_buf_size(int sockfd, int size)
     int                 optLen = sizeof(int);
 #ifdef MSW
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == SOCKET_ERROR)
+    {
         post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, WSAGetLastError());
 #else
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == -1)
+    {
         post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, errno);
 #endif
+        return 0;
+    }
     else return (tcpserver_get_socket_send_buf_size(sockfd));
 }
 
