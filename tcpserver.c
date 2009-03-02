@@ -590,7 +590,7 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 static int tcpserver_get_socket_send_buf_size(int sockfd)
 {
     int                 optVal = 0;
-    int                 optLen = sizeof(int);
+    unsigned int        optLen = sizeof(int);
 #ifdef MSW
     if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
         post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, WSAGetLastError());
@@ -711,11 +711,11 @@ static void tcpserver_notify(t_tcpserver *x)
 static void tcpserver_connectpoll(t_tcpserver *x)
 {
     struct sockaddr_in  incomer_address;
-    int                 sockaddrl = (int) sizeof( struct sockaddr );
+    unsigned int        sockaddrl = sizeof( struct sockaddr );
     int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
     int                 i;
     int                 optVal;
-    int                 optLen = sizeof(int);
+    unsigned int        optLen = sizeof(int);
 
     if (fd < 0) post("%s: accept failed", objName);
     else
