@@ -63,9 +63,11 @@ typedef struct _tcpclient
     t_clock         *x_poll;
     t_outlet        *x_msgout;
     t_outlet        *x_addrout;
-    t_outlet        *x_outconnect;
+    t_outlet        *x_connectout;
+    t_outlet        *x_statusout;
     int             x_dump; // 1 = hexdump received bytes
     int             x_fd; // the socket
+    int             x_fdbuf; // the socket's buffer size
     char            *x_hostname; // address we want to connect to as text
     int             x_connectstate; // 0 = not connected, 1 = connected
     int             x_port; // port we're connected to
@@ -85,6 +87,10 @@ static void *tcpclient_child_connect(void *w);
 static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fportno);
 static void tcpclient_disconnect(t_tcpclient *x);
 static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv);
+int tcpclient_send_byte(t_tcpclient *x, char byte);
+static int tcpclient_get_socket_send_buf_size(t_tcpclient *x);
+static int tcpclient_set_socket_send_buf_size(t_tcpclient *x, int size);
+static void tcpclient_buf_size(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpclient_rcv(t_tcpclient *x);
 static void tcpclient_poll(t_tcpclient *x);
 static void *tcpclient_new(t_floatarg udpflag);
@@ -126,7 +132,7 @@ static void tcp_client_hexdump(unsigned char *buf, long len)
 
 static void tcpclient_tick(t_tcpclient *x)
 {
-    outlet_float(x->x_outconnect, 1);
+    outlet_float(x->x_connectout, 1);
 }
 
 static void *tcpclient_child_connect(void *w)
@@ -202,7 +208,7 @@ static void tcpclient_disconnect(t_tcpclient *x)
         sys_closesocket(x->x_fd);
         x->x_fd = -1;
         x->x_connectstate = 0;
-        outlet_float(x->x_outconnect, 0);
+        outlet_float(x->x_connectout, 0);
         post("%s: disconnected", objName);
     }
     else post("%s: not connected", objName);
@@ -210,27 +216,29 @@ static void tcpclient_disconnect(t_tcpclient *x)
 
 static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
 {
-#define BYTE_BUF_LEN 65536 // arbitrary maximum similar to max IP packet size
-    static char    byte_buf[BYTE_BUF_LEN];
-    int            i, j, d;
-    unsigned char  c;
-    float          f, e;
-    char           *bp;
-    int            length, sent;
-    int            result;
-    static double  lastwarntime;
-    static double  pleasewarn;
-    double         timebefore;
-    double         timeafter;
-    int            late;
-    char           fpath[FILENAME_MAX];
-    FILE           *fptr;
+//#define BYTE_BUF_LEN 65536 // arbitrary maximum similar to max IP packet size
+//    static char     byte_buf[BYTE_BUF_LEN];
+    int             i, j, d;
+    unsigned char   c;
+    float           f, e;
+    char            *bp;
+    int             length;
+    size_t          sent;
+    int             result;
+    char            fpath[FILENAME_MAX];
+    FILE            *fptr;
+    t_atom          output_atom;
 
 #ifdef DEBUG
     post("s: %s", s->s_name);
     post("argc: %d", argc);
 #endif
 
+    if (x->x_fd < 0)
+    {
+        error("%s: not connected", objName);
+        return;
+    }
     for (i = j = 0; i < argc; ++i)
     {
         if (argv[i].a_type == A_FLOAT)
@@ -238,9 +246,6 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
             f = argv[i].a_w.w_float;
             d = (int)f;
             e = f - d;
-#ifdef DEBUG
-                post("%s: argv[%d]: float:%f int:%d delta:%f", objName, i, f, d, e);
-#endif
             if (e != 0)
             {
                 error("%s_send: item %d (%f) is not an integer", objName, i, f);
@@ -252,18 +257,13 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
                 return;
             }
             c = (unsigned char)d;
-#ifdef DEBUG
-            post("%s_send: argv[%d]: %d", objName, i, c);
-#endif
-            byte_buf[j++] = c;
+            if (0 == tcpclient_send_byte(x, c)) break;
+            ++j;
         }
         else if (argv[i].a_type == A_SYMBOL)
         {
 
             atom_string(&argv[i], fpath, FILENAME_MAX);
-#ifdef DEBUG
-            post ("%s_send fname: %s", objName, fpath);
-#endif
             fptr = fopen(fpath, "rb");
             if (fptr == NULL)
             {
@@ -271,66 +271,120 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
                 return;
             }
             rewind(fptr);
-#ifdef DEBUG
-            post("%s_send: d is %d", objName, d);
-#endif
             while ((d = fgetc(fptr)) != EOF)
             {
-                byte_buf[j++] = (char)(d & 0x0FF);
-#ifdef DEBUG
-                post("%s_send: byte_buf[%d] = %d", objName, j-1, byte_buf[j-1]);
-#endif
-                if (j >= BYTE_BUF_LEN)
-                {
-                    post ("%s_send: file too long, truncating at %lu", objName, BYTE_BUF_LEN);
-                    break;
-                }
+                c = (char)(d & 0x0FF);
+                if (0 == tcpclient_send_byte(x, c)) break;
+                ++j;
             }
             fclose(fptr);
             fptr = NULL;
             post("%s_send: read \"%s\" length %d byte%s", objName, fpath, j, ((d==1)?"":"s"));
         }
         else
-	    {
+        {
             error("%s_send: item %d is not a float or a file name", objName, i);
             return;
         }
     }
+    sent = j;
+    SETFLOAT(&output_atom, sent);
+    outlet_anything( x->x_statusout, gensym("sent"), 1, &output_atom);
+}
 
-    length = j;
-    if ((x->x_fd >= 0) && (length > 0))
+int tcpclient_send_byte(t_tcpclient *x, char byte)
+{
+    int             result = 0;
+    fd_set          wfds;
+    struct timeval  timeout;
+
+    FD_ZERO(&wfds);
+    FD_SET(x->x_fd, &wfds);
+    timeout.tv_sec = 0; /* give it no time to clear buffer */
+    timeout.tv_usec = 0;
+    result = select(x->x_fd+1, NULL, &wfds, NULL, &timeout);
+    if (result == -1)
     {
-        for (bp = byte_buf, sent = 0; sent < length;)
+        post("%s_send_byte: select returned error %d", objName, errno);
+        return 0;
+    }
+    if (FD_ISSET(x->x_fd, &wfds))
+    {
+        result = send(x->x_fd, &byte, 1, 0);
+        if (result <= 0)
         {
-            timebefore = sys_getrealtime();
-            result = send(x->x_fd, byte_buf, length-sent, 0);
-            timeafter = sys_getrealtime();
-            late = (timeafter - timebefore > 0.005);
-            if (late || pleasewarn)
-            {
-                if (timeafter > lastwarntime + 2)
-                {
-                    post("%s_send blocked %d msec", objName,
-                        (int)(1000 * ((timeafter - timebefore) + pleasewarn)));
-                    pleasewarn = 0;
-                    lastwarntime = timeafter;
-                }
-                else if (late) pleasewarn += timeafter - timebefore;
-            }
-            if (result <= 0)
-            {
-                sys_sockerror("tcpclient_send");
-                tcpclient_disconnect(x);
-                break;
-            }
-            else
-            {
-                sent += result;
-                bp += result;
-            }
+           sys_sockerror("tcpclient: send");
+           post("%s_send_byte: could not send data ", objName);
+           return 0;
         }
     }
-    else error("%s: not connected", objName);
+    return result;
+}
+
+/* Return the send buffer size of socket, also output it on status outlet */
+static int tcpclient_get_socket_send_buf_size(t_tcpclient *x)
+{
+    int                 optVal = 0;
+    int                 optLen = sizeof(int);
+    t_atom              output_atom;
+#ifdef MSW
+    if (getsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
+        post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, WSAGetLastError());
+#else
+    if (getsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == -1)
+        post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, errno);
+#endif
+    SETFLOAT(&output_atom, optVal);
+    outlet_anything( x->x_statusout, gensym("buf"), 1, &output_atom);
+    return  optVal;
+}
+
+/* Set the send buffer size of socket, returns actual size */
+static int tcpclient_set_socket_send_buf_size(t_tcpclient *x, int size)
+{
+    int optVal = size;
+    int optLen = sizeof(int);
+#ifdef MSW
+    if (setsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == SOCKET_ERROR)
+    {
+        post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, WSAGetLastError());
+#else
+    if (setsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == -1)
+    {
+        post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, errno);
+#endif
+        return 0;
+    }
+    else return (tcpclient_get_socket_send_buf_size(x));
+}
+
+/* Get/set the send buffer size of client socket */
+static void tcpclient_buf_size(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
+{
+    int     client = -1;
+    float   buf_size = 0;
+    t_atom  output_atom[3];
+
+    if(x->x_connectstate == 0)
+    {
+        post("%s_buf_size: no clients connected", objName);
+        return;
+    }
+    /* get size of buffer (first element in list) */
+    if (argc > 0)
+    {
+        if (argv[0].a_type != A_FLOAT)
+        {
+            post("%s_buf_size: specify buffer size with a float", objName);
+            return;
+        }
+        buf_size = atom_getfloatarg(0, argc, argv);
+        x->x_fdbuf = tcpclient_set_socket_send_buf_size(x, (int)buf_size);
+        post("%s_buf_size: set to %d", objName, x->x_fdbuf);
+        return;
+    }
+    x->x_fdbuf = tcpclient_get_socket_send_buf_size(x);
+    return;
 }
 
 static void tcpclient_rcv(t_tcpclient *x)
@@ -418,7 +472,8 @@ static void *tcpclient_new(t_floatarg udpflag)
     t_tcpclient *x = (t_tcpclient *)pd_new(tcpclient_class);
     x->x_msgout = outlet_new(&x->x_obj, &s_anything);	/* received data */
     x->x_addrout = outlet_new(&x->x_obj, &s_list);
-    x->x_outconnect = outlet_new(&x->x_obj, &s_float);	/* connection state */
+    x->x_connectout = outlet_new(&x->x_obj, &s_float);	/* connection state */
+    x->x_statusout = outlet_new(&x->x_obj, &s_anything);/* last outlet for everything else */
     x->x_clock = clock_new(x, (t_method)tcpclient_tick);
     x->x_poll = clock_new(x, (t_method)tcpclient_poll);
     x->x_fd = -1;
@@ -459,6 +514,7 @@ void tcpclient_setup(void)
         , A_SYMBOL, A_FLOAT, 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_disconnect, gensym("disconnect"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"), A_GIMME, 0);
+    class_addmethod(tcpclient_class, (t_method)tcpclient_buf_size, gensym("buf"), A_GIMME, 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("receive"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("rcv"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_dump, gensym("dump"), A_FLOAT, 0);
