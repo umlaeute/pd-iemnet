@@ -106,6 +106,7 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
+static void tcpserver_output_client_state(t_tcpserver *x, int client);
 static int tcpserver_get_socket_send_buf_size(int sockfd);
 static int tcpserver_set_socket_send_buf_size(int sockfd, int size);
 static void tcpserver_buf_size(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
@@ -296,7 +297,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     int             sockfd = x->x_fd[client];
     char            fpath[FILENAME_MAX];
     FILE            *fptr;
-    t_atom          output_atom[2];
+    t_atom          output_atom[3];
 
     /* process & send data */
     if(sockfd >= 0)
@@ -376,7 +377,8 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     else post("%s: not a valid socket number (%d)", objName, sockfd);
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], flen);
-    outlet_anything( x->x_status_outlet, gensym("sent"), 2, output_atom);
+    SETFLOAT(&output_atom[2], sockfd);
+    outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
 }
 
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length)
@@ -431,20 +433,20 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
         post("%s_send: no clients connected", objName);
         return;
     }
-    if(argc < 2)
+    if(argc == 0) /* no socket specified: output state of all sockets */
     {
-        post("%s_send: nothing to send", objName);
+        tcpserver_output_client_state(x, client);
         return;
     }
     /* get socket number of connection (first element in list) */
     if(argv[0].a_type == A_FLOAT)
     {
         sockfd = atom_getfloatarg(0, argc, argv);
-        for(i = 0; i < x->x_nconnections; i++)	/* check if connection exists */
+        for(i = 0; i < x->x_nconnections; i++) /* check if connection exists */
         {
             if(x->x_fd[i] == sockfd)
             {
-                client = i;	/* the client we're sending to */
+                client = i; /* the client we're sending to */
                 break;
             }
         }
@@ -457,6 +459,11 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
     else
     {
         post("%s_send: no socket specified", objName);
+        return;
+    }
+    if (argc < 2) /* nothing to send: output state of this socket */
+    {
+        tcpserver_output_client_state(x, client+1);
         return;
     }
     tcpserver_send_bytes(client, x, argc-1, &argv[1]);
@@ -529,7 +536,6 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
     int     client = -1;
-    t_atom  output_atom[4];
 
     if(x->x_nconnections <= 0)
     {
@@ -558,6 +564,13 @@ static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom 
         tcpserver_send_bytes(client, x, argc-1, &argv[1]);
         return;
     }
+    tcpserver_output_client_state(x, client);
+}
+
+static void tcpserver_output_client_state(t_tcpserver *x, int client)
+{
+    t_atom  output_atom[4];
+
     if (client == -1)
     {
         /* output parameters of all connections via status outlet */
