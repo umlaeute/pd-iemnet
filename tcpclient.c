@@ -68,6 +68,7 @@ typedef struct _tcpclient
     int             x_dump; // 1 = hexdump received bytes
     int             x_fd; // the socket
     int             x_fdbuf; // the socket's buffer size
+    t_int           x_timeout_us; /* send timeout in microseconds */
     char            *x_hostname; // address we want to connect to as text
     int             x_connectstate; // 0 = not connected, 1 = connected
     int             x_port; // port we're connected to
@@ -80,6 +81,7 @@ typedef struct _tcpclient
     pthread_attr_t  x_threadattr; /* attributes of child thread */
 } t_tcpclient;
 
+static void tcpclient_timeout(t_tcpclient *x, t_float timeout);
 static void tcpclient_dump(t_tcpclient *x, t_float dump);
 static void tcp_client_hexdump(unsigned char *buf, long len);
 static void tcpclient_tick(t_tcpclient *x);
@@ -96,6 +98,20 @@ static void tcpclient_poll(t_tcpclient *x);
 static void *tcpclient_new(t_floatarg udpflag);
 static void tcpclient_free(t_tcpclient *x);
 void tcpclient_setup(void);
+
+static void tcpclient_timeout(t_tcpclient *x, t_float timeout)
+{
+    /* set the timeout on the select call in tcpclient_send_byte */
+    /* this is the maximum time in microseconds to wait */
+    /* before abandoning attempt to send */
+
+    t_int timeout_us = 0;
+    if ((timeout >= 0)&&(timeout < 1000000))
+    {
+        timeout_us = (t_int)timeout;
+        x->x_timeout_us = timeout_us;
+    }
+}
 
 static void tcpclient_dump(t_tcpclient *x, t_float dump)
 {
@@ -300,8 +316,8 @@ int tcpclient_send_byte(t_tcpclient *x, char byte)
 
     FD_ZERO(&wfds);
     FD_SET(x->x_fd, &wfds);
-    timeout.tv_sec = 0; /* give it no time to clear buffer */
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0; 
+    timeout.tv_usec = x->x_timeout_us; /* give it about a millisecond to clear buffer */
     result = select(x->x_fd+1, NULL, &wfds, NULL, &timeout);
     if (result == -1)
     {
@@ -518,6 +534,7 @@ void tcpclient_setup(void)
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("receive"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("rcv"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_dump, gensym("dump"), A_FLOAT, 0);
+    class_addmethod(tcpclient_class, (t_method)tcpclient_timeout, gensym("timeout"), A_FLOAT, 0);
     class_addlist(tcpclient_class, (t_method)tcpclient_send);
 }
 
