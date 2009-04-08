@@ -82,7 +82,7 @@ typedef struct _tcpserver
     t_outlet                    *x_connectout;
     t_outlet                    *x_sockout;
     t_outlet                    *x_addrout;
-        t_outlet       *x_status_outlet;
+    t_outlet                    *x_status_outlet;
     t_int                       x_dump; // 1 = hexdump received bytes
     t_symbol                    *x_host[MAX_CONNECT];
     t_int                       x_fd[MAX_CONNECT];
@@ -93,6 +93,7 @@ typedef struct _tcpserver
     t_int                       x_sock_fd;
     t_int                       x_connectsocket;
     t_int                       x_nconnections;
+    t_int                       x_timeout_us;
     t_atom                      x_msgoutbuf[MAX_UDP_RECEIVE];
     char                        x_msginbuf[MAX_UDP_RECEIVE];
 } t_tcpserver;
@@ -104,7 +105,7 @@ static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd)
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
-static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length);
+static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length, t_int timeout_us);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_output_client_state(t_tcpserver *x, int client);
 static int tcpserver_get_socket_send_buf_size(int sockfd);
@@ -121,7 +122,22 @@ static void *tcpserver_new(t_floatarg fportno);
 static void tcpserver_free(t_tcpserver *x);
 void tcpserver_setup(void);
 static void tcpserver_dump(t_tcpserver *x, t_float dump);
+static void tcpserver_timeout(t_tcpserver *x, t_float timeout);
 static void tcpserver_hexdump(unsigned char *buf, long len);
+
+static void tcpserver_timeout(t_tcpserver *x, t_float timeout)
+{
+    /* set the timeout on the select call in tcpserver_send_buf */
+    /* this is the maximum time in microseconds to wait */
+    /* before abandoning attempt to send */
+
+    t_int timeout_us = 0;
+    if ((timeout >= 0)&&(timeout < 1000000))
+    {
+        timeout_us = (t_int)timeout;
+        x->x_timeout_us = timeout_us;
+    }
+}
 
 static void tcpserver_dump(t_tcpserver *x, t_float dump)
 {
@@ -353,7 +369,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
 #endif
                     if (j >= MAX_UDP_RECEIVE)
                     {
-                        flen += tcpserver_send_buf(client, sockfd, byte_buf, j);
+                        flen += tcpserver_send_buf(client, sockfd, byte_buf, j, x->x_timeout_us);
                         j = 0;
                     }
                 }
@@ -371,7 +387,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
         length = j;
         if (length > 0)
         {
-            flen += tcpserver_send_buf(client, sockfd, byte_buf, length);
+            flen += tcpserver_send_buf(client, sockfd, byte_buf, length, x->x_timeout_us);
         }
     }
     else post("%s: not a valid socket number (%d)", objName, sockfd);
@@ -381,7 +397,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
 }
 
-static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length)
+static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length, t_int timeout_us)
 {
     char            *bp;
     size_t          sent = 0;
@@ -394,8 +410,8 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
     {
         FD_ZERO(&wfds);
         FD_SET(sockfd, &wfds);
-        timeout.tv_sec = 0; /* give it no time to clear buffer */
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = timeout_us; /* give it a short time to clear buffer */
         result = select(sockfd+1, NULL, &wfds, NULL, &timeout);
         if (result == -1)
         {
@@ -417,7 +433,11 @@ static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t 
                 bp += result;
             }
         }
-        else return sent;/* abandon any further attempts to send so we don't block */
+        else
+        {
+            post ("%s_send_buf: can't send right now, sent %lu of %lu", objName, sent, length);
+            return sent;/* abandon any further attempts to send so we don't block */
+        }
     }
     return sent;
 }
@@ -865,7 +885,7 @@ static void *tcpserver_new(t_floatarg fportno)
         x->x_addrbytes[i].a_type = A_FLOAT;
         x->x_addrbytes[i].a_w.w_float = 0;
     }
-
+    x->x_timeout_us = 1000;/* default 1 ms for select call timeout when sending */
     return (x);
 }
 
@@ -902,6 +922,7 @@ void tcpserver_setup(void)
     class_addmethod(tcpserver_class, (t_method)tcpserver_socket_disconnect, gensym("disconnectsocket"), A_DEFFLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_dump, gensym("dump"), A_FLOAT, 0);
     class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
+    class_addmethod(tcpserver_class, (t_method)tcpserver_timeout, gensym("timeout"), A_FLOAT, 0);
     class_addlist(tcpserver_class, (t_method)tcpserver_send);
 }
 
