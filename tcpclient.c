@@ -505,6 +505,7 @@ static void *tcpclient_new(t_floatarg udpflag)
         x->x_addrbytes[i].a_w.w_float = 0;
     }
     x->x_addr = 0L;
+    x->x_timeout_us = 1000; /* set a default 1ms send timeout */
     /* prepare child thread */
     if(pthread_attr_init(&x->x_threadattr) < 0)
         post("%s: warning: could not prepare child thread", objName);
