@@ -33,6 +33,7 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#include <pthread.h>
 #if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -75,6 +76,15 @@ typedef struct _tcpserver_socketreceiver
     t_tcpserver_socketreceivefn sr_socketreceivefn;
 } t_tcpserver_socketreceiver;
 
+typedef struct _tcpserver_send_params
+{
+    int     client;
+    int     sockfd;
+    char    *byte_buf;
+    size_t  length;
+    t_int   timeout_us;
+} t_tcpserver_send_params;
+
 typedef struct _tcpserver
 {
     t_object                    x_obj;
@@ -105,6 +115,7 @@ static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd)
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
+static void *tcpserver_send_buf_thread(void *arg);
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length, t_int timeout_us);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_output_client_state(t_tcpserver *x, int client);
@@ -304,16 +315,19 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 
 static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *argv)
 {
-    static char     byte_buf[MAX_UDP_RECEIVE];// arbitrary maximum similar to max IP packet size
-    int             i, j, d;
-    unsigned char   c;
-    float           f, e;
-    int             length;
-    size_t          flen = 0;
-    int             sockfd = x->x_fd[client];
-    char            fpath[FILENAME_MAX];
-    FILE            *fptr;
-    t_atom          output_atom[3];
+    static char             byte_buf[MAX_UDP_RECEIVE];// arbitrary maximum similar to max IP packet size
+    int                     i, j, d;
+    unsigned char           c;
+    float                   f, e;
+    int                     length;
+    size_t                  flen = 0;
+    int                     sockfd = x->x_fd[client];
+    char                    fpath[FILENAME_MAX];
+    FILE                    *fptr;
+    t_atom                  output_atom[3];
+    t_tcpserver_send_params *ttsp;
+    pthread_t               sender_thread;
+    int                     sender_thread_result;
 
     /* process & send data */
     if(sockfd >= 0)
@@ -387,6 +401,18 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
         length = j;
         if (length > 0)
         {
+            ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
+            if (ttsp == NULL)
+            {
+                error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
+                return;
+            }
+            ttsp->client = client;
+            ttsp->sockfd = sockfd;
+            ttsp->byte_buf = byte_buf;
+            ttsp->length = length;
+            ttsp->timeout_us = x->x_timeout_us;
+            sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
             flen += tcpserver_send_buf(client, sockfd, byte_buf, length, x->x_timeout_us);
         }
     }
@@ -397,11 +423,27 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
 }
 
+// send a buffer in its own thread
+static void *tcpserver_send_buf_thread(void *arg)
+{
+    t_tcpserver_send_params *ttsp = (t_tcpserver_send_params *)arg;
+    int                     result;
+    
+    result = send(ttsp->sockfd, ttsp->byte_buf, ttsp->length, 0);
+    if (result <= 0)
+    {
+        sys_sockerror("tcpserver: send");
+        post("%s_send_buf: could not send data to client %d", objName, ttsp->client+1);
+    }
+    freebytes (arg, sizeof (t_tcpserver_send_params));
+    return NULL;
+}
+
+// send a buffer one byte at a time, no thread
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length, t_int timeout_us)
 {
     char            *bp;
     size_t          sent = 0;
-    double          timebefore;
     int             result;
     fd_set          wfds;
     struct timeval  timeout;
