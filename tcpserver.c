@@ -335,7 +335,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
         for (i = j = 0; i < argc; ++i)
         {
             if (argv[i].a_type == A_FLOAT)
-            {
+            { /* load floats into buffer as long as they are integers on [0..255]*/
                 f = argv[i].a_w.w_float;
                 d = (int)f;
                 e = f - d;
@@ -357,9 +357,26 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 post("%s: argv[%d]: %d", objName, i, c);
 #endif
                 byte_buf[j++] = c;
+                if (j >= MAX_UDP_RECEIVE)
+                { /* if the argument list is longer than our buffer, send the buffer whenever it's full */
+                    ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
+                    if (ttsp == NULL)
+                    {
+                        error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
+                        return;
+                    }
+                    ttsp->client = client;
+                    ttsp->sockfd = sockfd;
+                    ttsp->byte_buf = byte_buf;
+                    ttsp->length = j;
+                    ttsp->timeout_us = x->x_timeout_us;
+                    sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
+                    flen += j;
+                    j = 0;
+                }
             }
             else if (argv[i].a_type == A_SYMBOL)
-            {
+            { /* symbols are interpreted to be file names; attempt to load the file and send it */
 
                 atom_string(&argv[i], fpath, FILENAME_MAX);
 #ifdef DEBUG
@@ -382,8 +399,21 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                     post("%s: byte_buf[%d] = %d", objName, j-1, byte_buf[j-1]);
 #endif
                     if (j >= MAX_UDP_RECEIVE)
-                    {
-                        flen += tcpserver_send_buf(client, sockfd, byte_buf, j, x->x_timeout_us);
+                    { /* if the file is longer than our buffer, send the buffer whenever it's full */
+                        /* this might be better than allocating huge amounts of memory */
+                        ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
+                        if (ttsp == NULL)
+                        {
+                            error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
+                            return;
+                        }
+                        ttsp->client = client;
+                        ttsp->sockfd = sockfd;
+                        ttsp->byte_buf = byte_buf;
+                        ttsp->length = j;
+                        ttsp->timeout_us = x->x_timeout_us;
+                        sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
+                        flen += j;
                         j = 0;
                     }
                 }
@@ -393,14 +423,14 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 post("%s: read \"%s\" length %d byte%s", objName, fpath, flen, ((d==1)?"":"s"));
             }
             else
-            {
+            { /* arg was neither a float nor a valid file name */
                 error("%s: item %d is not a float or a file name", objName, i);
                 return;
             }
         }
         length = j;
         if (length > 0)
-        {
+        { /* send whatever remains in our buffer */
             ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
             if (ttsp == NULL)
             {
@@ -413,7 +443,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
             ttsp->length = length;
             ttsp->timeout_us = x->x_timeout_us;
             sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
-            flen += tcpserver_send_buf(client, sockfd, byte_buf, length, x->x_timeout_us);
+            flen += length;
         }
     }
     else post("%s: not a valid socket number (%d)", objName, sockfd);
