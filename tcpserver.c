@@ -327,11 +327,23 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     t_atom                  output_atom[3];
     t_tcpserver_send_params *ttsp;
     pthread_t               sender_thread;
+    pthread_attr_t          sender_attr;
     int                     sender_thread_result;
 
     /* process & send data */
     if(sockfd >= 0)
     {
+        /* sender thread should start out detached so its resouces will be freed when it is done */
+        if (0!= (sender_thread_result = pthread_attr_init(&sender_attr)))
+        {
+            error("%s: pthread_attr_init failed: %d", objName, sender_thread_result);
+            goto failed;
+        }
+        if(0!= (sender_thread_result = pthread_attr_setdetachstate(&sender_attr, PTHREAD_CREATE_DETACHED)))
+        {
+            error("%s: pthread_attr_setdetachstate failed: %d", objName, sender_thread_result);
+            goto failed;
+        }
         for (i = j = 0; i < argc; ++i)
         {
             if (argv[i].a_type == A_FLOAT)
@@ -370,7 +382,11 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                     ttsp->byte_buf = byte_buf;
                     ttsp->length = j;
                     ttsp->timeout_us = x->x_timeout_us;
-                    sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
+                    if(0 != (sender_thread_result = pthread_create(&sender_thread, &sender_attr, tcpserver_send_buf_thread, (void *)ttsp)))
+                    {
+                        error("%s: couldn't create sender thread (%d)", objName, sender_thread_result);
+                        goto failed;
+                    }
                     flen += j;
                     j = 0;
                 }
@@ -385,7 +401,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 fptr = fopen(fpath, "rb");
                 if (fptr == NULL)
                 {
-                    post("%s: unable to open \"%s\"", objName, fpath);
+                    error("%s: unable to open \"%s\"", objName, fpath);
                     return;
                 }
                 rewind(fptr);
@@ -412,7 +428,11 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                         ttsp->byte_buf = byte_buf;
                         ttsp->length = j;
                         ttsp->timeout_us = x->x_timeout_us;
-                        sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
+                        if ( 0!= (sender_thread_result = pthread_create(&sender_thread, &sender_attr, tcpserver_send_buf_thread, (void *)ttsp)))
+                        {
+                            error("%s: couldn't create sender thread (%d)", objName, sender_thread_result);
+                            goto failed;
+                        }
                         flen += j;
                         j = 0;
                     }
@@ -442,11 +462,16 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
             ttsp->byte_buf = byte_buf;
             ttsp->length = length;
             ttsp->timeout_us = x->x_timeout_us;
-            sender_thread_result = pthread_create(&sender_thread, NULL, tcpserver_send_buf_thread, (void *)ttsp);
+            if ( 0!= (sender_thread_result = pthread_create(&sender_thread, &sender_attr, tcpserver_send_buf_thread, (void *)ttsp)))
+            {
+                error("%s: couldn't create sender thread (%d)", objName, sender_thread_result);
+                goto failed;
+            }
             flen += length;
         }
     }
     else post("%s: not a valid socket number (%d)", objName, sockfd);
+failed:
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], flen);
     SETFLOAT(&output_atom[2], sockfd);
