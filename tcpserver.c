@@ -50,6 +50,11 @@
 #include <winsock2.h>
 #endif
 
+#ifdef __linux__
+/* The SIOCOUTQ ioctl call is in here */
+#include <linux/sockios.h>
+#endif // __linux__
+
 #ifdef _MSC_VER
 #define snprintf sprintf_s
 #endif
@@ -115,6 +120,9 @@ static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd)
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
 static void tcpserver_send_bytes(int sockfd, t_tcpserver *x, int argc, t_atom *argv);
+#ifdef SIOCOUTQ
+static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client);
+#endif
 static void *tcpserver_send_buf_thread(void *arg);
 static size_t tcpserver_send_buf(int client, int sockfd, char *byte_buf, size_t length, t_int timeout_us);
 static void tcpserver_client_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
@@ -357,12 +365,12 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 if (e != 0)
                 {
                     error("%s: item %d (%f) is not an integer", objName, i, f);
-                    return;
+                    goto failed;
                 }
                 if ((d < 0) || (d > 255))
                 {
                     error("%s: item %d (%f) is not between 0 and 255", objName, i, f);
-                    return;
+                    goto failed;
                 }
                 c = (unsigned char)d; /* make sure it doesn't become negative; this only matters for post() */
 #ifdef DEBUG
@@ -371,18 +379,25 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 byte_buf[j++] = c;
                 if (j >= MAX_UDP_RECEIVE)
                 { /* if the argument list is longer than our buffer, send the buffer whenever it's full */
+#ifdef SIOCOUTQ
+                    if (tcpserver_send_buffer_avaliable_for_client(x, client) < j)
+                    {
+                        error("%s: buffer too small for client(%d)", objName, client);
+                        goto failed;
+                    }
+#endif // SIOCOUTQ
                     ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
                     if (ttsp == NULL)
                     {
                         error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
-                        return;
+                        goto failed;
                     }
                     ttsp->client = client;
                     ttsp->sockfd = sockfd;
                     ttsp->byte_buf = byte_buf;
                     ttsp->length = j;
                     ttsp->timeout_us = x->x_timeout_us;
-                    if(0 != (sender_thread_result = pthread_create(&sender_thread, &sender_attr, tcpserver_send_buf_thread, (void *)ttsp)))
+                    if (0 != (sender_thread_result = pthread_create(&sender_thread, &sender_attr, tcpserver_send_buf_thread, (void *)ttsp)))
                     {
                         error("%s: couldn't create sender thread (%d)", objName, sender_thread_result);
                         goto failed;
@@ -402,7 +417,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                 if (fptr == NULL)
                 {
                     error("%s: unable to open \"%s\"", objName, fpath);
-                    return;
+                    goto failed;
                 }
                 rewind(fptr);
 #ifdef DEBUG
@@ -417,11 +432,18 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
                     if (j >= MAX_UDP_RECEIVE)
                     { /* if the file is longer than our buffer, send the buffer whenever it's full */
                         /* this might be better than allocating huge amounts of memory */
+#ifdef SIOCOUTQ
+                        if (tcpserver_send_buffer_avaliable_for_client(x, client) < j)
+                        {
+                            error("%s: buffer too small for client(%d)", objName, client);
+                            goto failed;
+                        }
+#endif // SIOCOUTQ
                         ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
                         if (ttsp == NULL)
                         {
                             error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
-                            return;
+                            goto failed;
                         }
                         ttsp->client = client;
                         ttsp->sockfd = sockfd;
@@ -445,17 +467,24 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
             else
             { /* arg was neither a float nor a valid file name */
                 error("%s: item %d is not a float or a file name", objName, i);
-                return;
+                goto failed;
             }
         }
         length = j;
         if (length > 0)
         { /* send whatever remains in our buffer */
+#ifdef SIOCOUTQ
+            if (tcpserver_send_buffer_avaliable_for_client(x, client) < length)
+            {
+                error("%s: buffer too small for client(%d)", objName, client);
+                goto failed;
+            }
+#endif // SIOCOUTQ
             ttsp = (t_tcpserver_send_params *)getbytes(sizeof(t_tcpserver_send_params));
             if (ttsp == NULL)
             {
                 error("%s: unable to allocate %d bytes for t_tcpserver_send_params", objName, sizeof(t_tcpserver_send_params));
-                return;
+                goto failed;
             }
             ttsp->client = client;
             ttsp->sockfd = sockfd;
@@ -477,6 +506,18 @@ failed:
     SETFLOAT(&output_atom[2], sockfd);
     outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
 }
+
+#ifdef SIOCOUTQ
+/* SIOCOUTQ exists only(?) on linux, returns remaining space in the socket's output buffer  */
+static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client)
+{
+    int sockfd = x->x_fd[client];
+    int result = 0L;
+
+    ioctl(sockfd, SIOCOUTQ, &result);
+    return result;
+}
+#endif // SIOCOUTQ
 
 // send a buffer in its own thread
 static void *tcpserver_send_buf_thread(void *arg)
@@ -721,7 +762,7 @@ static int tcpserver_get_socket_send_buf_size(int sockfd)
 {
     int                 optVal = 0;
     unsigned int        optLen = sizeof(int);
-#ifdef MSW
+#ifdef _WIN32
     if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
         post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, WSAGetLastError());
 #else
@@ -736,7 +777,7 @@ static int tcpserver_set_socket_send_buf_size(int sockfd, int size)
 {
     int                 optVal = size;
     int                 optLen = sizeof(int);
-#ifdef MSW
+#ifdef _WIN32
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == SOCKET_ERROR)
     {
         post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, WSAGetLastError());
@@ -854,7 +895,7 @@ static void tcpserver_connectpoll(t_tcpserver *x)
             (t_tcpserver_socketnotifier)tcpserver_notify, NULL);/* MP tcpserver_doit isn't used I think...*/
         if (!y)
         {
-#ifdef MSW
+#ifdef _WIN32
             closesocket(fd);
 #else
             close(fd);
@@ -871,7 +912,7 @@ static void tcpserver_connectpoll(t_tcpserver *x)
             objName, x->x_host[i]->s_name, x->x_fd[i]);
 /* see how big the send buffer is on this socket */
         x->x_fdbuf[i] = 0;
-#ifdef MSW
+#ifdef _WIN32
         if (getsockopt(x->x_fd[i], SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) != SOCKET_ERROR)
         {
             /* post("%s_connectpoll: send buffer is %ld\n", objName, optVal); */
