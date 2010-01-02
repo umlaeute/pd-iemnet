@@ -6,7 +6,7 @@
 #include "m_pd.h"
 #include "s_stuff.h"
 
-#ifdef MSW
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
