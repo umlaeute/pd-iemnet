@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef MSW
+#ifdef _WIN32
 #include <winsock2.h>
 #else
 #include <sys/types.h>
