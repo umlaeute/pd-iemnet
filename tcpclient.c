@@ -343,7 +343,7 @@ static int tcpclient_get_socket_send_buf_size(t_tcpclient *x)
     int                 optVal = 0;
     int                 optLen = sizeof(int);
     t_atom              output_atom;
-#ifdef MSW
+#ifdef _WIN32
     if (getsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
         post("%_get_socket_send_buf_size: getsockopt returned %d\n", objName, WSAGetLastError());
 #else
@@ -360,7 +360,7 @@ static int tcpclient_set_socket_send_buf_size(t_tcpclient *x, int size)
 {
     int optVal = size;
     int optLen = sizeof(int);
-#ifdef MSW
+#ifdef _WIN32
     if (setsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen) == SOCKET_ERROR)
     {
         post("%s_set_socket_send_buf_size: setsockopt returned %d\n", objName, WSAGetLastError());
