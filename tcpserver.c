@@ -45,15 +45,12 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <sys/select.h>
+#include <sys/ioctl.h> /* linux has the SIOCOUTQ ioctl */
 #define SOCKET_ERROR -1
 #else
 #include <winsock2.h>
 #endif
 
-#ifdef __linux__
-/* The SIOCOUTQ ioctl call is in here */
-#include <linux/sockios.h>
-#endif // __linux__
 
 #ifdef _MSC_VER
 #define snprintf sprintf_s
@@ -209,7 +206,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, t_t
         {
             freebytes(x, sizeof(*x));
             x = NULL;
-            error("%s_socketreceiver: unable to allocate %d bytes", objName, INBUFSIZE);
+            error("%s_socketreceiver: unable to allocate %ld bytes", objName, INBUFSIZE);
         }
     }
     return (x);
