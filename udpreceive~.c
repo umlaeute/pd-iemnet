@@ -1,0 +1,749 @@
+/* udpreceive~ started 20100110 by Martin Peach based on netreceive~:           */
+/* ------------------------ netreceive~ --------------------------------------- */
+/*                                                                              */
+/* Tilde object to receive uncompressed audio data from netsend~.               */
+/* Written by Olaf Matthes <olaf.matthes@gmx.de>.                               */
+/* Based on streamin~ by Guenter Geiger.                                        */
+/* Get source at http://www.akustische-kunst.org/                               */
+/*                                                                              */
+/* This program is free software; you can redistribute it and/or                */
+/* modify it under the terms of the GNU General Public License                  */
+/* as published by the Free Software Foundation; either version 2               */
+/* of the License, or (at your option) any later version.                       */
+/*                                                                              */
+/* See file LICENSE for further informations on licensing terms.                */
+/*                                                                              */
+/* This program is distributed in the hope that it will be useful,              */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/* GNU General Public License for more details.                                 */
+/*                                                                              */
+/* You should have received a copy of the GNU General Public License            */
+/* along with this program; if not, write to the Free Software                  */
+/* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
+/*                                                                              */
+/* Based on PureData by Miller Puckette and others.                             */
+/*                                                                              */
+/* This project was commissioned by the Society for Arts and Technology [SAT],  */
+/* Montreal, Quebec, Canada, http://www.sat.qc.ca/.                             */
+/*                                                                              */
+/* ---------------------------------------------------------------------------- */
+
+
+#include "m_pd.h"
+
+#include "udpsend~.h"
+
+#include <sys/types.h>
+#include <string.h>
+#ifdef UNIX
+#include <sys/socket.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+#define SOCKET_ERROR -1
+#else
+#include <winsock.h>
+#endif
+
+#ifndef SOL_IP
+#define SOL_IP IPPROTO_IP
+#endif
+
+#define DEFAULT_AUDIO_BUFFER_FRAMES 16  /* a small circ. buffer for 16 frames */
+#define DEFAULT_AVERAGE_NUMBER 10       /* number of values we store for average history */
+#define DEFAULT_NETWORK_POLLTIME 1      /* interval in ms for polling for input data (Max/MSP only) */
+#define DEFAULT_QUEUE_LENGTH 3          /* min. number of buffers that can be used reliably on your hardware */
+
+#ifdef UNIX
+#define CLOSESOCKET(fd) close(fd)
+#endif
+#ifdef _WIN32
+#define CLOSESOCKET(fd) closesocket(fd)
+#endif
+
+/* ------------------------ udpreceive~ ----------------------------- */
+
+typedef struct _udpreceive_tilde
+{
+    t_object    x_obj;
+    t_outlet    *x_outlet1;
+    t_outlet    *x_outlet2;
+    int         x_socket;
+    int         x_connectsocket;
+    int         x_nconnections;
+    int         x_ndrops;
+    int         x_tcp;
+    t_symbol    *x_hostname;
+
+    /* buffering */
+    int         x_framein;
+    int         x_frameout;
+    t_frame     x_frames[DEFAULT_AUDIO_BUFFER_FRAMES];
+    int         x_maxframes;
+    long        x_framecount;
+    int         x_blocksize;
+    int         x_blocksperrecv;
+    int         x_blockssincerecv;
+
+    int         x_nbytes;
+    int         x_counter;
+    int         x_average[DEFAULT_AVERAGE_NUMBER];
+    int         x_averagecur;
+    int         x_underflow;
+    int         x_overflow;
+
+    long        x_samplerate;
+    int         x_noutlets;
+    int         x_vecsize;
+    t_int       **x_myvec;  /* vector we pass on to the DSP routine */
+} t_udpreceive_tilde;
+
+/* function prototypes */
+static void udpreceive_tilde_closesocket(t_udpreceive_tilde* x);
+static void udpreceive_tilde_reset(t_udpreceive_tilde* x, t_floatarg buffer);
+static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x);
+static void udpreceive_tilde_connectpoll(t_udpreceive_tilde *x);
+static int udpreceive_tilde_createsocket(t_udpreceive_tilde* x, int portno);
+static t_int *udpreceive_tilde_perform(t_int *w);
+static void udpreceive_tilde_dsp(t_udpreceive_tilde *x, t_signal **sp);
+static void udpreceive_tilde_info(t_udpreceive_tilde *x);
+static void udpreceive_tilde_print(t_udpreceive_tilde* x);
+static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets);
+static void udpreceive_tilde_free(t_udpreceive_tilde *x);
+void udpreceive_tilde_setup(void);
+static int udpreceive_tilde_sockerror(char *s);
+static int udpreceive_tilde_setsocketoptions(int sockfd);
+/* these would require to include some headers that are different
+   between pd 0.36 and later, so it's easier to do it like this! */
+EXTERN void sys_rmpollfn(int fd);
+EXTERN void sys_addpollfn(int fd, void* fn, void *ptr);
+
+static t_class *udpreceive_tilde_class;
+static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow,
+                *ps_queuesize, *ps_average, *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit, 
+                *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname, *ps_nothing;
+
+/* remove all pollfunctions and close socket */
+static void udpreceive_tilde_closesocket(t_udpreceive_tilde* x)
+{
+    sys_rmpollfn(x->x_socket);
+    outlet_float(x->x_outlet1, 0);
+    CLOSESOCKET(x->x_socket);
+    x->x_socket = -1;
+}
+
+static void udpreceive_tilde_reset(t_udpreceive_tilde* x, t_floatarg buffer)
+{
+    int     i;
+
+    x->x_counter = 0;
+    x->x_nbytes = 0;
+    x->x_framein = 0;
+    x->x_frameout = 0;
+    x->x_blockssincerecv = 0;
+    x->x_blocksperrecv = x->x_blocksize / x->x_vecsize;
+
+    for (i = 0; i < DEFAULT_AVERAGE_NUMBER; i++)
+        x->x_average[i] = x->x_maxframes;
+    x->x_averagecur = 0;
+
+    if (buffer == 0.0)  /* set default */
+        x->x_maxframes = DEFAULT_QUEUE_LENGTH;
+    else
+    {
+        buffer = (float)CLIP((float)buffer, 0., 1.);
+        x->x_maxframes = (int)(DEFAULT_AUDIO_BUFFER_FRAMES * buffer);
+        x->x_maxframes = CLIP(x->x_maxframes, 1, DEFAULT_AUDIO_BUFFER_FRAMES - 1);
+        post("udpreceive~: set buffer to %g (%d frames)", buffer, x->x_maxframes);
+    }
+    x->x_underflow = 0;
+    x->x_overflow = 0;
+}
+
+static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
+{
+    int ret;
+    int n;
+
+    n = x->x_nbytes;
+
+    if (x->x_nbytes == 0)   /* we ate all the samples and need a new header tag */
+    {
+        /* receive header tag */
+        ret = recv(x->x_socket, (char*)&x->x_frames[x->x_framein].tag, sizeof(t_tag), 0);
+        if (ret <= 0)   /* error */
+        {
+            if (udpreceive_tilde_sockerror("recv tag"))
+                goto bail;
+            udpreceive_tilde_reset(x, 0);
+            x->x_counter = 0;
+            return;
+        }
+        else if (ret != sizeof(t_tag))
+        {
+            /* incomplete header tag: return and try again later */
+            /* in the hope that more data will be available */
+            error("udpreceive~: got incomplete header tag");
+            return;
+        }
+        /* adjust byte order if neccessarry */
+        if (x->x_frames[x->x_framein].tag.version != SF_BYTE_NATIVE)
+        {
+            x->x_frames[x->x_framein].tag.count = netsend_long(x->x_frames[x->x_framein].tag.count);
+            x->x_frames[x->x_framein].tag.framesize = netsend_long(x->x_frames[x->x_framein].tag.framesize);
+        }
+        /* get info from header tag */
+        if (x->x_frames[x->x_framein].tag.channels > x->x_noutlets)
+        {
+            error("udpreceive~: incoming stream has too many channels (%d)", x->x_frames[x->x_framein].tag.channels);
+            x->x_counter = 0;
+            return;
+        }
+        x->x_nbytes = n = x->x_frames[x->x_framein].tag.framesize;
+    }
+    else    /* we already have header tag or some data and need more */
+    {
+        ret = recv(x->x_socket, (char*)x->x_frames[x->x_framein].data + x->x_frames[x->x_framein].tag.framesize - n, n, 0);
+        if (ret > 0)
+        {
+            n -= ret;
+        }
+        else if (ret < 0)   /* error */
+        {
+            if (udpreceive_tilde_sockerror("recv data"))
+                goto bail;
+            udpreceive_tilde_reset(x, 0);
+            x->x_counter = 0;
+            return;
+        }
+
+        x->x_nbytes = n;
+        if (n == 0) /* a complete packet is received */
+        {
+            if (x->x_frames[x->x_framein].tag.format == SF_AAC)
+            {
+                error("udpreceive~: don't know how to decode AAC format");
+                return;
+            }
+            x->x_counter++;
+            x->x_framein++;
+            x->x_framein %= DEFAULT_AUDIO_BUFFER_FRAMES;
+
+            /* check for buffer overflow */
+            if (x->x_framein == x->x_frameout)
+            {
+                x->x_overflow++;
+            }
+        }
+    }
+bail:
+;
+}
+
+static void udpreceive_tilde_connectpoll(t_udpreceive_tilde *x)
+{
+    int                 sockaddrl = (int)sizeof(struct sockaddr);
+    struct sockaddr_in  incomer_address;
+    int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
+
+    if (fd < 0) 
+    {
+        post("udpreceive~: accept failed");
+        return;
+    }
+#ifdef O_NONBLOCK
+    fcntl(fd, F_SETFL, O_NONBLOCK);
+#endif
+    if (x->x_socket != -1)
+    {
+        post("udpreceive~: new connection");
+        udpreceive_tilde_closesocket(x);
+    }
+
+    udpreceive_tilde_reset(x, 0);
+    x->x_socket = fd;
+    x->x_nbytes = 0;
+    x->x_hostname = gensym(inet_ntoa(incomer_address.sin_addr));
+    sys_addpollfn(fd, udpreceive_tilde_datapoll, x);
+    outlet_float(x->x_outlet1, 1);
+}
+
+static int udpreceive_tilde_createsocket(t_udpreceive_tilde* x, int portno)
+{
+    struct sockaddr_in  server;
+    int                 sockfd;
+
+    /* create a socket */
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (sockfd < 0)
+    {
+        udpreceive_tilde_sockerror("socket");
+        return 0;
+    }
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+
+    /* assign server port number */
+
+    server.sin_port = htons((u_short)portno);
+    post("listening to port number %d", portno);
+
+    udpreceive_tilde_setsocketoptions(sockfd);
+
+    /* name the socket */
+    if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
+    {
+         udpreceive_tilde_sockerror("bind");
+         CLOSESOCKET(sockfd);
+         return 0;
+    }
+
+    x->x_socket = sockfd;
+    x->x_nbytes = 0;
+    sys_addpollfn(sockfd, udpreceive_tilde_datapoll, x);
+    return 1;
+}
+
+/* Queue is 1 to 16 frames long */
+#define QUEUESIZE (int)((x->x_framein + DEFAULT_AUDIO_BUFFER_FRAMES - x->x_frameout) % DEFAULT_AUDIO_BUFFER_FRAMES)
+/* Block is a set of sample vectors inside a frame, one vector per channel */
+#define BLOCKOFFSET (x->x_blockssincerecv * x->x_vecsize * x->x_frames[x->x_frameout].tag.channels)
+
+static t_int *udpreceive_tilde_perform(t_int *w)
+{
+    t_udpreceive_tilde      *x = (t_udpreceive_tilde*) (w[1]);
+    int                     n = (int)(w[2]);
+    t_float                 *out[DEFAULT_AUDIO_CHANNELS];
+    const int               offset = 3;
+    const int               channels = x->x_frames[x->x_frameout].tag.channels;
+    int                     i = 0;
+
+    for (i = 0; i < x->x_noutlets; i++)
+    {
+        out[i] = (t_float *)(w[offset + i]);
+    }
+
+    /* set our vector size to the local vector size */
+    if (n != x->x_vecsize)
+    {
+        x->x_vecsize = n;
+        x->x_blocksperrecv = x->x_blocksize / x->x_vecsize;
+        x->x_blockssincerecv = 0;
+    }
+
+    /* check whether there is enough data in buffer */
+    if (x->x_counter < x->x_maxframes)
+    {
+        goto bail;
+    }
+
+    /* check for buffer underflow */
+    if (x->x_framein == x->x_frameout)
+    {
+        x->x_underflow++;
+        goto bail;
+    }
+
+    /* queue balancing */
+    x->x_average[x->x_averagecur] = QUEUESIZE;
+    if (++x->x_averagecur >= DEFAULT_AVERAGE_NUMBER)
+        x->x_averagecur = 0;
+
+    switch (x->x_frames[x->x_frameout].tag.format)
+    {
+        case SF_FLOAT:
+        {
+            t_float* buf = (t_float *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+
+            if (x->x_frames[x->x_frameout].tag.version == SF_BYTE_NATIVE)
+            {
+                while (n--)
+                {
+                    for (i = 0; i < channels; i++)
+                    {
+                        *out[i]++ = *buf++;
+                    }
+                    for (i = channels; i < x->x_noutlets; i++)
+                    {
+                        *out[i]++ = 0.;
+                    }
+                }
+            }
+            else    /* swap bytes */
+            {
+                while (n--)
+                {
+                    for (i = 0; i < channels; i++)
+                    {
+                        *out[i]++ = netsend_float(*buf++);
+                    }
+                    for (i = channels; i < x->x_noutlets; i++)
+                    {
+                        *out[i]++ = 0.;
+                    }
+                }
+            }
+            break;
+        }
+        case SF_16BIT:
+        {
+            short* buf = (short *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+
+            if (x->x_frames[x->x_frameout].tag.version == SF_BYTE_NATIVE)
+            {
+                while (n--)
+                {
+                    for (i = 0; i < channels; i++)
+                    {
+                        *out[i]++ = (t_float)(*buf++ * 3.051850e-05);
+                    }
+                    for (i = channels; i < x->x_noutlets; i++)
+                    {
+                        *out[i]++ = 0.;
+                    }
+                }
+            }
+            else /* swap bytes */
+            {
+                while (n--)
+                {
+                    for (i = 0; i < channels; i++)
+                    {
+                        *out[i]++ = (t_float)(netsend_short(*buf++) * 3.051850e-05);
+                    }
+                    for (i = channels; i < x->x_noutlets; i++)
+                    {
+                        *out[i]++ = 0.;
+                    }
+                }
+            }
+            break;
+        }
+        case SF_8BIT:     
+        {
+            unsigned char* buf = (char *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+
+            while (n--)
+            {
+                for (i = 0; i < channels; i++)
+                {
+                    *out[i]++ = (t_float)((0.0078125 * (*buf++)) - 1.0);
+                }
+                for (i = channels; i < x->x_noutlets; i++)
+                {
+                    *out[i]++ = 0.;
+                }
+            }
+            break;
+        }
+        case SF_MP3:
+        {
+            post("udpreceive~: mp3 format not supported");
+        }
+        case SF_AAC:
+        {
+            post("udpreceive~: aac format not supported");
+            break;
+        }
+        default:
+            post("udpreceive~: unknown format (%d)",x->x_frames[x->x_frameout].tag.format);
+            break;
+    }
+
+    if (!(x->x_blockssincerecv < x->x_blocksperrecv - 1))
+    {
+        x->x_blockssincerecv = 0;
+        x->x_frameout++;
+        x->x_frameout %= DEFAULT_AUDIO_BUFFER_FRAMES;
+    }
+    else
+    {
+        x->x_blockssincerecv++;
+    }
+
+    return (w + offset + x->x_noutlets);
+
+bail:
+    /* set output to zero */
+    while (n--)
+    {
+        for (i = 0; i < x->x_noutlets; i++)
+        {
+            *(out[i]++) = 0.;
+        }
+    }
+    return (w + offset + x->x_noutlets);
+}
+
+static void udpreceive_tilde_dsp(t_udpreceive_tilde *x, t_signal **sp)
+{
+    int i;
+
+    x->x_myvec[0] = (t_int*)x;
+    x->x_myvec[1] = (t_int*)sp[0]->s_n;
+
+    x->x_samplerate = (long)sp[0]->s_sr;
+
+    if (DEFAULT_AUDIO_BUFFER_SIZE % sp[0]->s_n)
+    {
+        error("netsend~: signal vector size too large (needs to be even divisor of %d)", DEFAULT_AUDIO_BUFFER_SIZE);
+    }
+    else
+    {
+        for (i = 0; i < x->x_noutlets; i++)
+        {
+            x->x_myvec[2 + i] = (t_int*)sp[i + 1]->s_vec;
+        }
+        dsp_addv(udpreceive_tilde_perform, x->x_noutlets + 2, (t_int*)x->x_myvec);
+    }
+}
+
+/* send stream info */
+static void udpreceive_tilde_info(t_udpreceive_tilde *x)
+{
+    t_atom      list[2];
+    t_symbol    *sf_format;
+    t_float     bitrate;
+    int         i, avg = 0;
+
+    for (i = 0; i < DEFAULT_AVERAGE_NUMBER; i++)
+        avg += x->x_average[i];
+
+    bitrate = (t_float)((SF_SIZEOF(x->x_frames[x->x_frameout].tag.format) * x->x_samplerate * 8 * x->x_frames[x->x_frameout].tag.channels) / 1000.);
+
+    switch (x->x_frames[x->x_frameout].tag.format)
+    {
+        case SF_FLOAT:
+        {
+            sf_format = ps_sf_float;
+            break;
+        }
+        case SF_16BIT:
+        {
+            sf_format = ps_sf_16bit;
+            break;
+        }
+        case SF_8BIT:
+        {
+            sf_format = ps_sf_8bit;
+            break;
+        }
+        case SF_MP3:
+        {
+            sf_format = ps_sf_mp3;
+            break;
+        }
+        case SF_AAC:
+        {
+            sf_format = ps_sf_aac;
+            break;
+        }
+        default:
+        {
+            sf_format = ps_sf_unknown;
+            break;
+        }
+    }
+
+    /* --- stream information (t_tag) --- */
+    /* audio format */
+    SETSYMBOL(list, (t_symbol *)sf_format);
+    outlet_anything(x->x_outlet2, ps_format, 1, list);
+
+    /* channels */
+    SETFLOAT(list, (t_float)x->x_frames[x->x_frameout].tag.channels);
+    outlet_anything(x->x_outlet2, ps_channels, 1, list);
+
+    /* framesize */
+    SETFLOAT(list, (t_float)x->x_frames[x->x_frameout].tag.framesize);
+    outlet_anything(x->x_outlet2, ps_framesize, 1, list);
+
+    /* bitrate */
+    SETFLOAT(list, (t_float)bitrate);
+    outlet_anything(x->x_outlet2, ps_bitrate, 1, list);
+
+    /* --- internal info (buffer and network) --- */
+    /* overflow */
+    SETFLOAT(list, (t_float)x->x_overflow);
+    outlet_anything(x->x_outlet2, ps_overflow, 1, list);
+
+    /* underflow */
+    SETFLOAT(list, (t_float)x->x_underflow);
+    outlet_anything(x->x_outlet2, ps_underflow, 1, list);
+
+    /* queuesize */
+    SETFLOAT(list, (t_float)QUEUESIZE);
+    outlet_anything(x->x_outlet2, ps_queuesize, 1, list);
+
+    /* average queuesize */
+    SETFLOAT(list, (t_float)((t_float)avg / (t_float)DEFAULT_AVERAGE_NUMBER));
+    outlet_anything(x->x_outlet2, ps_average, 1, list);
+}
+
+static void udpreceive_tilde_print(t_udpreceive_tilde* x)
+{
+    int     i, avg = 0;
+
+    for (i = 0; i < DEFAULT_AVERAGE_NUMBER; i++)
+        avg += x->x_average[i];
+    post("udpreceive~: last size = %d, avg size = %g, %d underflows, %d overflows", QUEUESIZE, (float)((float)avg / (float)DEFAULT_AVERAGE_NUMBER), x->x_underflow, x->x_overflow);
+    post("udpreceive~: channels = %d, framesize = %d, packets = %d", x->x_frames[x->x_framein].tag.channels, x->x_frames[x->x_framein].tag.framesize, x->x_counter);
+}
+
+static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets)
+{
+    t_udpreceive_tilde  *x;
+    int                 i;
+
+    if (fportno == 0) fportno = DEFAULT_PORT;
+
+    x = (t_udpreceive_tilde *)pd_new(udpreceive_tilde_class);
+    if (x)
+    {
+        for (i = sizeof(t_object); i < (int)sizeof(t_udpreceive_tilde); i++)  
+            ((char *)x)[i] = 0; 
+
+        x->x_noutlets = CLIP((int)outlets, 1, DEFAULT_AUDIO_CHANNELS);
+        for (i = 0; i < x->x_noutlets; i++)
+            outlet_new(&x->x_obj, &s_signal);
+        x->x_outlet2 = outlet_new(&x->x_obj, &s_anything);
+        x->x_myvec = (t_int **)t_getbytes(sizeof(t_int *) * (x->x_noutlets + 3));
+        if (!x->x_myvec)
+        {
+            error("udpreceive~: out of memory");
+            return NULL;
+        }
+
+        x->x_connectsocket = -1;
+        x->x_socket = -1;
+        x->x_nconnections = 0;
+        x->x_ndrops = 0;
+        x->x_underflow = 0;
+        x->x_overflow = 0;
+        x->x_hostname = ps_nothing;
+/* allocate space for 16 frames of 1024 X numchannels floats*/
+        for (i = 0; i < DEFAULT_AUDIO_BUFFER_FRAMES; i++)
+        {
+            x->x_frames[i].data = (char *)t_getbytes(DEFAULT_AUDIO_BUFFER_SIZE * x->x_noutlets * sizeof(t_float));
+        }
+        x->x_framein = 0;
+        x->x_frameout = 0;
+        x->x_maxframes = DEFAULT_QUEUE_LENGTH;
+        x->x_vecsize = 64; /* we'll update this later */
+        x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; /* LATER make this dynamic */
+        x->x_blockssincerecv = 0;
+        x->x_blocksperrecv = x->x_blocksize / x->x_vecsize;
+
+        if (!udpreceive_tilde_createsocket(x, (int)fportno))
+        {
+            error("udpreceive~: failed to create listening socket");
+            return (NULL);
+        }
+    }
+    return (x);
+}
+
+static void udpreceive_tilde_free(t_udpreceive_tilde *x)
+{
+    int i;
+
+    if (x->x_connectsocket != -1)
+    {
+        sys_rmpollfn(x->x_connectsocket);
+        CLOSESOCKET(x->x_connectsocket);
+    }
+    if (x->x_socket != -1)
+    {
+        sys_rmpollfn(x->x_socket);
+        CLOSESOCKET(x->x_socket);
+    }
+
+    /* free memory */
+    t_freebytes(x->x_myvec, sizeof(t_int *) * (x->x_noutlets + 3));
+    for (i = 0; i < DEFAULT_AUDIO_BUFFER_FRAMES; i++)
+    {
+         t_freebytes(x->x_frames[i].data, DEFAULT_AUDIO_BUFFER_SIZE * x->x_noutlets * sizeof(t_float));
+    }
+}
+
+void udpreceive_tilde_setup(void)
+{
+    udpreceive_tilde_class = class_new(gensym("udpreceive~"), 
+        (t_newmethod) udpreceive_tilde_new, (t_method) udpreceive_tilde_free,
+        sizeof(t_udpreceive_tilde),  0, A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, A_NULL);
+
+    class_addmethod(udpreceive_tilde_class, nullfn, gensym("signal"), 0);
+    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_info, gensym("info"), 0);
+    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_dsp, gensym("dsp"), 0);
+    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_print, gensym("print"), 0);
+    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_reset, gensym("reset"), A_DEFFLOAT, 0);
+    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_reset, gensym("buffer"), A_DEFFLOAT, 0);
+    post("udpreceive~ v%s, (c) 2004 Olaf Matthes, 2010 Martin Peach", VERSION);
+
+    ps_format = gensym("format");
+    ps_channels = gensym("channels");
+    ps_framesize = gensym("framesize");
+    ps_bitrate = gensym("bitrate");
+    ps_overflow = gensym("overflow");
+    ps_underflow = gensym("underflow");
+    ps_queuesize = gensym("queuesize");
+    ps_average = gensym("average");
+    ps_hostname = gensym("ipaddr");
+    ps_sf_float = gensym("_float_");
+    ps_sf_16bit = gensym("_16bit_");
+    ps_sf_8bit = gensym("_8bit_");
+    ps_sf_mp3 = gensym("_mp3_");
+    ps_sf_aac = gensym("_aac_");
+    ps_sf_unknown = gensym("_unknown_");
+    ps_nothing = gensym("");
+}
+
+/* error handlers */
+static int udpreceive_tilde_sockerror(char *s)
+{
+#ifdef _WIN32
+    int err = WSAGetLastError();
+    if (err == 10054) return 1;
+    else if (err == 10040) post("netsend~: %s: message too long (%d)", s, err);
+    else if (err == 10053) post("netsend~: %s: software caused connection abort (%d)", s, err);
+    else if (err == 10055) post("netsend~: %s: no buffer space available (%d)", s, err);
+    else if (err == 10060) post("netsend~: %s: connection timed out (%d)", s, err);
+    else if (err == 10061) post("netsend~: %s: connection refused (%d)", s, err);
+    else post("udpreceive~: %s: %s (%d)", s, strerror(err), err);
+#else
+    int err = errno;
+    post("udpreceive~: %s: %s (%d)", s, strerror(err), err);
+#endif
+#ifdef _WIN32
+    if (err == WSAEWOULDBLOCK)
+#endif
+#ifdef UNIX
+    if (err == EAGAIN)
+#endif
+    {
+        return 1;   /* recoverable error */
+    }
+    return 0;   /* indicate non-recoverable error */
+}
+
+static int udpreceive_tilde_setsocketoptions(int sockfd)
+{
+    int sockopt = 1;
+    if (setsockopt(sockfd, SOL_IP, TCP_NODELAY, (const char*)&sockopt, sizeof(int)) < 0)
+        post("setsockopt NODELAY failed");
+
+    sockopt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&sockopt, sizeof(int)) < 0)
+        post("udpreceive~: setsockopt REUSEADDR failed");
+    return 0;
+}
+
+/* fin udpreceive~.c */
