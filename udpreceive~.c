@@ -36,7 +36,7 @@
 
 #include <sys/types.h>
 #include <string.h>
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -48,7 +48,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #define SOCKET_ERROR -1
-#else
+#endif
+#ifdef _WIN32
 #include <winsock.h>
 #endif
 
@@ -61,7 +62,7 @@
 #define DEFAULT_NETWORK_POLLTIME 1      /* interval in ms for polling for input data (Max/MSP only) */
 #define DEFAULT_QUEUE_LENGTH 3          /* min. number of buffers that can be used reliably on your hardware */
 
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
 #define CLOSESOCKET(fd) close(fd)
 #endif
 #ifdef _WIN32
@@ -725,7 +726,7 @@ static int udpreceive_tilde_sockerror(char *s)
 #ifdef _WIN32
     if (err == WSAEWOULDBLOCK)
 #endif
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
     if (err == EAGAIN)
 #endif
     {

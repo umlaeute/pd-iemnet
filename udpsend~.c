@@ -39,7 +39,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <stdlib.h>
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -52,6 +52,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <math.h>
 #define SOCKET_ERROR -1
 #endif
 #ifdef _WIN32
@@ -556,7 +557,7 @@ static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg prot)
     x->x_cbufsize = x->x_blocksize * sizeof(t_float) * x->x_ninlets;
     x->x_cbuf = (char *)t_getbytes(x->x_cbufsize);
 
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
     /* we don't want to get signaled in case send() fails */
     signal(SIGPIPE, SIG_IGN);
 #endif
@@ -626,7 +627,7 @@ static int udpsend_tilde_sockerror(char *s)
 #ifdef _WIN32
     if (err == WSAEWOULDBLOCK)
 #endif
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
     if (err == EAGAIN)
 #endif
     {
@@ -637,7 +638,7 @@ static int udpsend_tilde_sockerror(char *s)
 
 static void udpsend_tilde_closesocket(int fd)
 {
-#ifdef UNIX
+#if defined(UNIX) || defined(unix)
     close(fd);
 #endif
 #ifdef _WIN32
