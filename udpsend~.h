@@ -37,7 +37,7 @@
 #define VERSION "0.1"
 
 #define DEFAULT_AUDIO_CHANNELS 32       /* nax. number of audio channels we support */
-#define DEFAULT_AUDIO_BUFFER_SIZE 1024  /* number of samples in one audio block */
+#define DEFAULT_AUDIO_BUFFER_SIZE 2048 /*1024*/  /* number of samples in one audio block */
 #define DEFAULT_UDP_PACKT_SIZE 8192     /* number of bytes we send in one UDP datagram (OS X only) */
 #define DEFAULT_PORT 8000               /* default network port number */
 

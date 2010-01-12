@@ -75,41 +75,41 @@
 
 static t_class *udpsend_tilde_class;
 
-static t_symbol *ps_nothing, *ps_localhost;
+static t_symbol *ps_nothing, *ps_localhost, *ps_vecsize;
 static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow;
 static t_symbol *ps_queuesize, *ps_average, *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit;
 static t_symbol *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname;
 
 typedef struct _udpsend_tilde
 {
-    t_object x_obj;
-    t_outlet *x_outlet;
-    t_outlet *x_outlet2;
-    t_clock *x_clock;
-    int x_fd;
-    t_tag x_tag;
-    t_symbol* x_hostname;
-    int x_portno;
-    int x_connectstate;
-    char *x_cbuf;
-    int x_cbufsize;
-    int x_blocksize; /* set to DEFAULT_AUDIO_BUFFER_SIZE in udpsend_tilde_new() */
-    int x_blockspersend; /* set to x->x_blocksize / x->x_vecsize in udpsend_tilde_perform() */
-    int x_blockssincesend;
+    t_object        x_obj;
+    t_outlet        *x_outlet;
+    t_outlet        *x_outlet2;
+    t_clock         *x_clock;
+    int             x_fd;
+    t_tag           x_tag;
+    t_symbol*       x_hostname;
+    int             x_portno;
+    int             x_connectstate;
+    char            *x_cbuf;
+    int             x_cbufsize;
+    int             x_blocksize; /* set to DEFAULT_AUDIO_BUFFER_SIZE in udpsend_tilde_new() */
+    int             x_blockspersend; /* set to x->x_blocksize / x->x_vecsize in udpsend_tilde_perform() */
+    int             x_blockssincesend;
 
-    long x_samplerate;          /* samplerate we're running at */
-    int x_vecsize;              /* current DSP signal vector size */
-    int x_ninlets;              /* number of inlets */
-    int x_channels;             /* number of channels we want to stream */
-    int x_format;               /* format of streamed audio data */
-    int x_bitrate;              /* specifies bitrate for compressed formats */
-    int x_count;                /* total number of audio frames */
-    t_int **x_myvec;            /* vector we pass on in the DSP routine */
+    long            x_samplerate;          /* samplerate we're running at */
+    int             x_vecsize;              /* current DSP signal vector size */
+    int             x_ninlets;              /* number of inlets */
+    int             x_channels;             /* number of channels we want to stream */
+    int             x_format;               /* format of streamed audio data */
+    int             x_bitrate;              /* specifies bitrate for compressed formats */
+    int             x_count;                /* total number of audio frames */
+    t_int           **x_myvec;            /* vector we pass on in the DSP routine */
 
-    pthread_mutex_t   x_mutex;
-    pthread_cond_t    x_requestcondition;
-    pthread_cond_t    x_answercondition;
-    pthread_t         x_childthread;
+    pthread_mutex_t x_mutex;
+    pthread_cond_t  x_requestcondition;
+    pthread_cond_t  x_answercondition;
+    pthread_t       x_childthread;
 } t_udpsend_tilde;
 
 /* function prototypes */
@@ -125,7 +125,7 @@ static void udpsend_tilde_channels(t_udpsend_tilde *x, t_floatarg channels);
 static void udpsend_tilde_format(t_udpsend_tilde *x, t_symbol* form, t_floatarg bitrate);
 static void udpsend_tilde_float(t_udpsend_tilde* x, t_floatarg arg);
 static void udpsend_tilde_info(t_udpsend_tilde *x);
-static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg prot);
+static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg blocksize);
 static void udpsend_tilde_free(t_udpsend_tilde* x);
 void udpsend_tilde_setup(void);
 
@@ -324,6 +324,7 @@ static t_int *udpsend_tilde_perform(t_int *w)
                 udpsend_tilde_disconnect(x);
                 return (w + offset + x->x_ninlets);
             }
+            if (length != 0)
 /* UDP: max. packet size is 64k (incl. headers) so we have to split */
             {
 #ifdef __APPLE__
@@ -355,10 +356,11 @@ static t_int *udpsend_tilde_perform(t_int *w)
                     }
                 }
 #else
-                /* send the buffer, the OS might segment it into smaller packets */
+                /* If there is any data, send the buffer, the OS might segment it into smaller packets */
                 int ret = send(x->x_fd, bp, length, SEND_FLAGS);
                 if (ret <= 0)
                 {
+    post ("length %ld", length);
                     udpsend_tilde_sockerror("send data");
                     pthread_mutex_unlock(&x->x_mutex);
                     udpsend_tilde_disconnect(x);
@@ -417,11 +419,12 @@ static void udpsend_tilde_dsp(t_udpsend_tilde *x, t_signal **sp)
 static void udpsend_tilde_channels(t_udpsend_tilde *x, t_floatarg channels)
 {
     pthread_mutex_lock(&x->x_mutex);
-    if (channels >= 0 && channels <= DEFAULT_AUDIO_CHANNELS)
+    if (channels >= 0 && channels <= x->x_ninlets)
     {
         x->x_channels = (int)channels;
         post("udpsend~: channels set to %d", (int)channels);
     }
+    else post ("udpsend~ number of channels must be between 0 and %d", x->x_ninlets);
     pthread_mutex_unlock(&x->x_mutex);
 }
 
@@ -496,6 +499,10 @@ static void udpsend_tilde_info(t_udpsend_tilde *x)
     SETFLOAT(list, (t_float)x->x_tag.channels);
     outlet_anything(x->x_outlet2, ps_channels, 1, list);
 
+    /* current signal vector size */
+    SETFLOAT(list, (t_float)x->x_vecsize);
+    outlet_anything(x->x_outlet2, ps_vecsize, 1, list);
+
     /* framesize */
     SETFLOAT(list, (t_float)x->x_tag.framesize);
     outlet_anything(x->x_outlet2, ps_framesize, 1, list);
@@ -509,7 +516,7 @@ static void udpsend_tilde_info(t_udpsend_tilde *x)
     outlet_anything(x->x_outlet2, ps_hostname, 1, list);
 }
 
-static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg prot)
+static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg blocksize)
 {
     int i;
 
@@ -518,49 +525,60 @@ static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg prot)
     {
         for (i = sizeof(t_object); i < (int)sizeof(t_udpsend_tilde); i++)
             ((char *)x)[i] = 0; 
-    }
 
-    x->x_ninlets = CLIP((int)inlets, 1, DEFAULT_AUDIO_CHANNELS);
-    for (i = 1; i < x->x_ninlets; i++)
-        inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
+        if ((int)inlets < 1 || (int)inlets > DEFAULT_AUDIO_CHANNELS)
+        {
+            error("udpsend~: Number of channels must be between 1 and %d", DEFAULT_AUDIO_CHANNELS);
+            return NULL;
+        }
+        x->x_ninlets = (int)inlets;
+        for (i = 1; i < x->x_ninlets; i++)
+            inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
+ 
+        x->x_outlet = outlet_new(&x->x_obj, &s_float);
+        x->x_outlet2 = outlet_new(&x->x_obj, &s_list);
+        x->x_clock = clock_new(x, (t_method)udpsend_tilde_notify);
 
-    x->x_outlet = outlet_new(&x->x_obj, &s_float);
-    x->x_outlet2 = outlet_new(&x->x_obj, &s_list);
-    x->x_clock = clock_new(x, (t_method)udpsend_tilde_notify);
+        x->x_myvec = (t_int **)t_getbytes(sizeof(t_int *) * (x->x_ninlets + 3));
+        if (!x->x_myvec)
+        {
+            error("udpsend~: out of memory");
+            return NULL;
+        }
 
-    x->x_myvec = (t_int **)t_getbytes(sizeof(t_int *) * (x->x_ninlets + 3));
-    if (!x->x_myvec)
-    {
-        error("udpsend~: out of memory");
-        return NULL;
-    }
+        pthread_mutex_init(&x->x_mutex, 0);
+        pthread_cond_init(&x->x_requestcondition, 0);
+        pthread_cond_init(&x->x_answercondition, 0);
 
-    pthread_mutex_init(&x->x_mutex, 0);
-    pthread_cond_init(&x->x_requestcondition, 0);
-    pthread_cond_init(&x->x_answercondition, 0);
+        x->x_hostname = ps_localhost;
+        x->x_portno = DEFAULT_PORT;
+        x->x_connectstate = 0;
+        x->x_childthread = 0;
+        x->x_fd = -1;
 
-    x->x_hostname = ps_localhost;
-    x->x_portno = DEFAULT_PORT;
-    x->x_connectstate = 0;
-    x->x_childthread = 0;
-    x->x_fd = -1;
-
-    x->x_tag.format = x->x_format = SF_FLOAT;
-    x->x_tag.channels = x->x_channels = x->x_ninlets;
-    x->x_tag.version = SF_BYTE_NATIVE;	/* native endianness */
-    x->x_vecsize = 64; /* this is updated in the perform routine udpsend_tilde_perform */
-    x->x_bitrate = 0; /* not specified, use default */
-    x->x_cbuf = NULL;
-    x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; /* <-- the only place blocksize is set */
-    x->x_blockspersend = x->x_blocksize / x->x_vecsize; /* 1024/64 = 16 blocks */
-    x->x_blockssincesend = 0;
-    x->x_cbufsize = x->x_blocksize * sizeof(t_float) * x->x_ninlets;
-    x->x_cbuf = (char *)t_getbytes(x->x_cbufsize);
+        x->x_tag.format = x->x_format = SF_FLOAT;
+        x->x_tag.channels = x->x_channels = x->x_ninlets;
+        x->x_tag.version = SF_BYTE_NATIVE;	/* native endianness */
+        x->x_vecsize = 64; /* this is updated in the perform routine udpsend_tilde_perform */
+        x->x_bitrate = 0; /* not specified, use default */
+        x->x_cbuf = NULL;
+        if (blocksize == 0) x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; 
+        else if (DEFAULT_AUDIO_BUFFER_SIZE%(int)blocksize)
+        {
+            error("udpsend~: blocksize must fit snugly in %d", DEFAULT_AUDIO_BUFFER_SIZE);
+            return NULL;
+        } 
+        else x->x_blocksize = (int)blocksize; //DEFAULT_AUDIO_BUFFER_SIZE; /* <-- the only place blocksize is set */
+        x->x_blockspersend = x->x_blocksize / x->x_vecsize; /* 1024/64 = 16 blocks */
+        x->x_blockssincesend = 0;
+        x->x_cbufsize = x->x_blocksize * sizeof(t_float) * x->x_ninlets;
+        x->x_cbuf = (char *)t_getbytes(x->x_cbufsize);
 
 #if defined(UNIX) || defined(unix)
-    /* we don't want to get signaled in case send() fails */
-    signal(SIGPIPE, SIG_IGN);
+        /* we don't want to get signaled in case send() fails */
+        signal(SIGPIPE, SIG_IGN);
 #endif
+    }
 
     return (x);
 }
@@ -594,12 +612,14 @@ void udpsend_tilde_setup(void)
     class_addmethod(udpsend_tilde_class, (t_method)udpsend_tilde_format, gensym("format"), A_SYMBOL, A_DEFFLOAT, 0);
     class_sethelpsymbol(udpsend_tilde_class, gensym("udpsend~"));
     post("udpsend~ v%s, (c) 2004-2005 Olaf Matthes, 2010 Martin Peach", VERSION);
+    post("udpsend~ Default blocksize is %d", DEFAULT_AUDIO_BUFFER_SIZE);
 
     ps_nothing = gensym("");
     ps_localhost = gensym("localhost");
     ps_hostname = gensym("ipaddr");
     ps_format = gensym("format");
     ps_channels = gensym("channels");
+    ps_vecsize = gensym("vecsize");
     ps_framesize = gensym("framesize");
     ps_bitrate = gensym("bitrate");
     ps_sf_float = gensym("_float_");

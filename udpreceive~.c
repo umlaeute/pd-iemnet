@@ -76,6 +76,8 @@ typedef struct _udpreceive_tilde
     t_object    x_obj;
     t_outlet    *x_outlet1;
     t_outlet    *x_outlet2;
+    t_outlet    *x_addrout;
+    t_atom      x_addrbytes[5];
     int         x_socket;
     int         x_connectsocket;
     int         x_nconnections;
@@ -115,8 +117,7 @@ static int udpreceive_tilde_createsocket(t_udpreceive_tilde* x, int portno);
 static t_int *udpreceive_tilde_perform(t_int *w);
 static void udpreceive_tilde_dsp(t_udpreceive_tilde *x, t_signal **sp);
 static void udpreceive_tilde_info(t_udpreceive_tilde *x);
-static void udpreceive_tilde_print(t_udpreceive_tilde* x);
-static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets);
+static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floatarg blocksize);
 static void udpreceive_tilde_free(t_udpreceive_tilde *x);
 void udpreceive_tilde_setup(void);
 static int udpreceive_tilde_sockerror(char *s);
@@ -127,7 +128,7 @@ EXTERN void sys_rmpollfn(int fd);
 EXTERN void sys_addpollfn(int fd, void* fn, void *ptr);
 
 static t_class *udpreceive_tilde_class;
-static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow,
+static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow, *ps_packets,
                 *ps_queuesize, *ps_average, *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit, 
                 *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname, *ps_nothing;
 
@@ -155,14 +156,15 @@ static void udpreceive_tilde_reset(t_udpreceive_tilde* x, t_floatarg buffer)
         x->x_average[i] = x->x_maxframes;
     x->x_averagecur = 0;
 
-    if (buffer == 0.0)  /* set default */
-        x->x_maxframes = DEFAULT_QUEUE_LENGTH;
-    else
+    i = (int)buffer;    
+    if ((i > 0)&&(i < DEFAULT_AUDIO_BUFFER_FRAMES))
     {
-        buffer = (float)CLIP((float)buffer, 0., 1.);
-        x->x_maxframes = (int)(DEFAULT_AUDIO_BUFFER_FRAMES * buffer);
-        x->x_maxframes = CLIP(x->x_maxframes, 1, DEFAULT_AUDIO_BUFFER_FRAMES - 1);
-        post("udpreceive~: set buffer to %g (%d frames)", buffer, x->x_maxframes);
+        x->x_maxframes = i;
+        post("udpreceive~: set buffer to %d frames)", x->x_maxframes);
+    }
+    else if (i != 0) /* special case of 0 leaves buffer size unchanged */
+    {
+        post("udpreceive~: buffer must be between 1 and %d frames)", DEFAULT_AUDIO_BUFFER_FRAMES-1);
     }
     x->x_underflow = 0;
     x->x_overflow = 0;
@@ -170,16 +172,32 @@ static void udpreceive_tilde_reset(t_udpreceive_tilde* x, t_floatarg buffer)
 
 static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
 {
-    int ret;
-    int n;
+    int                 ret;
+    int                 n;
+    struct sockaddr_in  from;
+    socklen_t           fromlen = sizeof(from);
+    long                addr;
+    unsigned short      port;
 
     n = x->x_nbytes;
 
     if (x->x_nbytes == 0)   /* we ate all the samples and need a new header tag */
     {
         /* receive header tag */
-        ret = recv(x->x_socket, (char*)&x->x_frames[x->x_framein].tag, sizeof(t_tag), 0);
-        if (ret <= 0)   /* error */
+        ret = recvfrom(x->x_socket, (char*)&x->x_frames[x->x_framein].tag, sizeof(t_tag), 0,
+            (struct sockaddr *)&from, &fromlen);
+        /* get the sender's ip */
+        addr = ntohl(from.sin_addr.s_addr);
+        port = ntohs(from.sin_port);
+
+        x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
+        x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
+        x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
+        x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
+        x->x_addrbytes[4].a_w.w_float = port;
+        outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
+
+       if (ret <= 0)   /* error */
         {
             if (udpreceive_tilde_sockerror("recv tag"))
                 goto bail;
@@ -211,7 +229,8 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
     }
     else    /* we already have header tag or some data and need more */
     {
-        ret = recv(x->x_socket, (char*)x->x_frames[x->x_framein].data + x->x_frames[x->x_framein].tag.framesize - n, n, 0);
+        ret = recvfrom(x->x_socket, (char*)x->x_frames[x->x_framein].data + x->x_frames[x->x_framein].tag.framesize - n,
+            n, 0, (struct sockaddr *)&from, &fromlen);
         if (ret > 0)
         {
             n -= ret;
@@ -493,9 +512,9 @@ static void udpreceive_tilde_dsp(t_udpreceive_tilde *x, t_signal **sp)
 
     x->x_samplerate = (long)sp[0]->s_sr;
 
-    if (DEFAULT_AUDIO_BUFFER_SIZE % sp[0]->s_n)
+    if (x->x_blocksize % sp[0]->s_n)
     {
-        error("netsend~: signal vector size too large (needs to be even divisor of %d)", DEFAULT_AUDIO_BUFFER_SIZE);
+        error("netsend~: signal vector size too large (needs to be even divisor of %d)", x->x_blocksize);
     }
     else
     {
@@ -587,19 +606,13 @@ static void udpreceive_tilde_info(t_udpreceive_tilde *x)
     /* average queuesize */
     SETFLOAT(list, (t_float)((t_float)avg / (t_float)DEFAULT_AVERAGE_NUMBER));
     outlet_anything(x->x_outlet2, ps_average, 1, list);
+
+    /* total packets */
+    SETFLOAT(list, (t_float)x->x_counter);
+    outlet_anything(x->x_outlet2, ps_packets, 1, list);
 }
 
-static void udpreceive_tilde_print(t_udpreceive_tilde* x)
-{
-    int     i, avg = 0;
-
-    for (i = 0; i < DEFAULT_AVERAGE_NUMBER; i++)
-        avg += x->x_average[i];
-    post("udpreceive~: last size = %d, avg size = %g, %d underflows, %d overflows", QUEUESIZE, (float)((float)avg / (float)DEFAULT_AVERAGE_NUMBER), x->x_underflow, x->x_overflow);
-    post("udpreceive~: channels = %d, framesize = %d, packets = %d", x->x_frames[x->x_framein].tag.channels, x->x_frames[x->x_framein].tag.framesize, x->x_counter);
-}
-
-static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets)
+static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floatarg blocksize)
 {
     t_udpreceive_tilde  *x;
     int                 i;
@@ -616,6 +629,12 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets)
         for (i = 0; i < x->x_noutlets; i++)
             outlet_new(&x->x_obj, &s_signal);
         x->x_outlet2 = outlet_new(&x->x_obj, &s_anything);
+        x->x_addrout = outlet_new(&x->x_obj, &s_list);
+        for (i = 0; i < 5; ++i)
+        {
+            x->x_addrbytes[i].a_type = A_FLOAT;
+            x->x_addrbytes[i].a_w.w_float = 0;
+        }
         x->x_myvec = (t_int **)t_getbytes(sizeof(t_int *) * (x->x_noutlets + 3));
         if (!x->x_myvec)
         {
@@ -639,7 +658,13 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets)
         x->x_frameout = 0;
         x->x_maxframes = DEFAULT_QUEUE_LENGTH;
         x->x_vecsize = 64; /* we'll update this later */
-        x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; /* LATER make this dynamic */
+        if (blocksize == 0) x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; 
+        else if (DEFAULT_AUDIO_BUFFER_SIZE%(int)blocksize)
+        {
+            error("udpreceive~: blocksize must fit snugly in %d", DEFAULT_AUDIO_BUFFER_SIZE);
+            return NULL;
+        } 
+        else x->x_blocksize = (int)blocksize; //DEFAULT_AUDIO_BUFFER_SIZE; /* <-- the only place blocksize is set */
         x->x_blockssincerecv = 0;
         x->x_blocksperrecv = x->x_blocksize / x->x_vecsize;
 
@@ -684,7 +709,6 @@ void udpreceive_tilde_setup(void)
     class_addmethod(udpreceive_tilde_class, nullfn, gensym("signal"), 0);
     class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_info, gensym("info"), 0);
     class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_dsp, gensym("dsp"), 0);
-    class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_print, gensym("print"), 0);
     class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_reset, gensym("reset"), A_DEFFLOAT, 0);
     class_addmethod(udpreceive_tilde_class, (t_method)udpreceive_tilde_reset, gensym("buffer"), A_DEFFLOAT, 0);
     post("udpreceive~ v%s, (c) 2004 Olaf Matthes, 2010 Martin Peach", VERSION);
@@ -697,6 +721,7 @@ void udpreceive_tilde_setup(void)
     ps_underflow = gensym("underflow");
     ps_queuesize = gensym("queuesize");
     ps_average = gensym("average");
+    ps_packets = gensym("packets");
     ps_hostname = gensym("ipaddr");
     ps_sf_float = gensym("_float_");
     ps_sf_16bit = gensym("_16bit_");
