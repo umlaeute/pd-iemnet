@@ -50,7 +50,8 @@
 #define SOCKET_ERROR -1
 #endif
 #ifdef _WIN32
-#include <winsock.h>
+#include <winsock2.h>
+#include <ws2tcpip.h> /* for socklen_t */
 #endif
 
 #ifndef SOL_IP

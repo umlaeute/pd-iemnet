@@ -34,7 +34,7 @@
 #include "m_pd.h"
 
 #include "udpsend~.h"
-#include "float_cast.h"	/* tools for fast conversion from float to int */
+#include "float_cast.h" /* tools for fast conversion from float to int */
 
 #include <sys/types.h>
 #include <string.h>
@@ -56,7 +56,7 @@
 #define SOCKET_ERROR -1
 #endif
 #ifdef _WIN32
-#include <winsock.h>
+#include <winsock2.h>
 #include "pthread.h"
 #endif
 
