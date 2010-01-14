@@ -341,7 +341,7 @@ int tcpclient_send_byte(t_tcpclient *x, char byte)
 static int tcpclient_get_socket_send_buf_size(t_tcpclient *x)
 {
     int                 optVal = 0;
-    int                 optLen = sizeof(int);
+    socklen_t           optLen = sizeof(int);
     t_atom              output_atom;
 #ifdef _WIN32
     if (getsockopt(x->x_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == SOCKET_ERROR)
