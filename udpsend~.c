@@ -34,11 +34,11 @@
 #include "m_pd.h"
 
 #include "udpsend~.h"
-#include "float_cast.h" /* tools for fast conversion from float to int */
 
 #include <sys/types.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #if defined(UNIX) || defined(unix)
 #include <sys/socket.h>
 #include <errno.h>
@@ -52,7 +52,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <math.h>
 #define SOCKET_ERROR -1
 #endif
 #ifdef _WIN32
@@ -93,18 +92,18 @@ typedef struct _udpsend_tilde
     int             x_connectstate;
     char            *x_cbuf;
     int             x_cbufsize;
-    int             x_blocksize; /* set to DEFAULT_AUDIO_BUFFER_SIZE in udpsend_tilde_new() */
+    int             x_blocksize; /* set to DEFAULT_AUDIO_BUFFER_SIZE or user-supplied argument 3 in udpsend_tilde_new() */
     int             x_blockspersend; /* set to x->x_blocksize / x->x_vecsize in udpsend_tilde_perform() */
     int             x_blockssincesend;
 
-    long            x_samplerate;          /* samplerate we're running at */
-    int             x_vecsize;              /* current DSP signal vector size */
-    int             x_ninlets;              /* number of inlets */
-    int             x_channels;             /* number of channels we want to stream */
-    int             x_format;               /* format of streamed audio data */
-    int             x_bitrate;              /* specifies bitrate for compressed formats */
-    int             x_count;                /* total number of audio frames */
-    t_int           **x_myvec;            /* vector we pass on in the DSP routine */
+    long            x_samplerate; /* samplerate we're running at */
+    int             x_vecsize; /* current DSP signal vector size */
+    int             x_ninlets; /* number of inlets */
+    int             x_channels; /* number of channels we want to stream */
+    int             x_format; /* format of streamed audio data */
+//    int             x_bitrate; /* specifies bitrate for compressed formats */
+    int             x_count; /* total number of audio frames */
+    t_int           **x_myvec; /* vector we pass on in the DSP routine */
 
     pthread_mutex_t x_mutex;
     pthread_cond_t  x_requestcondition;
@@ -279,26 +278,33 @@ static t_int *udpsend_tilde_perform(t_int *w)
     {
         case SF_FLOAT:
         {
-            t_float* fbuf = (t_float *)x->x_cbuf + (x->x_blockssincesend * x->x_vecsize * x->x_tag.channels);
+            int32_t* fbuf = (int32_t *)x->x_cbuf + (x->x_blockssincesend * x->x_vecsize * x->x_tag.channels);
+            flint fl;
+
             while (n--)
                 for (i = 0; i < x->x_tag.channels; i++)
-                    *fbuf++ = *(in[i]++);
+                {
+                    fl.f32 = *(in[i]++);
+                    *fbuf++ = htonl(fl.i32);
+                }
             break;
         }
         case SF_16BIT:
         {
             short* cibuf = (short *)x->x_cbuf + (x->x_blockssincesend * x->x_vecsize * x->x_tag.channels);
+
             while (n--) 
                 for (i = 0; i < x->x_tag.channels; i++)
-                    *cibuf++ = (short)lrint(32767.0 * *(in[i]++));
+                    *cibuf++ = htons((short)floor(32767.5 * *(in[i]++)));/* signed binary */
             break;
         }
         case SF_8BIT:
         {
-            unsigned char*  cbuf = (unsigned char*)x->x_cbuf + (x->x_blockssincesend * x->x_vecsize * x->x_tag.channels);
+            unsigned char* cbuf = (unsigned char*)x->x_cbuf + (x->x_blockssincesend * x->x_vecsize * x->x_tag.channels);
+
             while (n--) 
                 for (i = 0; i < x->x_tag.channels; i++)
-                    *cbuf++ = (unsigned char)(128. * (1.0 + *(in[i]++)));
+                    *cbuf++ = (unsigned char)floor(128. * (1.0 + *(in[i]++))); /* offset binary */
             break;
         }
         default:
@@ -314,8 +320,8 @@ static t_int *udpsend_tilde_perform(t_int *w)
         {
             bp = (char *)x->x_cbuf;
             /* fill in the header tag */
-            x->x_tag.framesize = length;
-            x->x_tag.count = x->x_count;
+            x->x_tag.framesize = htonl(length);
+            x->x_tag.count = htonl(x->x_count);
             /* send the format tag */
             if (send(x->x_fd, (char*)&x->x_tag, sizeof(t_tag), SEND_FLAGS) < 0)
             {
@@ -504,7 +510,7 @@ static void udpsend_tilde_info(t_udpsend_tilde *x)
     outlet_anything(x->x_outlet2, ps_vecsize, 1, list);
 
     /* framesize */
-    SETFLOAT(list, (t_float)x->x_tag.framesize);
+    SETFLOAT(list, (t_float)(ntohl(x->x_tag.framesize)));
     outlet_anything(x->x_outlet2, ps_framesize, 1, list);
 
     /* bitrate */
@@ -558,9 +564,7 @@ static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg blocksize)
 
         x->x_tag.format = x->x_format = SF_FLOAT;
         x->x_tag.channels = x->x_channels = x->x_ninlets;
-        x->x_tag.version = SF_BYTE_NATIVE;	/* native endianness */
         x->x_vecsize = 64; /* this is updated in the perform routine udpsend_tilde_perform */
-        x->x_bitrate = 0; /* not specified, use default */
         x->x_cbuf = NULL;
         if (blocksize == 0) x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; 
         else if (DEFAULT_AUDIO_BUFFER_SIZE%(int)blocksize)

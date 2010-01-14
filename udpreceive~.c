@@ -214,11 +214,8 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
             return;
         }
         /* adjust byte order if neccessarry */
-        if (x->x_frames[x->x_framein].tag.version != SF_BYTE_NATIVE)
-        {
-            x->x_frames[x->x_framein].tag.count = netsend_long(x->x_frames[x->x_framein].tag.count);
-            x->x_frames[x->x_framein].tag.framesize = netsend_long(x->x_frames[x->x_framein].tag.framesize);
-        }
+        x->x_frames[x->x_framein].tag.count = ntohl(x->x_frames[x->x_framein].tag.count);
+        x->x_frames[x->x_framein].tag.framesize = ntohl(x->x_frames[x->x_framein].tag.framesize);
         /* get info from header tag */
         if (x->x_frames[x->x_framein].tag.channels > x->x_noutlets)
         {
@@ -270,18 +267,15 @@ bail:
 
 static void udpreceive_tilde_connectpoll(t_udpreceive_tilde *x)
 {
-    int                 sockaddrl = (int)sizeof(struct sockaddr);
+    socklen_t           sockaddrlen = sizeof(struct sockaddr);
     struct sockaddr_in  incomer_address;
-    int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
+    int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrlen);
 
     if (fd < 0) 
     {
         post("udpreceive~: accept failed");
         return;
     }
-#ifdef O_NONBLOCK
-    fcntl(fd, F_SETFL, O_NONBLOCK);
-#endif
     if (x->x_socket != -1)
     {
         post("udpreceive~: new connection");
@@ -382,34 +376,20 @@ static t_int *udpreceive_tilde_perform(t_int *w)
     {
         case SF_FLOAT:
         {
-            t_float* buf = (t_float *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+            int32_t* buf = (int32_t *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+            flint   fl;
 
-            if (x->x_frames[x->x_frameout].tag.version == SF_BYTE_NATIVE)
+            /* swap bytes if necessary */
+            while (n--)
             {
-                while (n--)
+                for (i = 0; i < channels; i++)
                 {
-                    for (i = 0; i < channels; i++)
-                    {
-                        *out[i]++ = *buf++;
-                    }
-                    for (i = channels; i < x->x_noutlets; i++)
-                    {
-                        *out[i]++ = 0.;
-                    }
+                    fl.i32 = ntohl(*buf++);
+                    *out[i]++ = fl.f32;
                 }
-            }
-            else    /* swap bytes */
-            {
-                while (n--)
+                for (i = channels; i < x->x_noutlets; i++)
                 {
-                    for (i = 0; i < channels; i++)
-                    {
-                        *out[i]++ = netsend_float(*buf++);
-                    }
-                    for (i = channels; i < x->x_noutlets; i++)
-                    {
-                        *out[i]++ = 0.;
-                    }
+                    *out[i]++ = 0.;
                 }
             }
             break;
@@ -417,40 +397,23 @@ static t_int *udpreceive_tilde_perform(t_int *w)
         case SF_16BIT:
         {
             short* buf = (short *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
-
-            if (x->x_frames[x->x_frameout].tag.version == SF_BYTE_NATIVE)
+            /* swap bytes if necessary */
+            while (n--)
             {
-                while (n--)
+                for (i = 0; i < channels; i++)
                 {
-                    for (i = 0; i < channels; i++)
-                    {
-                        *out[i]++ = (t_float)(*buf++ * 3.051850e-05);
-                    }
-                    for (i = channels; i < x->x_noutlets; i++)
-                    {
-                        *out[i]++ = 0.;
-                    }
+                    *out[i]++ = (t_float)((short)(ntohs(*buf++)) * 3.051850e-05);
                 }
-            }
-            else /* swap bytes */
-            {
-                while (n--)
+                for (i = channels; i < x->x_noutlets; i++)
                 {
-                    for (i = 0; i < channels; i++)
-                    {
-                        *out[i]++ = (t_float)(netsend_short(*buf++) * 3.051850e-05);
-                    }
-                    for (i = channels; i < x->x_noutlets; i++)
-                    {
-                        *out[i]++ = 0.;
-                    }
+                    *out[i]++ = 0.;
                 }
             }
             break;
         }
         case SF_8BIT:     
         {
-            unsigned char* buf = (char *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
+            unsigned char* buf = (unsigned char *)x->x_frames[x->x_frameout].data + BLOCKOFFSET;
 
             while (n--)
             {
@@ -468,6 +431,7 @@ static t_int *udpreceive_tilde_perform(t_int *w)
         case SF_MP3:
         {
             post("udpreceive~: mp3 format not supported");
+            break;
         }
         case SF_AAC:
         {
@@ -626,7 +590,13 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floa
         for (i = sizeof(t_object); i < (int)sizeof(t_udpreceive_tilde); i++)  
             ((char *)x)[i] = 0; 
 
-        x->x_noutlets = CLIP((int)outlets, 1, DEFAULT_AUDIO_CHANNELS);
+        if ((int)outlets < 1 || (int)outlets > DEFAULT_AUDIO_CHANNELS)
+        {
+            error("udpreceive~: Number of channels must be between 1 and %d", DEFAULT_AUDIO_CHANNELS);
+            return NULL;
+        }
+
+        x->x_noutlets = (int)outlets;
         for (i = 0; i < x->x_noutlets; i++)
             outlet_new(&x->x_obj, &s_signal);
         x->x_outlet2 = outlet_new(&x->x_obj, &s_anything);

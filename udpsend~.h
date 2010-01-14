@@ -1,4 +1,4 @@
-/* udpsend~.h based on netsend~.h */
+/* udpsend~.h modified by Martin Peach from netsend~.h: */
 /* ------------------------ netsend~ ------------------------------------------ */
 /*                                                                              */
 /* Tilde object to send uncompressed audio data to netreceive~.                 */
@@ -34,7 +34,7 @@
 /* Some enhancements have been made with the goal of keeping compatibility   */
 /* between the stream formats of streamout~/in~ and netsend~/receive~.       */
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 #define DEFAULT_AUDIO_CHANNELS 32       /* nax. number of audio channels we support */
 #define DEFAULT_AUDIO_BUFFER_SIZE 2048 /*1024*/  /* number of samples in one audio block */
@@ -60,53 +60,11 @@ typedef unsigned short u_int16_t;
 #endif
 #endif
 
-#ifndef CLIP
-#define CLIP(a, lo, hi) ( (a)>(lo)?( (a)<(hi)?(a):(hi) ):(lo) )
-#endif
-
-
-/* swap 32bit t_float. Is there a better way to do that???? */
-#ifdef _WIN32
-__inline static float netsend_float(float f)
-#else
-inline static float netsend_float(float f)
-#endif
+typedef union _flint
 {
-    union
-    {
-        float f;
-        unsigned char b[4];
-    } dat1, dat2;
-    
-    dat1.f = f;
-    dat2.b[0] = dat1.b[3];
-    dat2.b[1] = dat1.b[2];
-    dat2.b[2] = dat1.b[1];
-    dat2.b[3] = dat1.b[0];
-    return dat2.f;
-}
-
-/* swap 32bit long int */
-#ifdef _WIN32
-__inline static long netsend_long(long n)
-#else
-inline static long netsend_long(long n)
-#endif
-{
-    return (((n & 0xff) << 24) | ((n & 0xff00) << 8) |
-        ((n & 0xff0000) >> 8) | ((n & 0xff000000) >> 24));
-}
-
-/* swap 16bit short int */
-#ifdef _WIN32
-__inline static long netsend_short(long n)
-#else
-inline static short netsend_short(short n)
-#endif
-{
-    return (((n & 0xff) << 8) | ((n & 0xff00) >> 8));
-}
-
+    int i32;
+    t_float f32;
+} flint;
 
 /* format specific stuff */
 
@@ -124,21 +82,9 @@ inline static short netsend_short(short n)
 #define SF_SIZEOF(a) (a == SF_FLOAT ? sizeof(t_float) : \
                      a == SF_16BIT ? sizeof(short) : 1)
 
-
-/* version / byte-endian specific stuff */
-
-#define SF_BYTE_LE 1    /* little endian */
-#define SF_BYTE_BE 2    /* big endian */
-
-#if defined(_WIN32) || defined(__linux__) || defined(IRIX)
-#define SF_BYTE_NATIVE SF_BYTE_LE
-#else /* must be  __APPLE__ */
-#define SF_BYTE_NATIVE SF_BYTE_BE
-#endif
-
 typedef struct _tag
 {                         /* size (bytes) */
-    char version;         /*    1         */
+//    char version;         /*    1         */
     char format;          /*    1         */
     long count;           /*    4         */
     char channels;        /*    1         */
