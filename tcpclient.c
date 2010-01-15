@@ -44,6 +44,7 @@
 #define SOCKET_ERROR -1
 #else
 #include <winsock2.h>
+#include <ws2tcpip.h> /* for socklen_t */
 #endif
 
 #ifdef _MSC_VER
