@@ -101,15 +101,16 @@ typedef struct _udpsend_tilde
     int             x_ninlets; /* number of inlets */
     int             x_channels; /* number of channels we want to stream */
     int             x_format; /* format of streamed audio data */
-//    int             x_bitrate; /* specifies bitrate for compressed formats */
     int             x_count; /* total number of audio frames */
     t_int           **x_myvec; /* vector we pass on in the DSP routine */
 
     pthread_mutex_t x_mutex;
-    pthread_cond_t  x_requestcondition;
-    pthread_cond_t  x_answercondition;
-    pthread_t       x_childthread;
+    pthread_t       x_childthread; /* a thread to initiate a connection to the remote port */
+    pthread_attr_t  x_childthread_attr; /* child thread should have detached attribute so it can be cleaned up after it exits. */
+    int             x_childthread_result; /* result from pthread_create. Zero if x_childthread represents a valid thread. */
 } t_udpsend_tilde;
+
+#define NO_CHILDTHREAD 1 /* not zero */
 
 /* function prototypes */
 static int udpsend_tilde_sockerror(char *s);
@@ -132,8 +133,8 @@ void udpsend_tilde_setup(void);
 static void udpsend_tilde_notify(t_udpsend_tilde *x)
 {
     pthread_mutex_lock(&x->x_mutex);
-    x->x_childthread = NULL;
-    outlet_float(x->x_outlet, x->x_connectstate);
+    x->x_childthread_result = NO_CHILDTHREAD; /* connection thread has ended */
+    outlet_float(x->x_outlet, x->x_connectstate); /* we should be connected */
     pthread_mutex_unlock(&x->x_mutex);
 }
 
@@ -150,6 +151,7 @@ static void udpsend_tilde_disconnect(t_udpsend_tilde *x)
     pthread_mutex_unlock(&x->x_mutex);
 }
 
+/* udpsend_tilde_doconnect runs in the child thread, which terminates as soon as a connection is  */
 static void *udpsend_tilde_doconnect(void *zz)
 {
     t_udpsend_tilde *x = (t_udpsend_tilde *)zz;
@@ -171,7 +173,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     {
          post("udpsend~: connection to %s on port %d failed", hostname->s_name,portno); 
          udpsend_tilde_sockerror("socket");
-         x->x_childthread = NULL;
+         x->x_childthread_result = NO_CHILDTHREAD;
          return (0);
     }
 
@@ -181,7 +183,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     if (hp == 0)
     {
         post("udpsend~: bad host?");
-        x->x_childthread = NULL;
+        x->x_childthread_result = NO_CHILDTHREAD;
         return (0);
     }
 
@@ -204,7 +206,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     {
         udpsend_tilde_sockerror("connecting stream socket");
         udpsend_tilde_closesocket(sockfd);
-        x->x_childthread = NULL;
+        x->x_childthread_result = NO_CHILDTHREAD;
         return (0);
     }
 
@@ -213,7 +215,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     pthread_mutex_lock(&x->x_mutex);
     x->x_fd = sockfd;
     x->x_connectstate = 1;
-    clock_delay(x->x_clock, 0);
+    clock_delay(x->x_clock, 0);/* udpsend_tilde_notify is called in next clock tick */
     pthread_mutex_unlock(&x->x_mutex);
     return (0);
 }
@@ -221,7 +223,7 @@ static void *udpsend_tilde_doconnect(void *zz)
 static void udpsend_tilde_connect(t_udpsend_tilde *x, t_symbol *host, t_floatarg fportno)
 {
     pthread_mutex_lock(&x->x_mutex);
-    if (x->x_childthread != NULL)
+    if (x->x_childthread_result == 0)
     {
         pthread_mutex_unlock(&x->x_mutex);
         post("udpsend~: already trying to connect");
@@ -246,7 +248,25 @@ static void udpsend_tilde_connect(t_udpsend_tilde *x, t_symbol *host, t_floatarg
     x->x_count = 0;
 
     /* start child thread to connect */
-    pthread_create(&x->x_childthread, 0, udpsend_tilde_doconnect, x);
+    /* sender thread should start out detached so its resouces will be freed when it is done */
+    if (0!= (x->x_childthread_result = pthread_attr_init(&x->x_childthread_attr)))
+    {
+        pthread_mutex_unlock(&x->x_mutex);
+        post("udpsend~: pthread_attr_init failed: %d", x->x_childthread_result);
+        return;
+    }
+    if(0!= (x->x_childthread_result = pthread_attr_setdetachstate(&x->x_childthread_attr, PTHREAD_CREATE_DETACHED)))
+    {
+        pthread_mutex_unlock(&x->x_mutex);
+        post("udpsend~: pthread_attr_setdetachstate failed: %d", x->x_childthread_result);
+        return;
+    }
+    if (0 != (x->x_childthread_result = pthread_create(&x->x_childthread, &x->x_childthread_attr, udpsend_tilde_doconnect, x)))
+    {
+        pthread_mutex_unlock(&x->x_mutex);
+        post("udpsend~: couldn't create sender thread (%d)", x->x_childthread_result);
+        return;
+    }
     pthread_mutex_unlock(&x->x_mutex);
 }
 
@@ -553,13 +573,11 @@ static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg blocksize)
         }
 
         pthread_mutex_init(&x->x_mutex, 0);
-        pthread_cond_init(&x->x_requestcondition, 0);
-        pthread_cond_init(&x->x_answercondition, 0);
 
         x->x_hostname = ps_localhost;
         x->x_portno = DEFAULT_PORT;
         x->x_connectstate = 0;
-        x->x_childthread = NULL;
+        x->x_childthread_result = NO_CHILDTHREAD;
         x->x_fd = -1;
 
         x->x_tag.format = x->x_format = SF_FLOAT;
@@ -597,8 +615,6 @@ static void udpsend_tilde_free(t_udpsend_tilde* x)
 
     clock_free(x->x_clock);
 
-    pthread_cond_destroy(&x->x_requestcondition);
-    pthread_cond_destroy(&x->x_answercondition);
     pthread_mutex_destroy(&x->x_mutex);
 }
 

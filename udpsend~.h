@@ -34,7 +34,7 @@
 /* Some enhancements have been made with the goal of keeping compatibility   */
 /* between the stream formats of streamout~/in~ and netsend~/receive~.       */
 
-#define VERSION "0.2"
+#define VERSION "0.3"
 
 #define DEFAULT_AUDIO_CHANNELS 32       /* nax. number of audio channels we support */
 #define DEFAULT_AUDIO_BUFFER_SIZE 2048 /*1024*/  /* number of samples in one audio block */
