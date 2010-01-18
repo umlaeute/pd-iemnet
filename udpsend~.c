@@ -75,9 +75,9 @@
 static t_class *udpsend_tilde_class;
 
 static t_symbol *ps_nothing, *ps_localhost, *ps_vecsize;
-static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow;
-static t_symbol *ps_queuesize, *ps_average, *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit;
-static t_symbol *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname;
+static t_symbol *ps_format, *ps_channels, *ps_framesize;
+static t_symbol *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit;
+static t_symbol *ps_sf_unknown, *ps_bitrate, *ps_hostname;
 
 typedef struct _udpsend_tilde
 {
@@ -132,7 +132,7 @@ void udpsend_tilde_setup(void);
 static void udpsend_tilde_notify(t_udpsend_tilde *x)
 {
     pthread_mutex_lock(&x->x_mutex);
-    x->x_childthread = 0;
+    x->x_childthread = NULL;
     outlet_float(x->x_outlet, x->x_connectstate);
     pthread_mutex_unlock(&x->x_mutex);
 }
@@ -171,7 +171,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     {
          post("udpsend~: connection to %s on port %d failed", hostname->s_name,portno); 
          udpsend_tilde_sockerror("socket");
-         x->x_childthread = 0;
+         x->x_childthread = NULL;
          return (0);
     }
 
@@ -181,7 +181,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     if (hp == 0)
     {
         post("udpsend~: bad host?");
-        x->x_childthread = 0;
+        x->x_childthread = NULL;
         return (0);
     }
 
@@ -204,7 +204,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     {
         udpsend_tilde_sockerror("connecting stream socket");
         udpsend_tilde_closesocket(sockfd);
-        x->x_childthread = 0;
+        x->x_childthread = NULL;
         return (0);
     }
 
@@ -221,7 +221,7 @@ static void *udpsend_tilde_doconnect(void *zz)
 static void udpsend_tilde_connect(t_udpsend_tilde *x, t_symbol *host, t_floatarg fportno)
 {
     pthread_mutex_lock(&x->x_mutex);
-    if (x->x_childthread != 0)
+    if (x->x_childthread != NULL)
     {
         pthread_mutex_unlock(&x->x_mutex);
         post("udpsend~: already trying to connect");
@@ -559,7 +559,7 @@ static void *udpsend_tilde_new(t_floatarg inlets, t_floatarg blocksize)
         x->x_hostname = ps_localhost;
         x->x_portno = DEFAULT_PORT;
         x->x_connectstate = 0;
-        x->x_childthread = 0;
+        x->x_childthread = NULL;
         x->x_fd = -1;
 
         x->x_tag.format = x->x_format = SF_FLOAT;
