@@ -154,13 +154,14 @@ static void udpsend_tilde_disconnect(t_udpsend_tilde *x)
 /* udpsend_tilde_doconnect runs in the child thread, which terminates as soon as a connection is  */
 static void *udpsend_tilde_doconnect(void *zz)
 {
-    t_udpsend_tilde *x = (t_udpsend_tilde *)zz;
-    struct sockaddr_in server;
-    struct hostent *hp;
-    int intarg = 1;
-    int sockfd;
-    int portno;
-    t_symbol *hostname;
+    t_udpsend_tilde     *x = (t_udpsend_tilde *)zz;
+    struct sockaddr_in  server;
+    struct hostent      *hp;
+    int                 intarg = 1;
+    int                 sockfd;
+    int                 portno;
+    int                 broadcast = 1;/* nonzero is true */
+    t_symbol            *hostname;
 
     pthread_mutex_lock(&x->x_mutex);
     hostname = x->x_hostname;
@@ -177,6 +178,13 @@ static void *udpsend_tilde_doconnect(void *zz)
          return (0);
     }
 
+#ifdef SO_BROADCAST
+    if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
+    {
+        udpsend_tilde_sockerror("setting SO_BROADCAST");
+    }
+#endif /* SO_BROADCAST */
+
     /* connect socket using hostname provided in command line */
     server.sin_family = AF_INET;
     hp = gethostbyname(x->x_hostname->s_name);
@@ -192,7 +200,7 @@ static void *udpsend_tilde_doconnect(void *zz)
     intarg = 6;	/* select a priority between 0 and 7 */
     if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, (const char*)&intarg, sizeof(int)) < 0)
     {
-        error("udpsend~: setsockopt(SO_PRIORITY) failed");
+        udpsend_tilde_sockerror("setting SO_PRIORITY");
     }
 #endif
 
