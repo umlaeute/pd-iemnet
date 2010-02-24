@@ -394,7 +394,7 @@ static t_int *udpsend_tilde_perform(t_int *w)
                 int ret = send(x->x_fd, bp, length, SEND_FLAGS);
                 if (ret <= 0)
                 {
-    post ("length %ld", length);
+                    post ("udpsend~: sending length %ld", length);
                     udpsend_tilde_sockerror("send data");
                     pthread_mutex_unlock(&x->x_mutex);
                     udpsend_tilde_disconnect(x);

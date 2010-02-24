@@ -200,8 +200,7 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
 
        if (ret <= 0)   /* error */
         {
-            if (udpreceive_tilde_sockerror("recv tag"))
-                goto bail;
+            if (0 == udpreceive_tilde_sockerror("recv tag")) return;
             udpreceive_tilde_reset(x, 0);
             x->x_counter = 0;
             return;
@@ -235,8 +234,16 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
         }
         else if (ret < 0)   /* error */
         {
-            if (udpreceive_tilde_sockerror("recv data"))
-                goto bail;
+            if ( 0 == (ret = udpreceive_tilde_sockerror("recv data"))) return;
+#ifdef _WIN32
+            if ( ret == WSAEFAULT)            
+#else
+            if ( ret == EFAULT)
+#endif
+            {
+                post ("udpreceive~: EFAULT: %p %lu %d", x->x_frames[x->x_framein].data, x->x_frames[x->x_framein].tag.framesize, n);
+                return; 
+            }            
             udpreceive_tilde_reset(x, 0);
             x->x_counter = 0;
             return;
@@ -261,8 +268,6 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
             }
         }
     }
-bail:
-;
 }
 
 static void udpreceive_tilde_connectpoll(t_udpreceive_tilde *x)
@@ -309,7 +314,7 @@ static int udpreceive_tilde_createsocket(t_udpreceive_tilde* x, int portno)
     /* assign server port number */
 
     server.sin_port = htons((u_short)portno);
-    post("listening to port number %d", portno);
+    post("udpreceive~: listening to port number %d", portno);
 
     udpreceive_tilde_setsocketoptions(sockfd);
 
@@ -479,7 +484,7 @@ static void udpreceive_tilde_dsp(t_udpreceive_tilde *x, t_signal **sp)
 
     if (x->x_blocksize % sp[0]->s_n)
     {
-        error("netsend~: signal vector size too large (needs to be even divisor of %d)", x->x_blocksize);
+        error("udpreceive~: signal vector size too large (needs to be even divisor of %d)", x->x_blocksize);
     }
     else
     {
@@ -709,11 +714,11 @@ static int udpreceive_tilde_sockerror(char *s)
 #ifdef _WIN32
     int err = WSAGetLastError();
     if (err == 10054) return 1;
-    else if (err == 10040) post("netsend~: %s: message too long (%d)", s, err);
-    else if (err == 10053) post("netsend~: %s: software caused connection abort (%d)", s, err);
-    else if (err == 10055) post("netsend~: %s: no buffer space available (%d)", s, err);
-    else if (err == 10060) post("netsend~: %s: connection timed out (%d)", s, err);
-    else if (err == 10061) post("netsend~: %s: connection refused (%d)", s, err);
+    else if (err == 10040) post("udpreceive~: %s: message too long (%d)", s, err);
+    else if (err == 10053) post("udpreceive~: %s: software caused connection abort (%d)", s, err);
+    else if (err == 10055) post("udpreceive~: %s: no buffer space available (%d)", s, err);
+    else if (err == 10060) post("udpreceive~: %s: connection timed out (%d)", s, err);
+    else if (err == 10061) post("udpreceive~: %s: connection refused (%d)", s, err);
     else post("udpreceive~: %s: %s (%d)", s, strerror(err), err);
 #else
     int err = errno;
@@ -726,16 +731,16 @@ static int udpreceive_tilde_sockerror(char *s)
     if (err == EAGAIN)
 #endif
     {
-        return 1;   /* recoverable error */
+        return 0;   /* recoverable error */
     }
-    return 0;   /* indicate non-recoverable error */
+    return err;   /* indicate non-recoverable error */
 }
 
 static int udpreceive_tilde_setsocketoptions(int sockfd)
 {
     int sockopt = 1;
     if (setsockopt(sockfd, SOL_IP, TCP_NODELAY, (const char*)&sockopt, sizeof(int)) < 0)
-        post("setsockopt NODELAY failed");
+        post("udpreceive~: setsockopt NODELAY failed");
 
     sockopt = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&sockopt, sizeof(int)) < 0)
