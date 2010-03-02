@@ -67,6 +67,7 @@ typedef struct _tcpclient
     t_outlet        *x_connectout;
     t_outlet        *x_statusout;
     int             x_dump; // 1 = hexdump received bytes
+    int             x_verbosity; // 1 = post connection state changes to main window
     int             x_fd; // the socket
     int             x_fdbuf; // the socket's buffer size
     t_int           x_timeout_us; /* send timeout in microseconds */
@@ -83,8 +84,9 @@ typedef struct _tcpclient
 } t_tcpclient;
 
 static void tcpclient_timeout(t_tcpclient *x, t_float timeout);
+static void tcpclient_verbosity(t_tcpclient *x, t_float verbosity);
 static void tcpclient_dump(t_tcpclient *x, t_float dump);
-static void tcp_client_hexdump(unsigned char *buf, long len);
+static void tcp_client_hexdump(t_tcpclient *x, long len);
 static void tcpclient_tick(t_tcpclient *x);
 static void *tcpclient_child_connect(void *w);
 static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fportno);
@@ -119,15 +121,20 @@ static void tcpclient_dump(t_tcpclient *x, t_float dump)
     x->x_dump = (dump == 0)?0:1;
 }
 
-static void tcp_client_hexdump(unsigned char *buf, long len)
+static void tcpclient_verbosity(t_tcpclient *x, t_float verbosity)
+{
+    x->x_verbosity = (verbosity == 0)?0:1; /* only two states so far */
+}
+
+static void tcp_client_hexdump(t_tcpclient *x, long len)
 {
 #define BYTES_PER_LINE 16
-    char hexStr[(3*BYTES_PER_LINE)+1];
-    char ascStr[BYTES_PER_LINE+1];
-    long i, j, k = 0L;
-#ifdef DEBUG
-    post("tcp_client_hexdump %d", len);
-#endif
+    char            hexStr[(3*BYTES_PER_LINE)+1];
+    char            ascStr[BYTES_PER_LINE+1];
+    long            i, j, k = 0L;
+    unsigned char   *buf = x->x_msginbuf;
+
+    if (x->x_verbosity) post("%s_hexdump %d:", objName, len);
     while (k < len)
     {
         for (i = j = 0; i < BYTES_PER_LINE; ++i, ++k, j+=3)
@@ -188,7 +195,7 @@ static void *tcpclient_child_connect(void *w)
     /* assign client port number */
     server.sin_port = htons((u_short)x->x_port);
 
-    post("%s: connecting socket %d to port %d", objName, sockfd, x->x_port);
+    if (x->x_verbosity) post("%s: connecting socket %d to port %d", objName, sockfd, x->x_port);
     /* try to connect */
     if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
@@ -226,7 +233,7 @@ static void tcpclient_disconnect(t_tcpclient *x)
         x->x_fd = -1;
         x->x_connectstate = 0;
         outlet_float(x->x_connectout, 0);
-        post("%s: disconnected", objName);
+        if (x->x_verbosity) post("%s: disconnected", objName);
     }
     else post("%s: not connected", objName);
 }
@@ -296,7 +303,7 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
             }
             fclose(fptr);
             fptr = NULL;
-            post("%s_send: read \"%s\" length %d byte%s", objName, fpath, j, ((d==1)?"":"s"));
+            if (x->x_verbosity) post("%s_send: read \"%s\" length %d byte%s", objName, fpath, j, ((d==1)?"":"s"));
         }
         else
         {
@@ -397,7 +404,7 @@ static void tcpclient_buf_size(t_tcpclient *x, t_symbol *s, int argc, t_atom *ar
         }
         buf_size = atom_getfloatarg(0, argc, argv);
         x->x_fdbuf = tcpclient_set_socket_send_buf_size(x, (int)buf_size);
-        post("%s_buf_size: set to %d", objName, x->x_fdbuf);
+        if (x->x_verbosity) post("%s_buf_size: set to %d", objName, x->x_fdbuf);
         return;
     }
     x->x_fdbuf = tcpclient_get_socket_send_buf_size(x);
@@ -441,7 +448,7 @@ static void tcpclient_rcv(t_tcpclient *x)
                 x->x_msginbuf[ret] = 0;
                 post("%s: received %d bytes ", objName, ret);
 #endif
-                if (x->x_dump)tcp_client_hexdump(x->x_msginbuf, ret);
+                if (x->x_dump)tcp_client_hexdump(x, ret);
                 for (i = 0; i < ret; ++i)
                 {
                     /* convert the bytes in the buffer to floats in a list */
@@ -466,7 +473,7 @@ static void tcpclient_rcv(t_tcpclient *x)
                 }
                 else
                 {
-                    post("%s: connection closed for socket %d\n", objName, sockfd);
+                    if (x->x_verbosity) post("%s: connection closed for socket %d\n", objName, sockfd);
                     tcpclient_disconnect(x);
                 }
             }
@@ -493,6 +500,7 @@ static void *tcpclient_new(t_floatarg udpflag)
     x->x_statusout = outlet_new(&x->x_obj, &s_anything);/* last outlet for everything else */
     x->x_clock = clock_new(x, (t_method)tcpclient_tick);
     x->x_poll = clock_new(x, (t_method)tcpclient_poll);
+    x->x_verbosity = 1; /* default post status changes to main window */
     x->x_fd = -1;
     /* convert the bytes in the buffer to floats in a list */
     for (i = 0; i < MAX_UDP_RECEIVE; ++i)
@@ -535,6 +543,7 @@ void tcpclient_setup(void)
     class_addmethod(tcpclient_class, (t_method)tcpclient_buf_size, gensym("buf"), A_GIMME, 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("receive"), 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_rcv, gensym("rcv"), 0);
+    class_addmethod(tcpclient_class, (t_method)tcpclient_verbosity, gensym("verbosity"), A_FLOAT, 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_dump, gensym("dump"), A_FLOAT, 0);
     class_addmethod(tcpclient_class, (t_method)tcpclient_timeout, gensym("timeout"), A_FLOAT, 0);
     class_addlist(tcpclient_class, (t_method)tcpclient_send);
