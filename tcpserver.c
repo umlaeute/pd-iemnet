@@ -70,6 +70,10 @@ typedef void (*t_tcpserver_socketreceivefn)(void *x, t_binbuf *b);
 
 typedef struct _tcpserver_socketreceiver
 {
+    t_symbol                    *sr_host;
+    t_int                       sr_fd;
+    t_int                       sr_fdbuf;
+    u_long                      sr_addr;
     unsigned char               *sr_inbuf;
     int                         sr_inhead;
     int                         sr_intail;
@@ -97,10 +101,6 @@ typedef struct _tcpserver
     t_outlet                    *x_status_outlet;
     t_int                       x_dump; // 1 = hexdump received bytes
 
-    t_symbol                    *x_host[MAX_CONNECT];
-    t_int                       x_fd[MAX_CONNECT];
-    t_int                       x_fdbuf[MAX_CONNECT];
-    u_long                      x_addr[MAX_CONNECT];
     t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT];
 
     t_atom                      x_addrbytes[4];
@@ -291,14 +291,14 @@ static void tcpserver_socketreceiver_read(t_tcpserver_socketreceiver *x, int fd)
             /* output client's IP and socket no. */
             for(i = 0; i < y->x_nconnections; i++)	/* search for corresponding IP */
             {
-                if(y->x_fd[i] == y->x_sock_fd)
+                if(y->x_sr[i]->sr_fd == y->x_sock_fd)
                 {
-//                  outlet_symbol(x->x_connectionip, x->x_host[i]);
+//                  outlet_symbol(x->x_connectionip, x->x_sr[i].sr_host);
                     /* find sender's ip address and output it */
-                    y->x_addrbytes[0].a_w.w_float = (y->x_addr[i] & 0xFF000000)>>24;
-                    y->x_addrbytes[1].a_w.w_float = (y->x_addr[i] & 0x0FF0000)>>16;
-                    y->x_addrbytes[2].a_w.w_float = (y->x_addr[i] & 0x0FF00)>>8;
-                    y->x_addrbytes[3].a_w.w_float = (y->x_addr[i] & 0x0FF);
+                    y->x_addrbytes[0].a_w.w_float = (y->x_sr[i]->sr_addr & 0xFF000000)>>24;
+                    y->x_addrbytes[1].a_w.w_float = (y->x_sr[i]->sr_addr & 0x0FF0000)>>16;
+                    y->x_addrbytes[2].a_w.w_float = (y->x_sr[i]->sr_addr & 0x0FF00)>>8;
+                    y->x_addrbytes[3].a_w.w_float = (y->x_sr[i]->sr_addr & 0x0FF);
                     outlet_list(y->x_addrout, &s_list, 4L, y->x_addrbytes);
                     break;
                 }
@@ -328,7 +328,7 @@ static void tcpserver_send_bytes(int client, t_tcpserver *x, int argc, t_atom *a
     float                   f, e;
     int                     length;
     size_t                  flen = 0;
-    int                     sockfd = x->x_fd[client];
+    int                     sockfd = x->x_sr[client]->sr_fd;
     char                    fpath[FILENAME_MAX];
     FILE                    *fptr;
     t_atom                  output_atom[3];
@@ -510,7 +510,7 @@ failed:
 /* SIOCOUTQ exists only(?) on linux, returns remaining space in the socket's output buffer  */
 static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client)
 {
-    int sockfd = x->x_fd[client];
+    int sockfd = x->x_sr[client].sr_fd;
     int result = 0L;
 
     ioctl(sockfd, SIOCOUTQ, &result);
@@ -601,7 +601,7 @@ static void tcpserver_send(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
         sockfd = atom_getfloatarg(0, argc, argv);
         for(i = 0; i < x->x_nconnections; i++) /* check if connection exists */
         {
-            if(x->x_fd[i] == sockfd)
+            if(x->x_sr[i]->sr_fd == sockfd)
             {
                 client = i; /* the client we're sending to */
                 break;
@@ -637,10 +637,10 @@ static void tcpserver_disconnect(t_tcpserver *x)
         /* find the socketreceiver for this socket */
         for(i = 0; i < x->x_nconnections; i++)
         {
-            if(x->x_fd[i] == x->x_sock_fd)
+            if(x->x_sr[i]->sr_fd == x->x_sock_fd)
             {
                 y = x->x_sr[i];
-                fd = x->x_fd[i];
+                fd = y->sr_fd;
                 if (y->sr_notifier) (*y->sr_notifier)(x);
                 sys_rmpollfn(fd);
                 sys_closesocket(fd);
@@ -682,7 +682,7 @@ static void tcpserver_client_disconnect(t_tcpserver *x, t_floatarg fclient)
         return;
     }
     --client;/* zero based index*/
-    x->x_sock_fd = x->x_fd[client];
+    x->x_sock_fd = x->x_sr[client]->sr_fd;
     tcpserver_disconnect(x);
 }
 
@@ -733,12 +733,12 @@ static void tcpserver_output_client_state(t_tcpserver *x, int client)
         /* output parameters of all connections via status outlet */
         for(client = 0; client < x->x_nconnections; client++)
         {
-            x->x_fdbuf[client] = tcpserver_get_socket_send_buf_size(x->x_fd[client]);
+            x->x_sr[client]->sr_fdbuf = tcpserver_get_socket_send_buf_size(x->x_sr[client]->sr_fd);
             SETFLOAT(&output_atom[0], client+1);
-            SETFLOAT(&output_atom[1], x->x_fd[client]);
+            SETFLOAT(&output_atom[1], x->x_sr[client]->sr_fd);
             output_atom[2].a_type = A_SYMBOL;
-            output_atom[2].a_w.w_symbol = x->x_host[client];
-            SETFLOAT(&output_atom[3], x->x_fdbuf[client]);
+            output_atom[2].a_w.w_symbol = x->x_sr[client]->sr_host;
+            SETFLOAT(&output_atom[3], x->x_sr[client]->sr_fdbuf);
             outlet_anything( x->x_status_outlet, gensym("client"), 4, output_atom);
         }
     }
@@ -746,12 +746,12 @@ static void tcpserver_output_client_state(t_tcpserver *x, int client)
     {
         client -= 1;/* zero-based client index conflicts with 1-based user index !!! */
         /* output client parameters via status outlet */
-        x->x_fdbuf[client] = tcpserver_get_socket_send_buf_size(x->x_fd[client]);
+        x->x_sr[client]->sr_fdbuf = tcpserver_get_socket_send_buf_size(x->x_sr[client]->sr_fd);
         SETFLOAT(&output_atom[0], client+1);/* user sees client 0 as 1 */
-        SETFLOAT(&output_atom[1], x->x_fd[client]);
+        SETFLOAT(&output_atom[1], x->x_sr[client]->sr_fd);
         output_atom[2].a_type = A_SYMBOL;
-        output_atom[2].a_w.w_symbol = x->x_host[client];
-        SETFLOAT(&output_atom[3], x->x_fdbuf[client]);
+        output_atom[2].a_w.w_symbol = x->x_sr[client]->sr_host;
+        SETFLOAT(&output_atom[3], x->x_sr[client]->sr_fdbuf);
         outlet_anything( x->x_status_outlet, gensym("client"), 4, output_atom);
     }
 }
@@ -827,8 +827,8 @@ static void tcpserver_buf_size(t_tcpserver *x, t_symbol *s, int argc, t_atom *ar
         }
         buf_size = atom_getfloatarg(1, argc, argv);
         --client;/* zero based index*/
-        x->x_fdbuf[client] = tcpserver_set_socket_send_buf_size(x->x_fd[client], (int)buf_size);
-        post("%s_buf_size: client %d set to %d", objName, client+1, x->x_fdbuf[client]);
+        x->x_sr[client]->sr_fdbuf = tcpserver_set_socket_send_buf_size(x->x_sr[client]->sr_fd, (int)buf_size);
+        post("%s_buf_size: client %d set to %d", objName, client+1, x->x_sr[client]->sr_fdbuf);
         return;
     }
     post("%s_buf_size: specify client and buffer size", objName);
@@ -842,7 +842,7 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
     /* enumerate through the clients and send each the message */
     for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
     {
-        if(x->x_fd[client] >= 0)
+        if(x->x_sr[client]->sr_fd >= 0)
         { /* socket exists for this client */
             tcpserver_send_bytes(client, x, argc, argv);
         }
@@ -858,20 +858,16 @@ static void tcpserver_notify(t_tcpserver *x)
     /* remove connection from list */
     for(i = 0; i < x->x_nconnections; i++)
     {
-        if(x->x_fd[i] == x->x_sock_fd)
+        if(x->x_sr[i]->sr_fd == x->x_sock_fd)
         {
             x->x_nconnections--;
-            post("%s: \"%s\" removed from list of clients", objName, x->x_host[i]->s_name);
-            x->x_host[i] = NULL;	/* delete entry */
-            x->x_fd[i] = -1;
+            post("%s: \"%s\" removed from list of clients", objName, x->x_sr[i]->sr_host->s_name);
             tcpserver_socketreceiver_free(x->x_sr[i]);
             x->x_sr[i] = NULL;
 
             /* rearrange list now: move entries to close the gap */
             for(k = i; k < x->x_nconnections; k++)
             {
-                x->x_host[k] = x->x_host[k + 1];
-                x->x_fd[k] = x->x_fd[k + 1];
                 x->x_sr[k] = x->x_sr[k + 1];
             }
         }
@@ -905,35 +901,35 @@ static void tcpserver_connectpoll(t_tcpserver *x)
         sys_addpollfn(fd, (t_fdpollfn)tcpserver_socketreceiver_read, y);
         x->x_nconnections++;
         i = x->x_nconnections - 1;
-        x->x_host[i] = gensym(inet_ntoa(incomer_address.sin_addr));
-        x->x_fd[i] = fd;
 		x->x_sr[i] = y;
+        x->x_sr[i]->sr_host = gensym(inet_ntoa(incomer_address.sin_addr));
+        x->x_sr[i]->sr_fd = fd;
         post("%s: accepted connection from %s on socket %d",
-            objName, x->x_host[i]->s_name, x->x_fd[i]);
+            objName, x->x_sr[i]->sr_host->s_name, x->x_sr[i]->sr_fd);
 /* see how big the send buffer is on this socket */
-        x->x_fdbuf[i] = 0;
+        x->x_sr[i]->sr_fdbuf = 0;
 #ifdef _WIN32
-        if (getsockopt(x->x_fd[i], SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) != SOCKET_ERROR)
+        if (getsockopt(x->x_sr[i]->sr_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) != SOCKET_ERROR)
         {
             /* post("%s_connectpoll: send buffer is %ld\n", objName, optVal); */
-            x->x_fdbuf[i] = optVal;
+            x->x_sr[i]->sr_fdbuf = optVal;
         }
         else post("%s_connectpoll: getsockopt returned %d\n", objName, WSAGetLastError());
 #else
-        if (getsockopt(x->x_fd[i], SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == 0)
+        if (getsockopt(x->x_sr[i]->sr_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen) == 0)
         {
             /* post("%s_connectpoll: send buffer is %ld\n", objName, optVal); */
-            x->x_fdbuf[i] = optVal;
+            x->x_sr[i]->sr_fdbuf = optVal;
         }
         else post("%s_connectpoll: getsockopt returned %d\n", objName, errno);
 #endif
         outlet_float(x->x_connectout, x->x_nconnections);
-        outlet_float(x->x_sockout, x->x_fd[i]);	/* the socket number */
-        x->x_addr[i] = ntohl(incomer_address.sin_addr.s_addr);
-        x->x_addrbytes[0].a_w.w_float = (x->x_addr[i] & 0xFF000000)>>24;
-        x->x_addrbytes[1].a_w.w_float = (x->x_addr[i] & 0x0FF0000)>>16;
-        x->x_addrbytes[2].a_w.w_float = (x->x_addr[i] & 0x0FF00)>>8;
-        x->x_addrbytes[3].a_w.w_float = (x->x_addr[i] & 0x0FF);
+        outlet_float(x->x_sockout, x->x_sr[i]->sr_fd);	/* the socket number */
+        x->x_sr[i]->sr_addr = ntohl(incomer_address.sin_addr.s_addr);
+        x->x_addrbytes[0].a_w.w_float = (x->x_sr[i]->sr_addr & 0xFF000000)>>24;
+        x->x_addrbytes[1].a_w.w_float = (x->x_sr[i]->sr_addr & 0x0FF0000)>>16;
+        x->x_addrbytes[2].a_w.w_float = (x->x_sr[i]->sr_addr & 0x0FF00)>>8;
+        x->x_addrbytes[3].a_w.w_float = (x->x_sr[i]->sr_addr & 0x0FF);
         outlet_list(x->x_addrout, &s_list, 4L, x->x_addrbytes);
     }
 }
@@ -948,7 +944,7 @@ static void tcpserver_print(t_tcpserver *x)
         for(i = 0; i < x->x_nconnections; i++)
         {
             post("        \"%s\" on socket %d",
-                x->x_host[i]->s_name, x->x_fd[i]);
+                x->x_sr[i]->sr_host->s_name, x->x_sr[i]->sr_fd);
         }
     }
     else post("%s: no open connections", objName);
@@ -1009,7 +1005,6 @@ static void *tcpserver_new(t_floatarg fportno)
     x->x_nconnections = 0;
     for(i = 0; i < MAX_CONNECT; i++)
     {
-        x->x_fd[i] = -1;
         x->x_sr[i] = NULL;
     }
     /* prepare to convert the bytes in the buffer to floats in a list */
@@ -1033,10 +1028,10 @@ static void tcpserver_free(t_tcpserver *x)
 
     for(i = 0; i < MAX_CONNECT; i++)
     {
-        if (x->x_fd[i] >= 0)
+        if (x->x_sr[i]->sr_fd >= 0)
         {
-            sys_rmpollfn(x->x_fd[i]);
-            sys_closesocket(x->x_fd[i]);
+            sys_rmpollfn(x->x_sr[i]->sr_fd);
+            sys_closesocket(x->x_sr[i]->sr_fd);
         }
         if (x->x_sr[i] != NULL) tcpserver_socketreceiver_free(x->x_sr[i]);
     }
