@@ -96,11 +96,13 @@ typedef struct _tcpserver
     t_outlet                    *x_addrout;
     t_outlet                    *x_status_outlet;
     t_int                       x_dump; // 1 = hexdump received bytes
+
     t_symbol                    *x_host[MAX_CONNECT];
     t_int                       x_fd[MAX_CONNECT];
     t_int                       x_fdbuf[MAX_CONNECT];
     u_long                      x_addr[MAX_CONNECT];
     t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT];
+
     t_atom                      x_addrbytes[4];
     t_int                       x_sock_fd;
     t_int                       x_connectsocket;
@@ -870,6 +872,7 @@ static void tcpserver_notify(t_tcpserver *x)
             {
                 x->x_host[k] = x->x_host[k + 1];
                 x->x_fd[k] = x->x_fd[k + 1];
+                x->x_sr[k] = x->x_sr[k + 1];
             }
         }
     }
