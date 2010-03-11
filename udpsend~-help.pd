@@ -25,23 +25,23 @@
 #X text -51 391 framesize:;
 #X text 98 389 to:;
 #X msg -216 242 info;
-#X symbolatom -311 720 10 0 0 0 - - -;
-#X floatatom -273 673 5 0 0 0 - - -;
-#X floatatom -235 650 7 0 0 0 - - -;
-#X floatatom -196 720 9 0 0 0 - - -;
-#X obj -311 696 prepend set;
-#X text -337 672 channels:;
-#X text -357 719 format:;
-#X text -248 719 bitrate:;
-#X text -299 649 framesize:;
-#X floatatom -158 674 9 0 0 0 - - -;
-#X floatatom -120 650 9 0 0 0 - - -;
-#X floatatom -81 696 5 0 0 0 - - -;
-#X floatatom -43 674 5 0 0 0 - - -;
-#X text -215 673 overflow:;
-#X text -182 649 underflow:;
-#X text -144 695 queuesize:;
-#X text -95 673 average:;
+#X symbolatom -311 717 10 0 0 0 - - -;
+#X floatatom -277 671 5 0 0 0 - - -;
+#X floatatom -242 650 7 0 0 0 - - -;
+#X floatatom -208 737 9 0 0 0 - - -;
+#X obj -311 693 prepend set;
+#X text -341 670 channels:;
+#X text -357 716 format:;
+#X text -257 736 bitrate:;
+#X text -306 649 framesize:;
+#X floatatom -173 672 9 0 0 0 - - -;
+#X floatatom -139 650 9 0 0 0 - - -;
+#X floatatom -104 693 5 0 0 0 - - -;
+#X floatatom -70 672 5 0 0 0 - - -;
+#X text -230 671 overflow:;
+#X text -199 649 underflow:;
+#X text -165 692 queuesize:;
+#X text -118 671 average:;
 #X msg -443 478 info;
 #X text -237 34 broadcast to everybody on your local subnet listening
 on the specified port;
@@ -76,13 +76,10 @@ per sample);
 #X obj -97 246 noise~;
 #X obj -98 268 *~;
 #X obj -164 170 / 100;
-#X text -456 310 Author: Martin Peach 2010/01/10;
 #X text -455 338 Based on: [netreceive~] and [netsend~]by Olaf Matthes
 ;
-#X obj -311 613 route format channels framesize bitrate overflow underflow
-queuesize average packets;
-#X floatatom -5 718 9 0 0 0 - - -;
-#X text -57 717 packets:;
+#X floatatom -35 715 9 0 0 0 - - -;
+#X text -87 714 packets:;
 #X text -20 204 Default blocksize is 2048 The number of samples per
 block must be an integer multiple of the number of samples in one signal
 vector.;
@@ -99,17 +96,22 @@ may be changed on-the-fly;
 #X text -450 200 number of channels to transmit;
 #X msg -422 499 buffer 2;
 #X text -360 498 set number of frames to buffer before playback;
-#X text -456 373 [udpsend~] transmits dsp vectors ("audio") via UDP.
+#X text -458 365 [udpsend~] transmits dsp vectors ("audio") via UDP.
 UDP is a connectionless protocol \, so [udpsend~] will transmit even
 if nothing is receiving.;
 #X text -299 18 connect to <hostname> <port> and begin transmitting
 ;
-#X text -455 294 [udpreceive~] and [udpsend~];
+#X text -456 313 [udpreceive~] and [udpsend~];
 #X text -256 540 receives 2 channels on port 8008 Same blocksize as
 udpsend~;
 #X floatatom -412 216 5 0 0 0 - - -;
 #X obj -288 172 tgl 15 0 empty empty toggle_connection 17 7 0 10 -4034
 -1 -1 0 1;
+#X obj -311 613 route format channels framesize bitrate overflow underflow
+queuesize average packets tag_errors;
+#X floatatom -1 693 9 0 0 0 - - -;
+#X text -67 692 tag errors:;
+#X text -455 326 Author: Martin Peach 2010/03/11;
 #X connect 0 0 54 0;
 #X connect 1 0 62 0;
 #X connect 2 0 62 0;
@@ -139,26 +141,27 @@ udpsend~;
 #X connect 57 6 9 0;
 #X connect 60 0 62 0;
 #X connect 61 0 60 0;
-#X connect 61 0 88 0;
+#X connect 61 0 86 0;
 #X connect 62 0 10 0;
 #X connect 62 1 57 0;
 #X connect 64 0 65 0;
 #X connect 64 1 65 1;
-#X connect 64 2 73 0;
+#X connect 64 2 88 0;
 #X connect 64 3 52 0;
 #X connect 68 0 69 0;
 #X connect 69 0 62 1;
 #X connect 70 0 54 1;
 #X connect 70 0 69 1;
-#X connect 73 0 28 0;
-#X connect 73 1 25 0;
-#X connect 73 2 26 0;
-#X connect 73 3 27 0;
-#X connect 73 4 33 0;
-#X connect 73 5 34 0;
-#X connect 73 6 35 0;
-#X connect 73 7 36 0;
-#X connect 73 8 74 0;
-#X connect 73 9 8 0;
-#X connect 82 0 64 0;
-#X connect 89 0 62 0;
+#X connect 80 0 64 0;
+#X connect 87 0 62 0;
+#X connect 88 0 28 0;
+#X connect 88 1 25 0;
+#X connect 88 2 26 0;
+#X connect 88 3 27 0;
+#X connect 88 4 33 0;
+#X connect 88 5 34 0;
+#X connect 88 6 35 0;
+#X connect 88 7 36 0;
+#X connect 88 8 72 0;
+#X connect 88 9 89 0;
+#X connect 88 10 8 0;
