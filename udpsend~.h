@@ -83,15 +83,15 @@ typedef union _flint
                      a == SF_16BIT ? sizeof(short) : 1)
 
 typedef struct _tag
-{                         /* size (bytes) */
-//    char version;         /*    1         */
-    char format;          /*    1         */
-    long count;           /*    4         */
-    char channels;        /*    1         */
-    long framesize;       /*    4         */
-    char  extension[5];   /*    5         */
-} t_tag;                  /*--------------*/
-                          /*   16         */
+{                           /* size (bytes) */
+    char tag[4];            /*  4  */ /*"TAG!"*/
+    char format;            /*  1  */
+    long count;             /*  4  */
+    char channels;          /*  1  */
+    long framesize;         /*  4  */
+    char reserved[2];       /*  2  */ /* pad to 16 bytes */
+} t_tag;                    /*-----*/
+                            /* 16  */
 
 typedef struct _frame
 {

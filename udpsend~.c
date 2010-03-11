@@ -348,6 +348,10 @@ static t_int *udpsend_tilde_perform(t_int *w)
         {
             bp = (char *)x->x_cbuf;
             /* fill in the header tag */
+            x->x_tag.tag[0] = 'T';
+            x->x_tag.tag[1] = 'A';
+            x->x_tag.tag[2] = 'G';
+            x->x_tag.tag[3] = '!';
             x->x_tag.framesize = htonl(length);
             x->x_tag.count = htonl(x->x_count);
             /* send the format tag */

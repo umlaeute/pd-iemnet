@@ -87,17 +87,18 @@ typedef struct _udpreceive_tilde
     t_symbol    *x_hostname;
 
     /* buffering */
-    int         x_framein;
-    int         x_frameout;
+    int         x_framein;// index of next empty frame in x_frames[]
+    int         x_frameout;// index of next frame to play back from x_frames[]
     t_frame     x_frames[DEFAULT_AUDIO_BUFFER_FRAMES];
     int         x_maxframes;
-    long        x_framecount;
+    long        x_tag_errors;
+    int         x_sync;// zero if we didn't receive a tag when we expected one
     int         x_blocksize;
     int         x_blocksperrecv;
     int         x_blockssincerecv;
 
     int         x_nbytes;
-    int         x_counter;
+    int         x_counter;// count of received frames
     int         x_average[DEFAULT_AVERAGE_NUMBER];
     int         x_averagecur;
     int         x_underflow;
@@ -131,7 +132,8 @@ EXTERN void sys_addpollfn(int fd, void* fn, void *ptr);
 static t_class *udpreceive_tilde_class;
 static t_symbol *ps_format, *ps_channels, *ps_framesize, *ps_overflow, *ps_underflow, *ps_packets,
                 *ps_queuesize, *ps_average, *ps_sf_float, *ps_sf_16bit, *ps_sf_8bit, 
-                *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname, *ps_nothing;
+                *ps_sf_mp3, *ps_sf_aac, *ps_sf_unknown, *ps_bitrate, *ps_hostname, *ps_nothing,
+                *ps_tag_errors;
 
 /* remove all pollfunctions and close socket */
 static void udpreceive_tilde_closesocket(t_udpreceive_tilde* x)
@@ -152,6 +154,7 @@ static void udpreceive_tilde_reset(t_udpreceive_tilde* x, t_floatarg buffer)
     x->x_frameout = 0;
     x->x_blockssincerecv = 0;
     x->x_blocksperrecv = x->x_blocksize / x->x_vecsize;
+    x->x_tag_errors = 0;
 
     for (i = 0; i < DEFAULT_AVERAGE_NUMBER; i++)
         x->x_average[i] = x->x_maxframes;
@@ -179,13 +182,15 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
     socklen_t           fromlen = sizeof(from);
     long                addr;
     unsigned short      port;
+    t_tag               *tag_ptr;
 
     n = x->x_nbytes;
 
     if (x->x_nbytes == 0)   /* we ate all the samples and need a new header tag */
     {
+        tag_ptr = &x->x_frames[x->x_framein].tag;
         /* receive header tag */
-        ret = recvfrom(x->x_socket, (char*)&x->x_frames[x->x_framein].tag, sizeof(t_tag), 0,
+        ret = recvfrom(x->x_socket, (char*)tag_ptr, sizeof(t_tag), 0,
             (struct sockaddr *)&from, &fromlen);
         /* get the sender's ip */
         addr = ntohl(from.sin_addr.s_addr);
@@ -202,7 +207,6 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
         {
             if (0 == udpreceive_tilde_sockerror("recv tag")) return;
             udpreceive_tilde_reset(x, 0);
-            x->x_counter = 0;
             return;
         }
         else if (ret != sizeof(t_tag))
@@ -212,17 +216,28 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
             error("udpreceive~: got incomplete header tag");
             return;
         }
-        /* adjust byte order if neccessarry */
-        x->x_frames[x->x_framein].tag.count = ntohl(x->x_frames[x->x_framein].tag.count);
-        x->x_frames[x->x_framein].tag.framesize = ntohl(x->x_frames[x->x_framein].tag.framesize);
-        /* get info from header tag */
-        if (x->x_frames[x->x_framein].tag.channels > x->x_noutlets)
+        /* make sure this is really a tag */
+        if (!((tag_ptr->tag[0] == 'T')&&(tag_ptr->tag[1] == 'A')&&(tag_ptr->tag[2] == 'G')&&(tag_ptr->tag[3] == '!')))
         {
-            error("udpreceive~: incoming stream has too many channels (%d)", x->x_frames[x->x_framein].tag.channels);
+            ++x->x_tag_errors;
+            if (x->x_sync) error("udpreceive~: bad header tag (%d)", x->x_tag_errors);
+            x->x_sync = 0;
+            /* tag length is 16 bytes, a multiple of the data frame size, so eventually we should resync on a tag */
+            return;
+        }
+        /* adjust byte order if necessary */
+        tag_ptr->count = ntohl(tag_ptr->count);
+        tag_ptr->framesize = ntohl(tag_ptr->framesize);
+
+        /* get info from header tag */
+        if (tag_ptr->channels > x->x_noutlets)
+        {
+            error("udpreceive~: incoming stream has too many channels (%d)", tag_ptr->channels);
             x->x_counter = 0;
             return;
         }
-        x->x_nbytes = n = x->x_frames[x->x_framein].tag.framesize;
+        x->x_nbytes = n = tag_ptr->framesize;
+        x->x_sync = 1;
     }
     else    /* we already have header tag or some data and need more */
     {
@@ -245,7 +260,6 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
                 return; 
             }            
             udpreceive_tilde_reset(x, 0);
-            x->x_counter = 0;
             return;
         }
 
@@ -580,6 +594,11 @@ static void udpreceive_tilde_info(t_udpreceive_tilde *x)
     /* total packets */
     SETFLOAT(list, (t_float)x->x_counter);
     outlet_anything(x->x_outlet2, ps_packets, 1, list);
+
+    /* total tag errors */
+    SETFLOAT(list, (t_float)x->x_tag_errors);
+    outlet_anything(x->x_outlet2, ps_tag_errors, 1, list);
+
 }
 
 static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floatarg blocksize)
@@ -630,6 +649,8 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floa
         {
             x->x_frames[i].data = (char *)t_getbytes(DEFAULT_AUDIO_BUFFER_SIZE * x->x_noutlets * sizeof(t_float));
         }
+        x->x_tag_errors = 0;
+        x->x_sync = 1;
         x->x_framein = 0;
         x->x_frameout = 0;
         x->x_maxframes = DEFAULT_QUEUE_LENGTH;
@@ -690,6 +711,7 @@ void udpreceive_tilde_setup(void)
     post("udpreceive~ v%s, (c) 2004 Olaf Matthes, 2010 Martin Peach", VERSION);
 
     ps_format = gensym("format");
+    ps_tag_errors = gensym("tag_errors");
     ps_channels = gensym("channels");
     ps_framesize = gensym("framesize");
     ps_bitrate = gensym("bitrate");
