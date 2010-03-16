@@ -74,40 +74,41 @@
 
 typedef struct _udpreceive_tilde
 {
-    t_object    x_obj;
-    t_outlet    *x_outlet1;
-    t_outlet    *x_outlet2;
-    t_outlet    *x_addrout;
-    t_atom      x_addrbytes[5];
-    int         x_socket;
-    int         x_connectsocket;
-    int         x_nconnections;
-    int         x_ndrops;
-    int         x_tcp;
-    t_symbol    *x_hostname;
+    t_object        x_obj;
+    t_outlet        *x_outlet1;
+    t_outlet        *x_outlet2;
+    t_outlet        *x_addrout;
+    t_outlet        *x_validout;
+    t_atom          x_addrbytes[5];
+    int             x_socket;
+    int             x_connectsocket;
+    int             x_nconnections;
+    long            x_addr;
+    unsigned short  x_port;
+    t_symbol        *x_hostname;
 
     /* buffering */
-    int         x_framein;// index of next empty frame in x_frames[]
-    int         x_frameout;// index of next frame to play back from x_frames[]
-    t_frame     x_frames[DEFAULT_AUDIO_BUFFER_FRAMES];
-    int         x_maxframes;
-    long        x_tag_errors;
-    int         x_sync;// zero if we didn't receive a tag when we expected one
-    int         x_blocksize;
-    int         x_blocksperrecv;
-    int         x_blockssincerecv;
+    int             x_framein;// index of next empty frame in x_frames[]
+    int             x_frameout;// index of next frame to play back from x_frames[]
+    t_frame         x_frames[DEFAULT_AUDIO_BUFFER_FRAMES];
+    int             x_maxframes;
+    long            x_tag_errors;
+    int             x_sync;// zero if we didn't receive a tag when we expected one
+    int             x_blocksize;
+    int             x_blocksperrecv;
+    int             x_blockssincerecv;
 
-    int         x_nbytes;
-    int         x_counter;// count of received frames
-    int         x_average[DEFAULT_AVERAGE_NUMBER];
-    int         x_averagecur;
-    int         x_underflow;
-    int         x_overflow;
-
-    long        x_samplerate;
-    int         x_noutlets;
-    int         x_vecsize;
-    t_int       **x_myvec;  /* vector we pass on to the DSP routine */
+    int             x_nbytes;
+    int             x_counter;// count of received frames
+    int             x_average[DEFAULT_AVERAGE_NUMBER];
+    int             x_averagecur;
+    int          x_underflow;
+    int             x_overflow;
+    int             x_valid;
+    long            x_samplerate;
+    int             x_noutlets;
+    int             x_vecsize;
+    t_int           **x_myvec;  /* vector we pass on to the DSP routine */
 } t_udpreceive_tilde;
 
 /* function prototypes */
@@ -140,6 +141,7 @@ static void udpreceive_tilde_closesocket(t_udpreceive_tilde* x)
 {
     sys_rmpollfn(x->x_socket);
     outlet_float(x->x_outlet1, 0);
+    outlet_float(x->x_validout, 0);
     CLOSESOCKET(x->x_socket);
     x->x_socket = -1;
 }
@@ -178,10 +180,10 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
 {
     int                 ret;
     int                 n;
-    struct sockaddr_in  from;
-    socklen_t           fromlen = sizeof(from);
     long                addr;
     unsigned short      port;
+    struct sockaddr_in  from;
+    socklen_t           fromlen = sizeof(from);
     t_tag               *tag_ptr;
 
     n = x->x_nbytes;
@@ -195,15 +197,19 @@ static void udpreceive_tilde_datapoll(t_udpreceive_tilde *x)
         /* get the sender's ip */
         addr = ntohl(from.sin_addr.s_addr);
         port = ntohs(from.sin_port);
-
-        x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
-        x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
-        x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
-        x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-        x->x_addrbytes[4].a_w.w_float = port;
-        outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
-
-       if (ret <= 0)   /* error */
+        /* output addr/port only if changed */
+        if (!((addr == x->x_addr)&&(port == x->x_port)))
+        {
+            x->x_addr = addr;
+            x->x_port = port;
+            x->x_addrbytes[0].a_w.w_float = (x->x_addr & 0xFF000000)>>24;
+            x->x_addrbytes[1].a_w.w_float = (x->x_addr & 0x0FF0000)>>16;
+            x->x_addrbytes[2].a_w.w_float = (x->x_addr & 0x0FF00)>>8;
+            x->x_addrbytes[3].a_w.w_float = (x->x_addr & 0x0FF);
+            x->x_addrbytes[4].a_w.w_float = x->x_port;
+            outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
+        }
+        if (ret <= 0)   /* error */
         {
             if (0 == udpreceive_tilde_sockerror("recv tag")) return;
             udpreceive_tilde_reset(x, 0);
@@ -468,22 +474,15 @@ static t_int *udpreceive_tilde_perform(t_int *w)
         x->x_frameout++;
         x->x_frameout %= DEFAULT_AUDIO_BUFFER_FRAMES;
     }
-    else
-    {
-        x->x_blockssincerecv++;
-    }
+    else x->x_blockssincerecv++;
 
+    if (x->x_valid != 1) outlet_float(x->x_validout, 1);
     return (w + offset + x->x_noutlets);
 
 bail:
     /* set output to zero */
-    while (n--)
-    {
-        for (i = 0; i < x->x_noutlets; i++)
-        {
-            *(out[i]++) = 0.;
-        }
-    }
+    while (n--) for (i = 0; i < x->x_noutlets; i++) *(out[i]++) = 0.;
+    if (x->x_valid != 0) outlet_float(x->x_validout, 0);
     return (w + offset + x->x_noutlets);
 }
 
@@ -599,6 +598,7 @@ static void udpreceive_tilde_info(t_udpreceive_tilde *x)
     SETFLOAT(list, (t_float)x->x_tag_errors);
     outlet_anything(x->x_outlet2, ps_tag_errors, 1, list);
 
+    outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
 }
 
 static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floatarg blocksize)
@@ -630,6 +630,9 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floa
             x->x_addrbytes[i].a_type = A_FLOAT;
             x->x_addrbytes[i].a_w.w_float = 0;
         }
+        x->x_addr = 0;
+        x->x_port = 0;
+        x->x_validout = outlet_new(&x->x_obj, &s_float);
         x->x_myvec = (t_int **)t_getbytes(sizeof(t_int *) * (x->x_noutlets + 3));
         if (!x->x_myvec)
         {
@@ -637,22 +640,17 @@ static void *udpreceive_tilde_new(t_floatarg fportno, t_floatarg outlets, t_floa
             return NULL;
         }
 
-        x->x_connectsocket = -1;
-        x->x_socket = -1;
-        x->x_nconnections = 0;
-        x->x_ndrops = 0;
-        x->x_underflow = 0;
-        x->x_overflow = 0;
+        x->x_connectsocket = x->x_socket = -1;
+        x->x_nconnections = x->x_underflow = x->x_overflow = 0;
         x->x_hostname = ps_nothing;
 /* allocate space for 16 frames of 1024 X numchannels floats*/
         for (i = 0; i < DEFAULT_AUDIO_BUFFER_FRAMES; i++)
         {
             x->x_frames[i].data = (char *)t_getbytes(DEFAULT_AUDIO_BUFFER_SIZE * x->x_noutlets * sizeof(t_float));
         }
-        x->x_tag_errors = 0;
+        
         x->x_sync = 1;
-        x->x_framein = 0;
-        x->x_frameout = 0;
+        x->x_tag_errors = x->x_framein = x->x_frameout = x->x_valid = 0;
         x->x_maxframes = DEFAULT_QUEUE_LENGTH;
         x->x_vecsize = 64; /* we'll update this later */
         if (blocksize == 0) x->x_blocksize = DEFAULT_AUDIO_BUFFER_SIZE; 
