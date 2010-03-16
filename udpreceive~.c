@@ -476,13 +476,21 @@ static t_int *udpreceive_tilde_perform(t_int *w)
     }
     else x->x_blockssincerecv++;
 
-    if (x->x_valid != 1) outlet_float(x->x_validout, 1);
+    if (x->x_valid != 1)
+    {
+        x->x_valid = 1;
+        outlet_float(x->x_validout, x->x_valid);
+    }
     return (w + offset + x->x_noutlets);
 
 bail:
     /* set output to zero */
     while (n--) for (i = 0; i < x->x_noutlets; i++) *(out[i]++) = 0.;
-    if (x->x_valid != 0) outlet_float(x->x_validout, 0);
+    if (x->x_valid != 0)
+    {
+        x->x_valid = 0;
+        outlet_float(x->x_validout, x->x_valid);
+    }
     return (w + offset + x->x_noutlets);
 }
 
