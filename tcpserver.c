@@ -1028,12 +1028,15 @@ static void tcpserver_free(t_tcpserver *x)
 
     for(i = 0; i < MAX_CONNECT; i++)
     {
-        if (x->x_sr[i]->sr_fd >= 0)
-        {
-            sys_rmpollfn(x->x_sr[i]->sr_fd);
-            sys_closesocket(x->x_sr[i]->sr_fd);
+      
+        if (NULL!=x->x_sr[i]) {
+          tcpserver_socketreceiver_free(x->x_sr[i]);
+          if (x->x_sr[i]->sr_fd >= 0)
+            {
+              sys_rmpollfn(x->x_sr[i]->sr_fd);
+              sys_closesocket(x->x_sr[i]->sr_fd);
+            }
         }
-        if (x->x_sr[i] != NULL) tcpserver_socketreceiver_free(x->x_sr[i]);
     }
     if (x->x_connectsocket >= 0)
     {
