@@ -1,4 +1,4 @@
-#N canvas 415 49 859 803 10;
+#N canvas 197 27 785 803 10;
 #X obj -178 225 osc~ 440;
 #X msg -398 60 disconnect;
 #X msg -353 105 format float;
@@ -8,9 +8,9 @@
 #X text -244 103 float is the most expensive with the best resolution
 (32bit) \, default is 16bit;
 #X msg -419 39 connect 255.255.255.255 8008;
-#X obj 12 668 print udpreceive~;
+#X obj 52 687 print udpreceive~;
 #X obj 224 369 print udpsend~;
-#X obj -178 320 tgl 15 0 empty empty empty 17 7 0 10 -4034 -1 -1 1
+#X obj -178 320 tgl 15 0 empty empty empty 17 7 0 10 -4034 -1 -1 0
 1;
 #X symbolatom -97 435 10 0 0 0 - - -;
 #X floatatom -44 369 5 0 0 0 - - -;
@@ -20,42 +20,42 @@
 #X obj -97 411 prepend set;
 #X obj 117 367 prepend set;
 #X text -102 368 channels:;
-#X text -152 442 format:;
+#X text -144 442 format:;
 #X text 13 411 bitrate:;
 #X text -51 391 framesize:;
 #X text 98 389 to:;
 #X msg -216 242 info;
-#X symbolatom -333 755 10 0 0 0 - - -;
-#X floatatom -299 689 5 0 0 0 - - -;
-#X floatatom -264 668 7 0 0 0 - - -;
-#X floatatom -230 733 9 0 0 0 - - -;
-#X obj -333 714 prepend set;
-#X text -363 688 channels:;
-#X text -379 754 format:;
-#X text -279 732 bitrate:;
-#X text -328 667 framesize:;
-#X floatatom -195 690 9 0 0 0 - - -;
-#X floatatom -161 668 9 0 0 0 - - -;
-#X floatatom -126 711 5 0 0 0 - - -;
-#X floatatom -92 690 5 0 0 0 - - -;
-#X text -252 689 overflow:;
-#X text -221 667 underflow:;
-#X text -187 710 queuesize:;
-#X text -140 689 average:;
-#X msg -443 478 info;
+#X symbolatom -293 774 10 0 0 0 - - -;
+#X floatatom -259 708 5 0 0 0 - - -;
+#X floatatom -224 687 7 0 0 0 - - -;
+#X floatatom -190 752 9 0 0 0 - - -;
+#X obj -293 733 prepend set;
+#X text -323 707 channels:;
+#X text -339 773 format:;
+#X text -239 751 bitrate:;
+#X text -288 686 framesize:;
+#X floatatom -155 709 9 0 0 0 - - -;
+#X floatatom -121 687 9 0 0 0 - - -;
+#X floatatom -86 730 5 0 0 0 - - -;
+#X floatatom -52 709 5 0 0 0 - - -;
+#X text -212 708 overflow:;
+#X text -181 686 underflow:;
+#X text -147 729 queuesize:;
+#X text -100 708 average:;
+#X msg -435 478 info;
 #X text -237 34 broadcast to everybody on your local subnet listening
 on the specified port;
-#X msg -463 458 reset;
-#X text -410 477 status info to rightmost outlet;
+#X msg -455 458 reset;
+#X text -402 477 status info to rightmost outlet;
 #X text -415 241 status info to rightmost outlet;
-#X text -425 457 reset underflow & overflow counters;
-#X floatatom -301 608 3 0 0 0 - - -;
-#X floatatom -278 608 3 0 0 0 - - -;
-#X floatatom -255 608 3 0 0 0 - - -;
-#X floatatom -232 608 3 0 0 0 - - -;
-#X floatatom -208 608 5 0 0 0 - - -;
-#X obj -301 582 unpack 0 0 0 0 0;
-#X text -338 607 from:;
+#X text -417 457 reset underflow & overflow counters;
+#X floatatom -260 589 3 0 0 0 - - -;
+#X floatatom -237 589 3 0 0 0 - - -;
+#X floatatom -214 589 3 0 0 0 - - -;
+#X floatatom -191 589 3 0 0 0 - - -;
+#X floatatom -167 589 5 0 0 0 - - -;
+#X obj -260 563 unpack 0 0 0 0 0;
+#X text -297 588 from:;
 #X obj -179 268 *~;
 #X floatatom -164 150 5 0 0 0 - - -;
 #X text -66 148 Framesize = (blocksize) X (number of channels) X (bytes
@@ -66,11 +66,11 @@ per sample);
 #X text 70 430 dsp vector size:;
 #X msg -258 200 channels \$1;
 #X obj -412 185 hradio 15 1 0 4 empty empty empty 0 -8 0 10 -4034 -1
--1 1;
+-1 0;
 #X obj -178 297 udpsend~ 2 512;
 #X text -88 296 sends 2 dsp-channels using 512-sample blocks;
-#X obj -397 541 udpreceive~ 8008 2 512;
-#X obj -398 570 dac~ 1 2;
+#X obj -389 541 udpreceive~ 8008 2 512;
+#X obj -388 572 dac~ 1 2;
 #X text 68 448 (blocksize must be a multiple of this);
 #X text -160 318 1 = transmitting;
 #X obj -97 246 noise~;
@@ -78,15 +78,15 @@ per sample);
 #X obj -164 170 / 100;
 #X text -455 338 Based on: [netreceive~] and [netsend~]by Olaf Matthes
 ;
-#X floatatom -57 733 9 0 0 0 - - -;
-#X text -109 732 packets:;
+#X floatatom -17 752 9 0 0 0 - - -;
+#X text -69 751 packets:;
 #X text -50 177 Default blocksize is 2048 The number of samples per
 block must be an integer multiple of the number of samples in one signal
 vector.;
 #X text -28 225 Arguments: (1st required \, 2nd optional) 1:number
 of channels to send. 2:blocksize = number of samples per channel per
 frame. (Blocksize of sender and receiver must be the same.);
-#X text -43 560 To communicate \, a [udpreceive~] and [udpsend~] pair
+#X text -127 554 To communicate \, a [udpreceive~] and [udpsend~] pair
 must have the same number of channels and the same blocksize. Also
 [udpsend~] must [connect( to the port on which [udpreceive~] is listening.
 ;
@@ -94,27 +94,28 @@ must have the same number of channels and the same blocksize. Also
 #X text -355 76 format defines the resolution of the sent signal and
 may be changed on-the-fly;
 #X text -450 200 number of channels to transmit;
-#X msg -422 499 buffer 2;
-#X text -360 498 set number of frames to buffer before playback;
+#X msg -414 499 buffer 2;
+#X text -352 498 set number of frames to buffer before playback;
 #X text -458 365 [udpsend~] transmits dsp vectors ("audio") via UDP.
 UDP is a connectionless protocol \, so [udpsend~] will transmit even
 if nothing is receiving.;
 #X text -299 18 connect to <hostname> <port> and begin transmitting
 ;
 #X text -456 313 [udpreceive~] and [udpsend~];
-#X text -256 540 receives 2 channels on port 8008 Same blocksize as
+#X text -248 540 receives 2 channels on port 8008 Same blocksize as
 udpsend~;
 #X floatatom -412 216 5 0 0 0 - - -;
 #X obj -288 172 tgl 15 0 empty empty toggle_connection 17 7 0 10 -4034
 -1 -1 0 1;
-#X obj -333 631 route format channels framesize bitrate overflow underflow
+#X obj -293 650 route format channels framesize bitrate overflow underflow
 queuesize average packets tag_errors;
-#X floatatom -23 711 9 0 0 0 - - -;
-#X text -89 710 tag errors:;
-#X obj -268 562 tgl 15 0 empty empty empty 17 7 0 10 -4034 -1 -1 1
-1;
-#X text -455 326 Author: Martin Peach 2010/03/16;
-#X text -250 560 1 = valid audio;
+#X floatatom 17 730 9 0 0 0 - - -;
+#X text -49 729 tag errors:;
+#X obj -326 601 env~;
+#X floatatom -326 624 9 0 0 0 - - -;
+#X text -266 613 The rightmost signal outlet outputs 1 if the stream
+is valid \, else 0;
+#X text -455 326 Author: Martin Peach 2010/03/22;
 #X connect 0 0 54 0;
 #X connect 1 0 62 0;
 #X connect 2 0 62 0;
@@ -149,9 +150,9 @@ queuesize average packets tag_errors;
 #X connect 62 1 57 0;
 #X connect 64 0 65 0;
 #X connect 64 1 65 1;
-#X connect 64 2 88 0;
-#X connect 64 3 52 0;
-#X connect 64 4 91 0;
+#X connect 64 2 91 0;
+#X connect 64 3 88 0;
+#X connect 64 4 52 0;
 #X connect 68 0 69 0;
 #X connect 69 0 62 1;
 #X connect 70 0 54 1;
@@ -169,3 +170,4 @@ queuesize average packets tag_errors;
 #X connect 88 8 72 0;
 #X connect 88 9 89 0;
 #X connect 88 10 8 0;
+#X connect 91 0 92 0;
