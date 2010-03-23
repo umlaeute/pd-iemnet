@@ -17,6 +17,10 @@ SOURCES_iphoneos =
 SOURCES_linux = 
 SOURCES_windows = 
 
+# .c source files that will be statically linked to _all_ objects
+HELPERSOURCES = shared.c
+
+
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will
 # be included automatically
 PDOBJECTS = 
@@ -133,16 +137,16 @@ CFLAGS += $(OPT_CFLAGS)
 all: $(SOURCES:.c=.$(EXTENSION))
 
 %.o: %.c
-	$(CC) $(CFLAGS) -o "$*.o" -c "$*.c"
+	$(CC) $(CFLAGS) -o "$@" -c "$<"
 
-%.$(EXTENSION): %.o
-	$(CC) $(LDFLAGS) -o "$*.$(EXTENSION)" "$*.o"  $(LIBS)
+%.$(EXTENSION): %.o $(HELPERSOURCES:.c=.o)
+	$(CC) $(LDFLAGS) -o "$@" $^  $(LIBS)
 	chmod a-x "$*.$(EXTENSION)"
 
 # this links everything into a single binary file
-$(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
-	$(CC) $(LDFLAGS) -o $(LIBRARY_NAME).$(EXTENSION) $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(LIBS)
-	chmod a-x $(LIBRARY_NAME).$(EXTENSION)
+$(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(HELPERSOURCES:.c=.o)
+	$(CC) $(LDFLAGS) -o $@.$(EXTENSION) $^ $(LIBS)
+	chmod a-x $@.$(EXTENSION)
 
 
 install: libdir_install
