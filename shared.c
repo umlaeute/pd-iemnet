@@ -19,7 +19,8 @@
 #include <pthread.h>
 
 
-#define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
+#define INBUFSIZE 4096L /* was 4096: size of receiving data buffer */
+//#define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
 
  /* data handling */
@@ -382,7 +383,8 @@ struct _iemnet_receiver {
   t_iemnet_chunk*data;
   t_iemnet_receivecallback callback;
   t_queue*queue;
-  int cont;
+  int running;
+  t_clock *clock;
 };
 
 
@@ -396,43 +398,33 @@ static void*iemnet__receiver_readthread(void*arg) {
   unsigned char data[INBUFSIZE];
   unsigned int size=INBUFSIZE;
 
-  fprintf(stderr, "read thread started\n");
-
-  int i=0;
+  unsigned int i=0;
   for(i=0; i<size; i++)data[i]=0;
-
-  while(receiver->cont) {
+  receiver->running=1;
+  while(1) {
     int result = recv(sockfd, data, size, 0);
 
     if(0==result)break;
     t_iemnet_chunk*c = iemnet__chunk_create_data(result, data);
 
     queue_push(q, c);
-     
-    // shouldn't we do something with the result here?
+    clock_delay(receiver->clock, 0);
   }
-  fprintf(stderr, "read thread terminated\n");
+  clock_delay(receiver->clock, 0);
+  receiver->running=0;
   return NULL;
 }
 
 
-static void iemnet__receiver_pollfn(t_iemnet_receiver*x, int fd) {
-  int ret = recv(fd,  /* socket */
-             x->data->data, /* buf */
-             x->data->size,  /* len */
-             0); /* flags */
-
-  post("pollfn");
-  return;
-  if(ret<=0) {
-    sys_rmpollfn(fd);
-    x->callback(x->owner, fd, 0);
+static void iemnet__receiver_tick(t_iemnet_receiver *x)
+{
+  post("receiver tick");
+  if(x->running) {
+   // received data
+    t_iemnet_chunk*c=queue_pop(x->queue);
+    (x->callback)(x->owner, x->sockfd, c);
   } else {
-    // received data
-    const int size=x->data->size;
-    x->data->size=ret;
-    (x->callback)(x->owner, fd, x->data);
-    x->data->size=size;
+    x->callback(x->owner, x->sockfd, 0);
   }
 }
 
@@ -453,8 +445,8 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receive
     result->callback=callback;
 
     result->queue = queue_create();
-
-    result->cont = 1;
+    result->clock = clock_new(result, (t_method)iemnet__receiver_tick);
+    result->running=1;
     res=pthread_create(&result->thread, 0, iemnet__receiver_readthread, result);
   }
   //fprintf(stderr, "new receiver created\n");
@@ -463,17 +455,15 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receive
 }
 void iemnet__receiver_destroy(t_iemnet_receiver*r) {
   if(NULL==r)return;
-  sys_rmpollfn(r->sockfd);
   if(r->data)
     iemnet__chunk_destroy(r->data);
-
 
   r->sockfd=0;
   r->owner=NULL;
   r->data=NULL;
   r->callback=NULL;
 
-  r->cont = 0;
+  clock_free(r->clock);
 
   freebytes(r, sizeof(t_iemnet_receiver));
   r=NULL;
