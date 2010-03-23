@@ -91,7 +91,7 @@ typedef struct _tcpserver
   t_atom                      x_addrbytes[4];
 } t_tcpserver;
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd);
+static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd, t_symbol*host);
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
 
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
@@ -105,20 +105,22 @@ static void tcpserver_datacallback(t_tcpserver *x, int sockfd, t_iemnet_chunk*ch
 static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient);
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
-static void tcpserver_notify(t_tcpserver *x, int socket);
 static void tcpserver_connectpoll(t_tcpserver *x);
 static void *tcpserver_new(t_floatarg fportno);
 static void tcpserver_free(t_tcpserver *x);
 void tcpserver_setup(void);
 
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd)
+static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd, t_symbol*host)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   if(NULL==x) {
     error("%s_socketreceiver: unable to allocate %d bytes", objName, sizeof(*x));
     return NULL;
   } else {
+      x->sr_host=host;
+      x->sr_fd=sockfd;
+
       x->sr_sender=iemnet__sender_create(sockfd);
       x->sr_receiver=iemnet__receiver_create(sockfd, owner, (t_iemnet_receivecallback)tcpserver_datacallback);
   }
@@ -152,7 +154,7 @@ static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
 
 /* ---------------- main tcpserver (send) stuff --------------------- */
 
-static void tcpserver_send_bytes(t_tcpserver*x,int client, t_iemnet_chunk*chunk)
+static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
 {
   if(x && x->x_sr && x->x_sr[client]) {
     t_atom                  output_atom[3];
@@ -273,14 +275,36 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 
 
 
+static void tcpserver_disconnect(t_tcpserver *x, int client)
+{
+  t_tcpserver_socketreceiver  *y=NULL;
+  int fd=0;
+  int k;
+
+  y = x->x_sr[client];
+  fd = y->sr_fd;
+  post("closing fd[%d]=%d", client, fd);
+
+  tcpserver_socketreceiver_free(x->x_sr[client]);
+  x->x_sr[client]=NULL;
+  sys_closesocket(fd);
+
+  /* rearrange list now: move entries to close the gap */
+  for(k = client; k < x->x_nconnections; k++)
+    {
+      x->x_sr[k] = x->x_sr[k + 1];
+    }
+  x->x_sr[k + 1]=NULL;
+  x->x_nconnections--;
+
+  outlet_float(x->x_connectout, x->x_nconnections);
+}
 
 
 /* disconnect a client by number */
 static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
 {
   int client = (int)fclient;
-  t_tcpserver_socketreceiver  *y=NULL;
-  int fd=0;
 
   if(x->x_nconnections <= 0)
     {
@@ -294,11 +318,7 @@ static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
     }
   --client; /* zero based index*/
 
-  y = x->x_sr[client];
-  fd = y->sr_fd;
-  tcpserver_notify(x, fd);
-  sys_rmpollfn(fd);
-  sys_closesocket(fd);
+  tcpserver_disconnect(x, client);
 }
 
 
@@ -312,29 +332,7 @@ static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
 
 /* ---------------- main tcpserver (receive) stuff --------------------- */
 
-static void tcpserver_notify(t_tcpserver *x, int sockfd)
-{
-  int     i, k;
 
-  /* remove connection from list */
-  for(i = 0; i < x->x_nconnections; i++)
-    {
-      if(x->x_sr[i]->sr_fd == sockfd)
-        {
-          x->x_nconnections--;
-          post("%s: \"%s\" removed from list of clients", objName, x->x_sr[i]->sr_host->s_name);
-          tcpserver_socketreceiver_free(x->x_sr[i]);
-          x->x_sr[i] = NULL;
-
-          /* rearrange list now: move entries to close the gap */
-          for(k = i; k < x->x_nconnections; k++)
-            {
-              x->x_sr[k] = x->x_sr[k + 1];
-            }
-        }
-    }
-  outlet_float(x->x_connectout, x->x_nconnections);
-}
 static void tcpserver_datacallback(t_tcpserver *x, int sockfd, t_iemnet_chunk*chunk) {
   post("data callback for %x with data @ %x", x, chunk);
 
@@ -367,7 +365,8 @@ static void tcpserver_connectpoll(t_tcpserver *x)
   if (fd < 0) post("%s: accept failed", objName);
   else
     {
-      t_tcpserver_socketreceiver *y = tcpserver_socketreceiver_new((void *)x, fd);
+      t_symbol*host=gensym(inet_ntoa(incomer_address.sin_addr));
+      t_tcpserver_socketreceiver *y = tcpserver_socketreceiver_new((void *)x, fd, host);
       if (!y)
         {
           sys_closesocket(fd);
@@ -456,7 +455,6 @@ static void tcpserver_free(t_tcpserver *x)
         tcpserver_socketreceiver_free(x->x_sr[i]);
         if (x->x_sr[i]->sr_fd >= 0)
           {
-            sys_rmpollfn(x->x_sr[i]->sr_fd);
             sys_closesocket(x->x_sr[i]->sr_fd);
           }
       }

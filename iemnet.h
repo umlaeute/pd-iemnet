@@ -9,6 +9,7 @@ typedef struct _iemnet_chunk {
 
 void iemnet__chunk_destroy(t_iemnet_chunk*);
 t_iemnet_chunk*iemnet__chunk_create_empty(int);
+t_iemnet_chunk*iemnet__chunk_create_data(int, unsigned char*);
 t_iemnet_chunk*iemnet__chunk_create_list(int, t_atom*);
 t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*);
 
