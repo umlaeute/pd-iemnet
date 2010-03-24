@@ -72,7 +72,8 @@ ifeq ($(UNAME),Darwin)
     ISYSROOT = -isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk
     IPHONE_CFLAGS = -miphoneos-version-min=3.0 $(ISYSROOT) -arch armv6
     OPT_CFLAGS = -fast -funroll-loops -fomit-frame-pointer
-	CFLAGS := $(IPHONE_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
+	CFLAGS := $(IPHONE_CFLAGS) $(OPT_CFLAGS) $(CFLAGS) \
+      -I/Applications/Pd-extended.app/Contents/Resources/include
     LDFLAGS += -arch armv6 -bundle -undefined dynamic_lookup $(ISYSROOT)
     LIBS += -lc 
     STRIP = strip -x
@@ -84,7 +85,8 @@ ifeq ($(UNAME),Darwin)
     OS = macosx
     OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=2 -fast
     FAT_FLAGS = -arch i386 -arch ppc -mmacosx-version-min=10.4
-    CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include
+    CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include \
+      -I/Applications/Pd-extended.app/Contents/Resources/include
     LDFLAGS += $(FAT_FLAGS) -bundle -undefined dynamic_lookup -L/sw/lib
     LIBS += -lc 
     STRIP = strip -x
