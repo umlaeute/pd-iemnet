@@ -1,11 +1,43 @@
+/* *********************************************+
+ * iemnet
+ *     networking for Pd
+ *
+ *  (c) 2010 IOhannes m zmölnig
+ *           Institute of Electronic Music and Acoustics (IEM)
+ *           University of Music and Dramatic Arts (KUG), Graz, Austria
+ *
+ * based on net/ library by Martin Peach
+ * based on maxlib by Olaf Matthes
+ */
+
+/* ---------------------------------------------------------------------------- */
+
+/* This program is free software; you can redistribute it and/or                */
+/* modify it under the terms of the GNU General Public License                  */
+/* as published by the Free Software Foundation; either version 2               */
+/* of the License, or (at your option) any later version.                       */
+/*                                                                              */
+/* This program is distributed in the hope that it will be useful,              */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/* GNU General Public License for more details.                                 */
+/*                                                                              */
+/* You should have received a copy of the GNU General Public License            */
+/* along with this program; if not, write to the Free Software                  */
+/* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
+/*                                                                              */
+
+/* ---------------------------------------------------------------------------- */
+
+#ifndef INCLUDE_IEMNET_H_
+#define INCLUDE_IEMNET_H_
+
 #include "m_pd.h"
 
 #ifdef _WIN32
-# define IEMNET_EXTERN __declspec(dllexport) extern
 # include <winsock2.h>
 # include <ws2tcpip.h>
 #else
-# define IEMNET_EXTERN extern
 # include <sys/socket.h>
 #endif
 
@@ -46,3 +78,23 @@ typedef void (*t_iemnet_receivecallback)(void*x, int sockfd, int argc, t_atom*ar
  */
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receivecallback callback);
 void iemnet__receiver_destroy(t_iemnet_receiver*);
+
+
+#if defined(_MSC_VER)
+# define IEMNET_EXTERN __declspec(dllexport) extern
+# define CCALL __cdecl
+# pragma section(".CRT$XCU",read)
+# define IEMNET_INITIALIZER(f) \
+   static void __cdecl f(void); \
+   __declspec(allocate(".CRT$XCU")) void (__cdecl*f##_)(void) = f; \
+   static void __cdecl f(void)
+#elif defined(__GNUC__)
+# define IEMNET_EXTERN extern
+# define CCALL
+# define IEMNET_INITIALIZER(f) \
+  static void autoinit ## f(void) __attribute__((constructor)); \
+  static void autoinit ## f(void) { f(); }
+#endif
+
+
+#endif /* INCLUDE_IEMNET_H_ */

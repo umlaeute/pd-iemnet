@@ -414,11 +414,12 @@ static void tcpserver_free(t_tcpserver *x)
       sys_rmpollfn(x->x_connectsocket);
       sys_closesocket(x->x_connectsocket);
     }
-
 }
 
-IEMNET_EXTERN void tcpserver_setup(void)
+IEMNET_EXTERN void  tcpserver_setup(void)
 {
+  static int again=0; if(again)return; again=1;
+
   tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new, (t_method)tcpserver_free,
                               sizeof(t_tcpserver), 0, A_DEFFLOAT, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_client, gensym("disconnectclient"), A_DEFFLOAT, 0);
@@ -438,5 +439,8 @@ IEMNET_EXTERN void tcpserver_setup(void)
   post("        (c) 2010 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
 }
+
+IEMNET_INITIALIZER(tcpserver_setup);
+
 
 /* end of tcpserver.c */

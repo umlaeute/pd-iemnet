@@ -19,7 +19,7 @@ SOURCES_linux =
 SOURCES_windows = 
 
 # .c source files that will be statically linked to _all_ objects
-HELPERSOURCES = shared.c
+HELPERSOURCES = iemnet.c
 
 
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will

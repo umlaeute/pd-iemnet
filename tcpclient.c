@@ -247,6 +247,8 @@ static void tcpclient_free(t_tcpclient *x)
 
 IEMNET_EXTERN void tcpclient_setup(void)
 {
+  static int again=0; if(again)return; again=1;
+
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
                               sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
@@ -260,5 +262,11 @@ IEMNET_EXTERN void tcpclient_setup(void)
   post("        (c) 2010 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
 }
+
+
+IEMNET_INITIALIZER(tcpclient_setup);
+
+
+
 
 /* end of tcpclient.c */
