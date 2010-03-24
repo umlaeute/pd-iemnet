@@ -85,15 +85,15 @@ void iemnet__receiver_destroy(t_iemnet_receiver*);
 # define CCALL __cdecl
 # pragma section(".CRT$XCU",read)
 # define IEMNET_INITIALIZER(f) \
-   static void __cdecl f(void); \
+   static void __cdecl autoinit__ ## f(void); \
    __declspec(allocate(".CRT$XCU")) void (__cdecl*f##_)(void) = f; \
-   static void __cdecl f(void)
+  static void __cdecl autoinit__ ## f(void) { f(); }
 #elif defined(__GNUC__)
 # define IEMNET_EXTERN extern
 # define CCALL
 # define IEMNET_INITIALIZER(f) \
-  static void autoinit ## f(void) __attribute__((constructor)); \
-  static void autoinit ## f(void) { f(); }
+  static void autoinit__ ## f(void) __attribute__((constructor)); \
+  static void autoinit__ ## f(void) { f(); }
 #endif
 
 

@@ -416,7 +416,7 @@ static void tcpserver_free(t_tcpserver *x)
     }
 }
 
-IEMNET_EXTERN void  tcpserver_setup(void)
+IEMNET_EXTERN void tcpserver_setup(void)
 {
   static int again=0; if(again)return; again=1;
 
