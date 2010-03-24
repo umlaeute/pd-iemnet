@@ -608,10 +608,16 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
 
 
+#ifdef _MSC_VER
+    void tcpclient_setup(void);
+    void tcpserver_setup(void);
+#endif
 
 
 
 IEMNET_EXTERN void iemnet_setup(void) {
-
-
+#ifdef _MSC_VER
+    tcpclient_setup();
+    tcpserver_setup();
+#endif
 }

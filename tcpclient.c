@@ -247,7 +247,8 @@ static void tcpclient_free(t_tcpclient *x)
 
 IEMNET_EXTERN void tcpclient_setup(void)
 {
-  static int again=0; if(again)return; again=1;
+    post("tcpclient");
+  //static int again=0; if(again)return; again=1;
 
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
