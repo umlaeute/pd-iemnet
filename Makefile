@@ -6,7 +6,8 @@ LIBRARY_VERSION = 0.1
 
 # Next, add your .c source files to the SOURCES variable.  The help files will
 # be included automatically
-SOURCES = tcpclient.c  tcpreceive.c  tcpsend.c  tcpserver.c  udpreceive~.c  udpreceive.c  udpsend~.c  udpsend.c
+SOURCES = tcpserver.c
+#SOURCES = tcpclient.c  tcpreceive.c  tcpsend.c  tcpserver.c  udpreceive~.c  udpreceive.c  udpsend~.c  udpsend.c
 
 # For objects that only build on certain platforms, add those to the SOURCES
 # line for the right platforms.
