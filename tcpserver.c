@@ -7,59 +7,36 @@
 /*                                                                              */
 /* A server for bidirectional communication from within Pd.                     */
 /* Allows to send back data to specific clients connected to the server.        */
-/* Written by Olaf Matthes <olaf.matthes@gmx.de>                                */
-/* Get source at http://www.akustische-kunst.org/puredata/maxlib                */
- /*                                                                              */
- /* This program is free software; you can redistribute it and/or                */
- /* modify it under the terms of the GNU General Public License                  */
- /* as published by the Free Software Foundation; either version 2               */
- /* of the License, or (at your option) any later version.                       */
- /*                                                                              */
- /* This program is distributed in the hope that it will be useful,              */
- /* but WITHOUT ANY WARRANTY; without even the implied warranty of               */
- /* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
- /* GNU General Public License for more details.                                 */
- /*                                                                              */
- /* You should have received a copy of the GNU General Public License            */
- /* along with this program; if not, write to the Free Software                  */
- /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
- /*                                                                              */
+/*                                                                              */
+/* This program is free software; you can redistribute it and/or                */
+/* modify it under the terms of the GNU General Public License                  */
+/* as published by the Free Software Foundation; either version 2               */
+/* of the License, or (at your option) any later version.                       */
+/*                                                                              */
+/* This program is distributed in the hope that it will be useful,              */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/* GNU General Public License for more details.                                 */
+/*                                                                              */
+/* You should have received a copy of the GNU General Public License            */
+/* along with this program; if not, write to the Free Software                  */
+/* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
+/*                                                                              */
 
- /* ---------------------------------------------------------------------------- */
-#define DEBUG
+/* ---------------------------------------------------------------------------- */
+//#define DEBUG
 #include "iemnet.h"
 
-#include "m_imp.h"
 #include "s_stuff.h"
 
-#include <sys/types.h>
-#include <stdio.h>
 #if defined(UNIX) || defined(unix)
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <errno.h>
-#include <sys/select.h>
-#include <sys/ioctl.h> /* linux has the SIOCOUTQ ioctl */
-#define SOCKET_ERROR -1
+# include <arpa/inet.h>
 #else
-#include <winsock2.h>
+# include <winsock2.h>
 #endif
 
-
-#ifdef _MSC_VER
-#define snprintf sprintf_s
-#endif
 
 #define MAX_CONNECT 32 /* maximum number of connections */
-#define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
-#define MAX_UDP_RECEIVE 65536L /* longer than data in maximum UDP packet */
-
 
 /* ----------------------------- tcpserver ------------------------- */
 
@@ -79,8 +56,6 @@ typedef struct _tcpserver
   t_object                    x_obj;
   t_outlet                    *x_msgout;
   t_outlet                    *x_connectout;
-  t_outlet                    *x_sockout;
-  t_outlet                    *x_addrout;
   t_outlet                    *x_status_outlet;
 
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
@@ -91,25 +66,7 @@ typedef struct _tcpserver
   t_atom                      x_addrbytes[4];
 } t_tcpserver;
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd, t_symbol*host);
-static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x);
-
-static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
-static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
-static void tcpserver_send_bytes(t_tcpserver *x, int sockfd, t_iemnet_chunk*chunk);
-#ifdef SIOCOUTQ
-static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client);
-#endif
-static void tcpserver_datacallback(t_tcpserver *x, int sockfd, int argc, t_atom*argv);
-
-static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient);
-static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
-static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv);
-static void tcpserver_connectpoll(t_tcpserver *x);
-static void *tcpserver_new(t_floatarg fportno);
-static void tcpserver_free(t_tcpserver *x);
-void tcpserver_setup(void);
-
+static void tcpserver_receive_callback(t_tcpserver *x, int sockfd, int argc, t_atom*argv);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd, t_symbol*host)
 {
@@ -122,7 +79,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int
       x->sr_fd=sockfd;
 
       x->sr_sender=iemnet__sender_create(sockfd);
-      x->sr_receiver=iemnet__receiver_create(sockfd, owner, (t_iemnet_receivecallback)tcpserver_datacallback);
+      x->sr_receiver=iemnet__receiver_create(sockfd, owner, (t_iemnet_receivecallback)tcpserver_receive_callback);
   }
   return (x);
 }
@@ -131,12 +88,14 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 {
   if (x != NULL)
     {
-      if(x->sr_sender)iemnet__sender_destroy(x->sr_sender);
+      if(x->sr_sender)  iemnet__sender_destroy(x->sr_sender);
       if(x->sr_receiver)iemnet__receiver_destroy(x->sr_receiver);
+
+      sys_closesocket(x->sr_fd);
+
       freebytes(x, sizeof(*x));
     }
 }
-
 
 static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
 {
@@ -148,8 +107,27 @@ static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
           return i;
         }
     }  
-
   return -1;
+}
+
+/* checks whether client is a valid (1-based) index
+ *  if the id is invalid, returns -1
+ *  if the id is valid, return the 0-based index (client-1)
+ */
+static int tcpserver_fixindex(t_tcpserver*x, int client)
+{
+  if(x->x_nconnections <= 0)
+    {
+      pd_error(x, "[%s]: no clients connected", objName);
+      return -1;
+    }
+  
+  if (!((client > 0) && (client <= x->x_nconnections)))
+    {
+      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, x->x_nconnections);
+      return -1;
+    }
+  return (client-1);
 }
 
 /* ---------------- main tcpserver (send) stuff --------------------- */
@@ -174,54 +152,23 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   }
 }
 
-#ifdef SIOCOUTQ
-/* SIOCOUTQ exists only(?) on linux, returns remaining space in the socket's output buffer  */
-static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client)
-{
-  int sockfd = x->x_sr[client].sr_fd;
-  int result = 0L;
-
-  ioctl(sockfd, SIOCOUTQ, &result);
-  return result;
-}
-#endif // SIOCOUTQ
-
-
-
 /* send message to client using client number
    note that the client numbers might change in case a client disconnects! */
 /* clients start at 1 but our index starts at 0 */
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int     client = -1;
-
-  if(x->x_nconnections <= 0)
-    {
-      post("%s_client_send: no clients connected", objName);
-      return;
-    }
-  if(argc > 0)
-    {
-      /* get number of client (first element in list) */
-      if(argv[0].a_type == A_FLOAT)
-        client = atom_getfloatarg(0, argc, argv);
-      else
-        {
-          post("%s_client_send: specify client by number", objName);
-          return;
-        }
-      if (!((client > 0) && (client < MAX_CONNECT)))
-        {
-          post("%s_client_send: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
-          return;
-        }
-    }
   if (argc > 1)
     {
+      int client=tcpserver_fixindex(x, atom_getint(argv));
+      if(client<0)return;
       t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc-1, argv+1);
       --client;/* zero based index*/
       tcpserver_send_bytes(x, client, chunk);
       return;
+    }
+  else 
+    {
+      pd_error(x, "[%s] no client specified", objName);
     }
 }
 
@@ -237,20 +184,44 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
       /* socket exists for this client */
       tcpserver_send_bytes(x, client, chunk);
     }
+  iemnet__chunk_destroy(chunk);
 }
 
+/* broadcasts a message to all connected clients */
+static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+{
+  int client=0;
+  int but=-1;
+  t_iemnet_chunk*chunk=NULL;
 
+  if(argc<2) {
+    return;
+  }
+  if((but=tcpserver_fixindex(x, atom_getint(argv)))<0)return;
+
+  chunk=iemnet__chunk_create_list(argc+1, argv+1);
+
+  /* enumerate through the clients and send each the message */
+  for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
+    {
+      /* socket exists for this client */
+      if(client!=but)tcpserver_send_bytes(x, client, chunk);
+    }
+  iemnet__chunk_destroy(chunk);
+}
 
 /* send message to client using socket number */
 static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
   int     client = -1;
+  if(argc) {
+    client = tcpserver_socket2index(x, atom_getint(argv));
+    if(client<0)return;
+  } else {
+    pd_error(x, "%s_send: no socket specified", objName);
+    return;
+  }
 
-  if(x->x_nconnections <= 0)
-    {
-      post("%s_send: no clients connected", objName);
-      return;
-    }
   /* get socket number of connection (first element in list) */
   if(argc && argv->a_type == A_FLOAT)
     {
@@ -270,24 +241,15 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
   
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc-1, argv+1);
   tcpserver_send_bytes(x, client, chunk);
+  iemnet__chunk_destroy(chunk);
 }
-
-
-
 
 static void tcpserver_disconnect(t_tcpserver *x, int client)
 {
-  t_tcpserver_socketreceiver  *y=NULL;
-  int fd=0;
   int k;
-
-  y = x->x_sr[client];
-  fd = y->sr_fd;
-  post("closing fd[%d]=%d", client, fd);
 
   tcpserver_socketreceiver_free(x->x_sr[client]);
   x->x_sr[client]=NULL;
-  sys_closesocket(fd);
 
   /* rearrange list now: move entries to close the gap */
   for(k = client; k < x->x_nconnections; k++)
@@ -304,20 +266,9 @@ static void tcpserver_disconnect(t_tcpserver *x, int client)
 /* disconnect a client by number */
 static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
 {
-  int client = (int)fclient;
+  int client = tcpserver_fixindex(x, fclient);
 
-  if(x->x_nconnections <= 0)
-    {
-      post("%s_client_disconnect: no clients connected", objName);
-      return;
-    }
-  if (!((client > 0) && (client < MAX_CONNECT)))
-    {
-      post("%s: client %d out of range [1..%d]", objName, client, MAX_CONNECT);
-      return;
-    }
-  --client; /* zero based index*/
-
+  if(client<0)return;
   tcpserver_disconnect(x, client);
 }
 
@@ -332,16 +283,23 @@ static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
 
 
 
+/* disconnect a client by socket */
+static void tcpserver_disconnect_all(t_tcpserver *x)
+{
+  int id=x->x_nconnections;
+  while(--id>=0) {
+    tcpserver_disconnect(x, id);
+  }
+}
+
+
+
 
 
 /* ---------------- main tcpserver (receive) stuff --------------------- */
-static void tcpserver_datacallback(t_tcpserver *x, int sockfd, int argc, t_atom*argv) {
-  static int packetcount=0;
-  static int bytecount=0;
-  if(argc) {
+static void tcpserver_receive_callback(t_tcpserver *x, int sockfd, int argc, t_atom*argv) {
+   if(argc) {
     outlet_list(x->x_msgout, &s_list, argc, argv);
-    packetcount++;
-    bytecount+=argc;
   } else {
     // disconnected
     tcpserver_disconnect_socket(x, sockfd);
@@ -371,6 +329,8 @@ static void tcpserver_connectpoll(t_tcpserver *x)
       i = x->x_nconnections - 1;
       x->x_sr[i] = y;
     }
+
+  outlet_float(x->x_connectout, x->x_nconnections);
 }
 
 static void *tcpserver_new(t_floatarg fportno)
@@ -419,8 +379,6 @@ static void *tcpserver_new(t_floatarg fportno)
     {
       sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
       x->x_connectout = outlet_new(&x->x_obj, &s_float); /* 2nd outlet for number of connected clients */
-      x->x_sockout = outlet_new(&x->x_obj, &s_float); /* 3rd outlet for socket number of current client */
-      x->x_addrout = outlet_new(&x->x_obj, &s_list); /* 4th outlet for ip address of current client */
       x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);/* 5th outlet for everything else */
     }
   x->x_connectsocket = sockfd;
@@ -445,13 +403,8 @@ static void tcpserver_free(t_tcpserver *x)
 
   for(i = 0; i < MAX_CONNECT; i++)
     {
-      
       if (NULL!=x->x_sr[i]) {
         tcpserver_socketreceiver_free(x->x_sr[i]);
-        if (x->x_sr[i]->sr_fd >= 0)
-          {
-            sys_closesocket(x->x_sr[i]->sr_fd);
-          }
       }
     }
   if (x->x_connectsocket >= 0)
@@ -468,14 +421,16 @@ void tcpserver_setup(void)
                               sizeof(t_tcpserver), 0, A_DEFFLOAT, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_client, gensym("disconnectclient"), A_DEFFLOAT, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_socket, gensym("disconnectsocket"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_all, gensym("disconnect"), 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_send_socket, gensym("send"), A_GIMME, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_send_client, gensym("client"), A_GIMME, 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
 
-  class_addlist(tcpserver_class, (t_method)tcpserver_broadcast);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_broadcastbut, gensym("broadcastbut"), A_GIMME, 0);
 
+  class_addlist(tcpserver_class, (t_method)tcpserver_broadcast);
 
   post("iemnet: networking with Pd :: %s", objName);
   post("        (c) 2010 IOhannes m zmoelnig, IEM");
