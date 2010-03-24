@@ -579,7 +579,10 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   if(rec->data)iemnet__chunk_destroy(rec->data);
   if(rec->flist)iemnet__floatlist_destroy(rec->flist);
   clock_free(rec->clock);
-  sys_closesocket(rec->sockfd);
+  rec->clock=NULL;
+
+  shutdown(rec->sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+  sys_closesocket(rec->sockfd); 
 
   rec->sockfd=0;
   fprintf(stderr, "receiverdestroy join thread\n");
