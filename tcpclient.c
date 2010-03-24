@@ -143,9 +143,11 @@ static void tcpclient_tick(t_tcpclient *x)
 }
 
 
+static void tcpclient_disconnect(t_tcpclient *x);
 
 static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fportno)
 {
+  if(x->x_fd>=0)tcpclient_disconnect(x);
   /* we get hostname and port and pass them on
      to the child thread that establishes the connection */
   x->x_hostname = hostname->s_name;
@@ -158,11 +160,11 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fpo
 
 static void tcpclient_disconnect(t_tcpclient *x)
 {
-  if(x->x_sender)iemnet__sender_destroy(x->x_sender);
-  if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver);
-
   if (x->x_fd >= 0)
     {
+      if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
+      if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver); x->x_receiver=NULL;
+
       sys_closesocket(x->x_fd);
       x->x_fd = -1;
       x->x_connectstate = 0;
