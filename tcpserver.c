@@ -159,9 +159,10 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 {
   if (argc > 1)
     {
+      t_iemnet_chunk*chunk=NULL;
       int client=tcpserver_fixindex(x, atom_getint(argv));
       if(client<0)return;
-      t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc-1, argv+1);
+      chunk=iemnet__chunk_create_list(argc-1, argv+1);
       --client;/* zero based index*/
       tcpserver_send_bytes(x, client, chunk);
       return;
@@ -214,6 +215,7 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom
 static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
   int     client = -1;
+  t_iemnet_chunk*chunk=NULL;
   if(argc) {
     client = tcpserver_socket2index(x, atom_getint(argv));
     if(client<0)return;
@@ -239,7 +241,7 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
       return;
     }
   
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc-1, argv+1);
+  chunk=iemnet__chunk_create_list(argc-1, argv+1);
   tcpserver_send_bytes(x, client, chunk);
   iemnet__chunk_destroy(chunk);
 }
@@ -299,7 +301,7 @@ static void tcpserver_disconnect_all(t_tcpserver *x)
 /* ---------------- main tcpserver (receive) stuff --------------------- */
 static void tcpserver_receive_callback(t_tcpserver *x, int sockfd, int argc, t_atom*argv) {
    if(argc) {
-    outlet_list(x->x_msgout, &s_list, argc, argv);
+    outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
     tcpserver_disconnect_socket(x, sockfd);
@@ -364,7 +366,7 @@ static void *tcpserver_new(t_floatarg fportno)
     }
 
   x = (t_tcpserver *)pd_new(tcpserver_class);
-  x->x_msgout = outlet_new(&x->x_obj, &s_anything); /* 1st outlet for received data */
+  x->x_msgout = outlet_new(&x->x_obj, 0); /* 1st outlet for received data */
 
 
 
@@ -378,8 +380,8 @@ static void *tcpserver_new(t_floatarg fportno)
   else
     {
       sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
-      x->x_connectout = outlet_new(&x->x_obj, &s_float); /* 2nd outlet for number of connected clients */
-      x->x_status_outlet = outlet_new(&x->x_obj, &s_anything);/* 5th outlet for everything else */
+      x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* 2nd outlet for number of connected clients */
+      x->x_status_outlet = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
     }
   x->x_connectsocket = sockfd;
   x->x_nconnections = 0;
@@ -415,7 +417,7 @@ static void tcpserver_free(t_tcpserver *x)
 
 }
 
-void tcpserver_setup(void)
+IEMNET_EXTERN void tcpserver_setup(void)
 {
   tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new, (t_method)tcpserver_free,
                               sizeof(t_tcpserver), 0, A_DEFFLOAT, 0);

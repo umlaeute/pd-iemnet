@@ -1,6 +1,13 @@
 #include "m_pd.h"
 
-#include <sys/socket.h>
+#ifdef _WIN32
+# define IEMNET_EXTERN __declspec(dllexport) extern
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#else
+# define IEMNET_EXTERN extern
+# include <sys/socket.h>
+#endif
 
 typedef struct _iemnet_chunk {
   unsigned char* data;

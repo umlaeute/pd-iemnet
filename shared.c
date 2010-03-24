@@ -387,10 +387,10 @@ static int iemnet__sender_dosend(int sockfd, t_queue*q) {
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
-
+    int result=-1;
     fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
 
-    int result = send(sockfd, data, size, 0);
+    result = send(sockfd, data, size, 0);
     // shouldn't we do something with the result here?
     iemnet__chunk_destroy(c);
   } else {
@@ -508,12 +508,13 @@ static void*iemnet__receiver_readthread(void*arg) {
   for(i=0; i<size; i++)data[i]=0;
   receiver->running=1;
   while(1) {
+    t_iemnet_chunk*c=NULL;
     fprintf(stderr, "reading %d bytes...\n", size);
     result = recv(sockfd, data, size, 0);
     fprintf(stderr, "read %d bytes...\n", result);
 
     if(result<=0)break;
-    t_iemnet_chunk*c = iemnet__chunk_create_data(result, data);
+    c= iemnet__chunk_create_data(result, data);
 
     queue_push(q, c);
 
@@ -531,27 +532,20 @@ static void*iemnet__receiver_readthread(void*arg) {
   return NULL;
 }
 
-#define WHERE fprintf(stderr, "%s:%d", __FUNCTION__, __LINE__)
 static void iemnet__receiver_tick(t_iemnet_receiver *x)
 {
-  WHERE; fprintf(stderr, "\treceiver=%x", x);
   // received data
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
-  WHERE; fprintf(stderr, "\tchunk=%x", c);
   while(NULL!=c) {
     x->flist = iemnet__chunk2list(c, x->flist);
     (x->callback)(x->owner, x->sockfd, x->flist->argc, x->flist->argv);
     iemnet__chunk_destroy(c);
     c=queue_pop_noblock(x->queue);
   }
-
-  WHERE; fprintf(stderr, "\trunning=%d", x->running);
-
   if(!x->running) {
     // read terminated
     x->callback(x->owner, x->sockfd, 0, NULL);
   }
-  WHERE; fprintf(stderr, "\ttick done\n");
 }
 
 

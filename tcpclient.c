@@ -28,7 +28,11 @@
 
 #include "s_stuff.h"
 
-#include <netdb.h> /* gethostbyname, htons... */
+#ifdef _WIN32
+#else
+# include <netdb.h> /* gethostbyname, htons... */
+#endif
+
 #include <string.h>
 
 
@@ -189,7 +193,7 @@ static void tcpclient_receive_callback(t_tcpclient *x, int sockfd, int argc, t_a
   // ignore sockfd
 
   if(argc) {
-    outlet_list(x->x_msgout, &s_list, argc, argv);
+    outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
     tcpclient_disconnect(x);
@@ -203,10 +207,10 @@ static void *tcpclient_new(void)
   int i;
 
   t_tcpclient *x = (t_tcpclient *)pd_new(tcpclient_class);
-  x->x_msgout = outlet_new(&x->x_obj, &s_anything);	/* received data */
-  x->x_addrout = outlet_new(&x->x_obj, &s_list);
-  x->x_connectout = outlet_new(&x->x_obj, &s_float);	/* connection state */
-  x->x_statusout = outlet_new(&x->x_obj, &s_anything);/* last outlet for everything else */
+  x->x_msgout = outlet_new(&x->x_obj, 0);	/* received data */
+  x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
+  x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
+  x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
 
   x->x_fd = -1;
 
@@ -239,7 +243,7 @@ static void tcpclient_free(t_tcpclient *x)
   clock_free(x->x_clock);
 }
 
-void tcpclient_setup(void)
+IEMNET_EXTERN void tcpclient_setup(void)
 {
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
@@ -249,6 +253,10 @@ void tcpclient_setup(void)
   class_addmethod(tcpclient_class, (t_method)tcpclient_disconnect, gensym("disconnect"), 0);
   class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"), A_GIMME, 0);
   class_addlist(tcpclient_class, (t_method)tcpclient_send);
+
+  post("iemnet: networking with Pd :: %s", objName);
+  post("        (c) 2010 IOhannes m zmoelnig, IEM");
+  post("        based on mrpeach/net, based on maxlib");
 }
 
 /* end of tcpclient.c */
