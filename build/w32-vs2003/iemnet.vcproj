@@ -97,9 +97,6 @@
 			<File
 				RelativePath="..\..\iemnet.h">
 			</File>
-			<File
-				RelativePath="..\..\shared.c">
-			</File>
 		</Filter>
 	</Files>
 	<Globals>
