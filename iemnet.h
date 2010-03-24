@@ -13,8 +13,6 @@ t_iemnet_chunk*iemnet__chunk_create_data(int, unsigned char*);
 t_iemnet_chunk*iemnet__chunk_create_list(int, t_atom*);
 t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*);
 
-t_atom*iemnet__chunk2list(t_iemnet_chunk*);
-
 /* sender */
 #define t_iemnet_sender struct _iemnet_sender
 EXTERN_STRUCT _iemnet_sender;
@@ -33,7 +31,7 @@ int iemnet__sender_setsockopt(t_iemnet_sender*, int level, int optname, const vo
 #define t_iemnet_receiver struct _iemnet_receiver
 EXTERN_STRUCT _iemnet_receiver;
 
-typedef void (*t_iemnet_receivecallback)(void*x, int, t_iemnet_chunk*);
+typedef void (*t_iemnet_receivecallback)(void*x, int sockfd, int argc, t_atom*argv);
 
 /**
  * create a receiver object: whenever something is received on the socket,

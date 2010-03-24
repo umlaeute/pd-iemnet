@@ -100,7 +100,7 @@ static void tcpserver_send_bytes(t_tcpserver *x, int sockfd, t_iemnet_chunk*chun
 #ifdef SIOCOUTQ
 static int tcpserver_send_buffer_avaliable_for_client(t_tcpserver *x, int client);
 #endif
-static void tcpserver_datacallback(t_tcpserver *x, int sockfd, t_iemnet_chunk*chunk);
+static void tcpserver_datacallback(t_tcpserver *x, int sockfd, int argc, t_atom*argv);
 
 static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient);
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
@@ -330,29 +330,24 @@ static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
     tcpserver_disconnect_client(x, id+1);
 }
 
+
+
+
+
 /* ---------------- main tcpserver (receive) stuff --------------------- */
-
-
-static void tcpserver_datacallback(t_tcpserver *x, int sockfd, t_iemnet_chunk*chunk) {
-  post("data callback for %x with data @ %x", x, chunk);
-
-  if(NULL!=chunk) {
-    t_atom*argv=NULL;
-    const int size=chunk->size;
-    post("\t%d elements", size);
-    argv=iemnet__chunk2list(chunk);
-    post("got list at %x", argv);
-
-    outlet_list(x->x_msgout, &s_list, chunk->size, argv);
-    
-    post("freeing list");
-
-    freebytes(argv, sizeof(t_atom)*chunk->size);
+static void tcpserver_datacallback(t_tcpserver *x, int sockfd, int argc, t_atom*argv) {
+  static int packetcount=0;
+  static int bytecount=0;
+  if(argc) {
+    outlet_list(x->x_msgout, &s_list, argc, argv);
+    packetcount++;
+    bytecount+=argc;
   } else {
     // disconnected
     tcpserver_disconnect_socket(x, sockfd);
   }
-  post("callback done");
+
+  //  post("tcpserver: %d bytes in %d packets", bytecount, packetcount);
 }
 
 static void tcpserver_connectpoll(t_tcpserver *x)
