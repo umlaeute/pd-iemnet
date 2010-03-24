@@ -388,7 +388,7 @@ static int iemnet__sender_dosend(int sockfd, t_queue*q) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
     int result=-1;
-    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
+    //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
 
     result = send(sockfd, data, size, 0);
     // shouldn't we do something with the result here?
@@ -408,7 +408,7 @@ static void*iemnet__sender_sendthread(void*arg) {
   while(sender->cont) {
     if(!iemnet__sender_dosend(sockfd, q))break;
   }
-  fprintf(stderr, "write thread terminated\n");
+  //fprintf(stderr, "write thread terminated\n");
   return NULL;
 }
 
@@ -509,9 +509,9 @@ static void*iemnet__receiver_readthread(void*arg) {
   receiver->running=1;
   while(1) {
     t_iemnet_chunk*c=NULL;
-    fprintf(stderr, "reading %d bytes...\n", size);
+    //fprintf(stderr, "reading %d bytes...\n", size);
     result = recv(sockfd, data, size, 0);
-    fprintf(stderr, "read %d bytes...\n", result);
+    //fprintf(stderr, "read %d bytes...\n", result);
 
     if(result<=0)break;
     c= iemnet__chunk_create_data(result, data);
@@ -527,8 +527,7 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   receiver->running=0;
 
-
-  fprintf(stderr, "read thread terminated\n");
+  //fprintf(stderr, "read thread terminated\n");
   return NULL;
 }
 
@@ -585,9 +584,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   sys_closesocket(rec->sockfd); 
 
   rec->sockfd=0;
-  fprintf(stderr, "receiverdestroy join thread\n");
   pthread_join(rec->thread, NULL);
-  fprintf(stderr, "receiverdestroy joined thread\n");
   rec->owner=NULL;
   rec->data=NULL;
   rec->callback=NULL;
