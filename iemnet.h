@@ -34,15 +34,27 @@
 
 #include "m_pd.h"
 
+/* from s_stuff.h */
+typedef void (*t_fdpollfn)(void *ptr, int fd);
+EXTERN void sys_closesocket(int fd);
+EXTERN void sys_sockerror(char *s);
+EXTERN void sys_addpollfn(int fd, t_fdpollfn fn, void *ptr);
+EXTERN void sys_rmpollfn(int fd);
+
+
+
 #ifdef _WIN32
 # include <winsock2.h>
 # include <ws2tcpip.h>
 #else
+# include <netdb.h>
+# include <arpa/inet.h>
 # include <sys/socket.h>
 #endif
 
 typedef struct _iemnet_chunk {
   unsigned char* data;
+
   size_t size;
 } t_iemnet_chunk;
 
@@ -70,13 +82,13 @@ int iemnet__sender_setsockopt(t_iemnet_sender*, int level, int optname, const vo
 #define t_iemnet_receiver struct _iemnet_receiver
 EXTERN_STRUCT _iemnet_receiver;
 
-typedef void (*t_iemnet_receivecallback)(void*x, int sockfd, int argc, t_atom*argv);
+typedef void (*t_iemnet_receivecallback)(void*data, int argc, t_atom*argv);
 
 /**
  * create a receiver object: whenever something is received on the socket,
  * the callback is called with the payload
  */
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receivecallback callback);
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback);
 void iemnet__receiver_destroy(t_iemnet_receiver*);
 
 
