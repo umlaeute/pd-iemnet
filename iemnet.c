@@ -2,6 +2,8 @@
  *  copyright (c) 2010 IOhannes m zmölnig, IEM
  */
 
+#define DEBUG
+
 #include "iemnet.h"
 
 #include <string.h>
@@ -20,7 +22,7 @@
 #include <pthread.h>
 
 
-//#define INBUFSIZE 4096L /* was 4096: size of receiving data buffer */
+
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
 
@@ -426,6 +428,7 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
 }
 
 void iemnet__sender_destroy(t_iemnet_sender*s) {
+  DEBUG("destroy sender %x", s);
   s->cont=0;
   queue_finish(s->queue);
   s->sockfd = -1;
@@ -434,12 +437,16 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
 
   freebytes(s, sizeof(t_iemnet_sender));
   s=NULL;
+  DEBUG("destroyed sender");
 }
 t_iemnet_sender*iemnet__sender_create(int sock) {
   t_iemnet_sender*result=(t_iemnet_sender*)getbytes(sizeof(t_iemnet_sender));
   int res=0;
-
-  if(NULL==result)return NULL;
+  DEBUG("create sender %x", result);
+  if(NULL==result){
+    DEBUG("create sender failed");
+    return NULL;
+  }
 
   result->queue = queue_create();
   result->sockfd = sock;
@@ -453,6 +460,7 @@ t_iemnet_sender*iemnet__sender_create(int sock) {
     // something went wrong
   }
 
+  DEBUG("created sender");
   return result;
 }
 
@@ -553,12 +561,14 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
 
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
   t_iemnet_receiver*rec=(t_iemnet_receiver*)getbytes(sizeof(t_iemnet_receiver));
+  DEBUG("create new receiver for 0x%X:%d", userdata, sock);
   //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
   if(rec) {
     t_iemnet_chunk*data=iemnet__chunk_create_empty(INBUFSIZE);
     int res=0;
     if(NULL==data) {
       iemnet__receiver_destroy(rec);
+      DEBUG("create receiver failed");
       return NULL;
     }
     rec->sockfd=sock;
@@ -577,6 +587,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
   return rec;
 }
 void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
+  DEBUG("destroy receiver %x", rec);
   if(NULL==rec)return;
   if(rec->data)iemnet__chunk_destroy(rec->data);
   if(rec->flist)iemnet__floatlist_destroy(rec->flist);
@@ -596,6 +607,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   freebytes(rec, sizeof(t_iemnet_receiver));
   rec=NULL;
+  DEBUG("destroyed receiver");
 }
 
 

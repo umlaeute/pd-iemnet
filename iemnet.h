@@ -109,4 +109,17 @@ void iemnet__receiver_destroy(t_iemnet_receiver*);
 #endif
 
 
+
+#ifdef DEBUG
+# undef DEBUG
+# define DEBUG startpost("[%s:%d]", __FUNCTION__, __LINE__); post
+#else
+static void debug_dummy(const char *format, ...)  {;}
+# define DEBUG debug_dummy
+#endif
+
+
+
+
+
 #endif /* INCLUDE_IEMNET_H_ */
