@@ -42,8 +42,13 @@ and if so how, is an implementation detail)
 the lib doesn't know anything about the actual transport protocol. it only
 interacts with a socket.
 
-easy to use:
+easy to run:
+think speed
 
+
+
+easy to use:
+probably not
 
 
 
