@@ -6,7 +6,7 @@ LIBRARY_VERSION = 0.1
 
 # Next, add your .c source files to the SOURCES variable.  The help files will
 # be included automatically
-SOURCES = tcpserver.c tcpclient.c
+SOURCES = tcpserver.c tcpclient.c tcpsend.c tcpreceive.c
 #SOURCES = tcpclient.c  tcpreceive.c  tcpsend.c  tcpserver.c  udpreceive~.c  udpreceive.c  udpsend~.c  udpsend.c
 
 # For objects that only build on certain platforms, add those to the SOURCES
@@ -39,7 +39,7 @@ EXTRA_DIST = README.txt
 #------------------------------------------------------------------------------#
 
 # where Pd lives
-PD_PATH = ../../pd
+PD_PATH = ../../../pd
 # where to install the library
 prefix = /usr/local
 libdir = $(prefix)/lib
