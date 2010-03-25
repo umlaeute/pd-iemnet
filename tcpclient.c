@@ -25,20 +25,7 @@
 /* ---------------------------------------------------------------------------- */
 
 #include "iemnet.h"
-
-#include "s_stuff.h"
-
-#ifdef _WIN32
-#else
-# include <netdb.h> /* gethostbyname, htons... */
-#endif
-
 #include <string.h>
-
-
- //#include <sys/types.h>
- //#include <sys/socket.h>
-
 
 #include <pthread.h>
 

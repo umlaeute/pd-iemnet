@@ -27,12 +27,8 @@
 //#define DEBUG
 #include "iemnet.h"
 
-#include "s_stuff.h"
-
-#if defined(UNIX) || defined(unix)
+#ifndef _WIN32
 # include <arpa/inet.h>
-#else
-# include <winsock2.h>
 #endif
 
 
@@ -45,6 +41,8 @@ static char objName[] = "tcpserver";
 
 typedef struct _tcpserver_socketreceiver
 {
+  struct _tcpserver *sr_owner;
+
   t_symbol                    *sr_host;
   t_int                       sr_fd;
   t_iemnet_sender*sr_sender;
@@ -66,20 +64,22 @@ typedef struct _tcpserver
   t_atom                      x_addrbytes[4];
 } t_tcpserver;
 
-static void tcpserver_receive_callback(t_tcpserver *x, int sockfd, int argc, t_atom*argv);
+static void tcpserver_receive_callback(t_tcpserver_socketreceiver*x, int argc, t_atom*argv);
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(void *owner, int sockfd, t_symbol*host)
+static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, t_symbol*host)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   if(NULL==x) {
     error("%s_socketreceiver: unable to allocate %d bytes", objName, sizeof(*x));
     return NULL;
   } else {
-      x->sr_host=host;
-      x->sr_fd=sockfd;
+    x->sr_owner=owner;
 
-      x->sr_sender=iemnet__sender_create(sockfd);
-      x->sr_receiver=iemnet__receiver_create(sockfd, owner, (t_iemnet_receivecallback)tcpserver_receive_callback);
+    x->sr_host=host;
+    x->sr_fd=sockfd;
+
+    x->sr_sender=iemnet__sender_create(sockfd);
+    x->sr_receiver=iemnet__receiver_create(sockfd, x, (t_iemnet_receivecallback)tcpserver_receive_callback);
   }
   return (x);
 }
@@ -92,6 +92,11 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       if(x->sr_receiver)iemnet__receiver_destroy(x->sr_receiver);
 
       sys_closesocket(x->sr_fd);
+
+      x->sr_owner=NULL;
+      x->sr_sender=NULL;
+      x->sr_receiver=NULL;
+      x->sr_fd=-1;
 
       freebytes(x, sizeof(*x));
     }
@@ -294,16 +299,16 @@ static void tcpserver_disconnect_all(t_tcpserver *x)
   }
 }
 
-
-
-
-
 /* ---------------- main tcpserver (receive) stuff --------------------- */
-static void tcpserver_receive_callback(t_tcpserver *x, int sockfd, int argc, t_atom*argv) {
-   if(argc) {
+static void tcpserver_receive_callback(t_tcpserver_socketreceiver *y, int argc, t_atom*argv) {
+  t_tcpserver*x=NULL;
+  if(NULL==y || NULL==(x=y->sr_owner))return;
+  
+  if(argc) {
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
+    int sockfd=y->sr_fd;
     tcpserver_disconnect_socket(x, sockfd);
   }
 

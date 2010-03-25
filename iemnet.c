@@ -4,8 +4,6 @@
 
 #include "iemnet.h"
 
-#include "s_stuff.h"
-
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -488,7 +486,7 @@ int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname, const v
 struct _iemnet_receiver {
   pthread_t thread;
   int sockfd; /* owned outside; you must call iemnet__receiver_destroy() before freeing socket yourself */
-  void*owner;
+  void*userdata;
   t_iemnet_chunk*data;
   t_iemnet_receivecallback callback;
   t_queue*queue;
@@ -542,20 +540,20 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
   while(NULL!=c) {
     x->flist = iemnet__chunk2list(c, x->flist);
-    (x->callback)(x->owner, x->sockfd, x->flist->argc, x->flist->argv);
+    (x->callback)(x->userdata, x->flist->argc, x->flist->argv);
     iemnet__chunk_destroy(c);
     c=queue_pop_noblock(x->queue);
   }
   if(!x->running) {
     // read terminated
-    x->callback(x->owner, x->sockfd, 0, NULL);
+    x->callback(x->userdata, 0, NULL);
   }
 }
 
 
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receivecallback callback) {
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
   t_iemnet_receiver*rec=(t_iemnet_receiver*)getbytes(sizeof(t_iemnet_receiver));
-  //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, owner, callback);
+  //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
   if(rec) {
     t_iemnet_chunk*data=iemnet__chunk_create_empty(INBUFSIZE);
     int res=0;
@@ -564,7 +562,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*owner, t_iemnet_receive
       return NULL;
     }
     rec->sockfd=sock;
-    rec->owner=owner;
+    rec->userdata=userdata;
     rec->data=data;
     rec->callback=callback;
     rec->flist=iemnet__floatlist_create(1024);
@@ -590,7 +588,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   rec->sockfd=0;
   pthread_join(rec->thread, NULL);
-  rec->owner=NULL;
+  rec->userdata=NULL;
   rec->data=NULL;
   rec->callback=NULL;
   rec->clock=NULL;
@@ -609,15 +607,17 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
 
 #ifdef _MSC_VER
-    void tcpclient_setup(void);
-    void tcpserver_setup(void);
+void tcpclient_setup(void);
+void tcpserver_setup(void);
+void tcpsend_setup(void);
 #endif
 
 
 
 IEMNET_EXTERN void iemnet_setup(void) {
 #ifdef _MSC_VER
-    tcpclient_setup();
-    tcpserver_setup();
+  tcpclient_setup();
+  tcpserver_setup();
+  tcpserver_setup();
 #endif
 }
