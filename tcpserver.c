@@ -43,8 +43,9 @@ typedef struct _tcpserver_socketreceiver
 {
   struct _tcpserver *sr_owner;
 
-  t_symbol                    *sr_host;
-  t_int                       sr_fd;
+  long           sr_host;
+  unsigned short sr_port;
+  t_int          sr_fd;
   t_iemnet_sender*sr_sender;
   t_iemnet_receiver*sr_receiver;
 } t_tcpserver_socketreceiver;
@@ -62,13 +63,11 @@ typedef struct _tcpserver
   t_int                       x_nconnections;
 
   t_int                       x_connectsocket;    /* socket waiting for new connections */
-
-  t_atom                      x_addrbytes[4];
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, t_symbol*host)
+static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   if(NULL==x) {
@@ -77,8 +76,10 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
   } else {
     x->sr_owner=owner;
 
-    x->sr_host=host;
     x->sr_fd=sockfd;
+
+    x->sr_host=ntohl(addr->sin_addr.s_addr);
+    x->sr_port=ntohs(addr->sin_port);
 
     x->sr_sender=iemnet__sender_create(sockfd);
     x->sr_receiver=iemnet__receiver_create(sockfd, x, tcpserver_receive_callback);
@@ -310,7 +311,8 @@ static void tcpserver_receive_callback(void *y0,
   if(NULL==y || NULL==(x=y->sr_owner))return;
   
   if(argc) {
-    iemnet__addrout(x->x_status_outlet, x->x_addrout, c->addr, c->port);
+
+    iemnet__addrout(x->x_status_outlet, x->x_addrout, y->sr_host, y->sr_port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
@@ -331,8 +333,7 @@ static void tcpserver_connectpoll(t_tcpserver *x)
   if (fd < 0) post("%s: accept failed", objName);
   else
     {
-      t_symbol*host=gensym(inet_ntoa(incomer_address.sin_addr));
-      t_tcpserver_socketreceiver *y = tcpserver_socketreceiver_new((void *)x, fd, host);
+      t_tcpserver_socketreceiver *y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
       if (!y)
         {
           sys_closesocket(fd);
@@ -355,15 +356,18 @@ static void *tcpserver_new(t_floatarg fportno)
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-#ifdef DEBUG
-  post("%s: receive socket %d", objName, sockfd);
-#endif
+  DEBUG("%s: receive socket %d", objName, sockfd);
+
   if (sockfd < 0)
     {
       sys_sockerror("tcpserver: socket");
+      // LATER allow creation even if port is in use
       return (0);
     }
+
   server.sin_family = AF_INET;
+
+  /* LATER allow setting of inaddr */
   server.sin_addr.s_addr = INADDR_ANY;
 
   /* assign server port number */
@@ -398,21 +402,12 @@ static void *tcpserver_new(t_floatarg fportno)
       sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
     }
 
-
-
-
   x->x_connectsocket = sockfd;
   x->x_nconnections = 0;
 
   for(i = 0; i < MAX_CONNECT; i++)
     {
       x->x_sr[i] = NULL;
-    }
-  /* prepare to convert the bytes in the buffer to floats in a list */
-  for (i = 0; i < 4; ++i)
-    {
-      x->x_addrbytes[i].a_type = A_FLOAT;
-      x->x_addrbytes[i].a_w.w_float = 0;
     }
   return (x);
 }
