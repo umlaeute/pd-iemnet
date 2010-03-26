@@ -521,11 +521,13 @@ static void*iemnet__receiver_readthread(void*arg) {
     
     queue_push(q, c);
 
+    sys_lock();
     if(receiver->clock)clock_delay(receiver->clock, 0);
+    sys_unlock();
   }
-
-  if(result>=0)
-    if(receiver->clock)clock_delay(receiver->clock, 0);
+  sys_lock();
+  if(result>=0 && receiver->clock)clock_delay(receiver->clock, 0);
+  sys_unlock();
 
   receiver->running=0;
 
