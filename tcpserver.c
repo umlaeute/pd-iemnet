@@ -54,7 +54,9 @@ typedef struct _tcpserver
   t_object                    x_obj;
   t_outlet                    *x_msgout;
   t_outlet                    *x_connectout;
-  t_outlet                    *x_status_outlet;
+  t_outlet                    *x_sockout; // legacy
+  t_outlet                    *x_addrout; // legacy
+  t_outlet                    *x_status_outlet; 
 
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
   t_int                       x_nconnections;
@@ -308,6 +310,7 @@ static void tcpserver_receive_callback(void *y0,
   if(NULL==y || NULL==(x=y->sr_owner))return;
   
   if(argc) {
+    iemnet__addrout(x->x_status_outlet, x->x_addrout, c->addr, c->port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
@@ -374,7 +377,12 @@ static void *tcpserver_new(t_floatarg fportno)
     }
 
   x = (t_tcpserver *)pd_new(tcpserver_class);
+
   x->x_msgout = outlet_new(&x->x_obj, 0); /* 1st outlet for received data */
+  x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* 2nd outlet for number of connected clients */
+  x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
+  x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
+  x->x_status_outlet = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
 
 
 
@@ -388,9 +396,11 @@ static void *tcpserver_new(t_floatarg fportno)
   else
     {
       sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
-      x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* 2nd outlet for number of connected clients */
-      x->x_status_outlet = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
     }
+
+
+
+
   x->x_connectsocket = sockfd;
   x->x_nconnections = 0;
 
