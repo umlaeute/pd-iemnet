@@ -43,7 +43,15 @@ the lib doesn't know anything about the actual transport protocol. it only
 interacts with a socket.
 
 easy to run:
-think speed
+think speed, think reliability
+all known implementations for pd are either slow or will freeze Pd when under
+_heavy_ load. most do both.
+iemnet wants to provide objects whih allow you to saturate the network
+connection and still keep Pd reactive.
+(sidenote: saturating even a 100MBit network with Pd might lead to audio
+dropouts; this is not necessarily related to the network but rather to the 
+amount of data processed by Pd...)
+
 
 
 
