@@ -25,7 +25,6 @@
 #include "iemnet.h"
 #include <string.h>
 
-
 static t_class *udpsend_class;
 
 typedef struct _udpsend
@@ -33,8 +32,6 @@ typedef struct _udpsend
   t_object x_obj;
   t_iemnet_sender*x_sender;
 } t_udpsend;
-
-
 
 static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 			    t_floatarg fportno)
@@ -119,7 +116,6 @@ static void udpsend_free(t_udpsend *x)
   udpsend_disconnect(x);
 }
 
-
 static void *udpsend_new(void)
 {
   t_udpsend *x = (t_udpsend *)pd_new(udpsend_class);
@@ -133,10 +129,12 @@ void udpsend_setup(void)
   udpsend_class = class_new(gensym("udpsend"), (t_newmethod)udpsend_new,
 			    (t_method)udpsend_free,
 			    sizeof(t_udpsend), 0, 0);
+
   class_addmethod(udpsend_class, (t_method)udpsend_connect,
 		  gensym("connect"), A_SYMBOL, A_FLOAT, 0);
   class_addmethod(udpsend_class, (t_method)udpsend_disconnect,
 		  gensym("disconnect"), 0);
+
   class_addmethod(udpsend_class, (t_method)udpsend_send, gensym("send"),
 		  A_GIMME, 0);
   class_addlist(udpsend_class, (t_method)udpsend_send);
