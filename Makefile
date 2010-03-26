@@ -187,11 +187,12 @@ install-doc:
 
 
 clean:
-	-rm -f -- $(SOURCES:.c=.o)
+	-rm -f -- $(SOURCES:.c=.o) $(HELPERSOURCES:.c=.o)
 	-rm -f -- $(SOURCES:.c=.$(EXTENSION))
 	-rm -f -- $(LIBRARY_NAME).$(EXTENSION)
 
 distclean: clean
+	-rm -f *~ *.o *.$(EXTENSION)
 	-rm -f -- $(DISTBINDIR).tar.gz
 	-rm -rf -- $(DISTBINDIR)
 	-rm -f -- $(DISTDIR).tar.gz
