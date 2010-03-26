@@ -524,7 +524,6 @@ static void*iemnet__receiver_readthread(void*arg) {
     if(receiver->clock)clock_delay(receiver->clock, 0);
   }
 
-
   if(result>=0)
     if(receiver->clock)clock_delay(receiver->clock, 0);
 
@@ -603,6 +602,29 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 }
 
 
+
+
+void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, 
+		     long address, unsigned short port) {
+
+  static t_atom addr[5];
+  static int firsttime=1;
+
+  if(firsttime) {
+    int i=0;
+    for(i=0; i<5; i++)SETFLOAT(addr+i, 0);
+    firsttime=0;
+  }
+
+  addr[0].a_w.w_float = (address & 0xFF000000)>>24;
+  addr[1].a_w.w_float = (address & 0x0FF0000)>>16;
+  addr[2].a_w.w_float = (address & 0x0FF00)>>8;
+  addr[3].a_w.w_float = (address & 0x0FF);
+  addr[4].a_w.w_float = port;
+
+  if(status_outlet )outlet_anything(status_outlet , gensym("address"), 5, addr);
+  if(address_outlet)outlet_list    (address_outlet, gensym("list"   ), 5, addr);
+}
 
 
 

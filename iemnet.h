@@ -97,6 +97,22 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivec
 void iemnet__receiver_destroy(t_iemnet_receiver*);
 
 
+
+
+
+/* convenience functions */
+
+/* output the address */
+void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
+
+
+
+
+
+
+
+
+
 #if defined(_MSC_VER)
 # define IEMNET_EXTERN __declspec(dllexport) extern
 # define CCALL __cdecl
