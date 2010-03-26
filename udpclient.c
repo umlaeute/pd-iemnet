@@ -1,7 +1,5 @@
 /* udpclient.c
  * copyright (c) 2010 IOhannes m zmölnig, IEM
- * copyright (c) 2006-2010 Martin Peach
- * copyright (c) 2004 Olaf Matthes
  */
 
 /*                                                                              */
@@ -39,7 +37,6 @@ typedef struct _udpclient
 {
   t_object        x_obj;
   t_clock         *x_clock;
-  t_clock         *x_poll;
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
   t_outlet        *x_connectout;
@@ -50,11 +47,10 @@ typedef struct _udpclient
 
 
   int             x_fd; // the socket
-  char            *x_hostname; // address we want to connect to as text
+  char           *x_hostname; // address we want to connect to as text
   int             x_connectstate; // 0 = not connected, 1 = connected
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int
-  t_atom          x_addrbytes[4]; // address we're connected to as 4 bytes
 
 
   /* multithread stuff */
@@ -125,6 +121,9 @@ static void *udpclient_child_connect(void *w)
       sys_closesocket(sockfd);
       return (x);
     }
+  x->x_fd = sockfd;
+  x->x_addr = ntohl(*(long *)hp->h_addr);
+
   x->x_sender=iemnet__sender_create(sockfd);
   x->x_receiver=iemnet__receiver_create(sockfd, x,  udpclient_receive_callback);
 
@@ -190,6 +189,7 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c, int argc, t_ato
   t_udpclient *x=(t_udpclient*)y;
 
   if(argc) {
+    iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
@@ -211,16 +211,11 @@ static void *udpclient_new(void)
   x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
 
   x->x_fd = -1;
-
-  for (i = 0; i < 4; ++i)
-    {
-      SETFLOAT(x->x_addrbytes+i, 0);
-    }
   x->x_addr = 0L;
+  x->x_port = 0;
 
   x->x_sender=NULL;
   x->x_receiver=NULL;
-
 
   x->x_clock = clock_new(x, (t_method)udpclient_tick);
 
@@ -237,7 +232,6 @@ static void *udpclient_new(void)
 static void udpclient_free(t_udpclient *x)
 {
   udpclient_disconnect(x);
-  clock_free(x->x_poll);
   clock_free(x->x_clock);
 }
 

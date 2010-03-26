@@ -39,22 +39,20 @@ typedef struct _tcpclient
 {
   t_object        x_obj;
   t_clock         *x_clock;
-  t_clock         *x_poll;
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
   t_outlet        *x_connectout;
   t_outlet        *x_statusout;
 
-  t_iemnet_sender*x_sender;
+  t_iemnet_sender  *x_sender;
   t_iemnet_receiver*x_receiver;
 
 
   int             x_fd; // the socket
-  char            *x_hostname; // address we want to connect to as text
+  char           *x_hostname; // address we want to connect to as text
   int             x_connectstate; // 0 = not connected, 1 = connected
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int
-  t_atom          x_addrbytes[4]; // address we're connected to as 4 bytes
 
 
   /* multithread stuff */
@@ -182,6 +180,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c, int argc, t_ato
   t_tcpclient *x=(t_tcpclient*)y;
 
   if(argc) {
+    iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
@@ -203,11 +202,8 @@ static void *tcpclient_new(void)
 
   x->x_fd = -1;
 
-  for (i = 0; i < 4; ++i)
-    {
-      SETFLOAT(x->x_addrbytes+i, 0);
-    }
   x->x_addr = 0L;
+  x->x_port = 0;
 
   x->x_sender=NULL;
   x->x_receiver=NULL;
@@ -228,7 +224,6 @@ static void *tcpclient_new(void)
 static void tcpclient_free(t_tcpclient *x)
 {
   tcpclient_disconnect(x);
-  clock_free(x->x_poll);
   clock_free(x->x_clock);
 }
 
