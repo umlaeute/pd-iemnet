@@ -64,7 +64,7 @@ typedef struct _tcpserver
   t_atom                      x_addrbytes[4];
 } t_tcpserver;
 
-static void tcpserver_receive_callback(t_tcpserver_socketreceiver*x, int argc, t_atom*argv);
+static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, t_symbol*host)
 {
@@ -79,7 +79,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
     x->sr_fd=sockfd;
 
     x->sr_sender=iemnet__sender_create(sockfd);
-    x->sr_receiver=iemnet__receiver_create(sockfd, x, (t_iemnet_receivecallback)tcpserver_receive_callback);
+    x->sr_receiver=iemnet__receiver_create(sockfd, x, tcpserver_receive_callback);
   }
   return (x);
 }
@@ -300,7 +300,10 @@ static void tcpserver_disconnect_all(t_tcpserver *x)
 }
 
 /* ---------------- main tcpserver (receive) stuff --------------------- */
-static void tcpserver_receive_callback(t_tcpserver_socketreceiver *y, int argc, t_atom*argv) {
+static void tcpserver_receive_callback(void *y0, 
+				       t_iemnet_chunk*c, 
+				       int argc, t_atom*argv) {
+  t_tcpserver_socketreceiver *y=(t_tcpserver_socketreceiver*)y0;
   t_tcpserver*x=NULL;
   if(NULL==y || NULL==(x=y->sr_owner))return;
   

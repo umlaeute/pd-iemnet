@@ -54,13 +54,16 @@ EXTERN void sys_rmpollfn(int fd);
 
 typedef struct _iemnet_chunk {
   unsigned char* data;
-
   size_t size;
+
+  long addr;
+  unsigned short port;
 } t_iemnet_chunk;
 
 void iemnet__chunk_destroy(t_iemnet_chunk*);
 t_iemnet_chunk*iemnet__chunk_create_empty(int);
 t_iemnet_chunk*iemnet__chunk_create_data(int, unsigned char*);
+t_iemnet_chunk*iemnet__chunk_create_dataaddr(int, unsigned char*, struct sockaddr_in*addr);
 t_iemnet_chunk*iemnet__chunk_create_list(int, t_atom*);
 t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*);
 
@@ -82,7 +85,9 @@ int iemnet__sender_setsockopt(t_iemnet_sender*, int level, int optname, const vo
 #define t_iemnet_receiver struct _iemnet_receiver
 EXTERN_STRUCT _iemnet_receiver;
 
-typedef void (*t_iemnet_receivecallback)(void*data, int argc, t_atom*argv);
+typedef void (*t_iemnet_receivecallback)(void*userdata, 
+					 t_iemnet_chunk*rawdata,
+					 int argc, t_atom*argv);
 
 /**
  * create a receiver object: whenever something is received on the socket,

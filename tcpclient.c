@@ -63,7 +63,9 @@ typedef struct _tcpclient
 } t_tcpclient;
 
 
-static void tcpclient_receive_callback(t_tcpclient *x, int sockfd, int argc, t_atom*argv);
+static void tcpclient_receive_callback(void *x, 
+				       t_iemnet_chunk*,
+				       int argc, t_atom*argv);
 
 
 
@@ -116,7 +118,7 @@ static void *tcpclient_child_connect(void *w)
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
   x->x_sender=iemnet__sender_create(sockfd);
-  x->x_receiver=iemnet__receiver_create(sockfd, x,  (t_iemnet_receivecallback)tcpclient_receive_callback);
+  x->x_receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback);
 
   x->x_connectstate = 1;
 
@@ -178,8 +180,8 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
   outlet_anything( x->x_statusout, gensym("sent"), 1, &output_atom);
 }
 
-static void tcpclient_receive_callback(t_tcpclient *x, int sockfd, int argc, t_atom*argv) {
-  // ignore sockfd
+static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c, int argc, t_atom*argv) {
+  t_tcpclient *x=(t_tcpclient*)y;
 
   if(argc) {
     outlet_list(x->x_msgout, gensym("list"), argc, argv);

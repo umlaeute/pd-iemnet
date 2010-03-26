@@ -118,41 +118,37 @@ t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
     }
 
     memset(result->data, 0, result->size);
+
+    result->addr=0L;
+    result->port=0;
+
   }
   return result;
 }
 
 t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data) {
-  t_iemnet_chunk*result=(t_iemnet_chunk*)getbytes(sizeof(t_iemnet_chunk));
+  t_iemnet_chunk*result=iemnet__chunk_create_empty(size);
   if(result) {
-    result->size=size;
-    result->data=(unsigned char*)getbytes(sizeof(unsigned char)*size); 
-
-    if(NULL == result->data) {
-      result->size=0;
-      iemnet__chunk_destroy(result);
-      return NULL;
-    }
-
     memcpy(result->data, data, result->size);
   }
   return result;
 }
 
+t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size, 
+					      unsigned char*data,
+					      struct sockaddr_in*addr) {
+  t_iemnet_chunk*result=iemnet__chunk_create_data(size, data);
+  if(addr) {
+    result->addr = ntohl(addr->sin_addr.s_addr);
+    result->port = ntohs(addr->sin_port);
+  }
+  return result;
+}
 
 t_iemnet_chunk* iemnet__chunk_create_list(int argc, t_atom*argv) {
-  t_iemnet_chunk*result=(t_iemnet_chunk*)getbytes(sizeof(t_iemnet_chunk));
   int i;
+  t_iemnet_chunk*result=iemnet__chunk_create_empty(argc);
   if(NULL==result)return NULL;
-
-  result->size=argc;
-  result->data=(unsigned char*)getbytes(sizeof(unsigned char)*argc);
-
-  if(NULL == result->data) {
-    result->size=0;
-    iemnet__chunk_destroy(result);
-    return NULL;
-  }
 
   for(i=0; i<argc; i++) {
     unsigned char c = atom_getint(argv);
@@ -166,18 +162,9 @@ t_iemnet_chunk* iemnet__chunk_create_list(int argc, t_atom*argv) {
 t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c) {
   t_iemnet_chunk*result=NULL;
   if(NULL==c)return NULL;
-
-  result=(t_iemnet_chunk*)getbytes(sizeof(t_iemnet_chunk));
-
-  result->size=c->size;
-  result->data=(unsigned char*)getbytes(sizeof(unsigned char)*(result->size));
-  if(NULL == result->data) {
-    result->size=0;
-    iemnet__chunk_destroy(result);
-    return NULL;
-  }
-
-  memcpy(result->data, c->data, result->size);
+  result=iemnet__chunk_create_data(c->size, c->data);
+  result->addr=c->addr;
+  result->port=c->port;
 
   return result;
 }
@@ -515,18 +502,23 @@ static void*iemnet__receiver_readthread(void*arg) {
   unsigned char data[INBUFSIZE];
   unsigned int size=INBUFSIZE;
 
+  struct sockaddr_in  from;
+  socklen_t           fromlen = sizeof(from);
+
   unsigned int i=0;
   for(i=0; i<size; i++)data[i]=0;
   receiver->running=1;
   while(1) {
     t_iemnet_chunk*c=NULL;
+    fromlen = sizeof(from);
     //fprintf(stderr, "reading %d bytes...\n", size);
-    result = recv(sockfd, data, size, 0);
+    //result = recv(sockfd, data, size, 0);
+    result = recvfrom(sockfd, data, size, 0, (struct sockaddr *)&from, &fromlen);
     //fprintf(stderr, "read %d bytes...\n", result);
-
+    
     if(result<=0)break;
-    c= iemnet__chunk_create_data(result, data);
-
+    c= iemnet__chunk_create_dataaddr(result, data, &from);
+    
     queue_push(q, c);
 
     if(receiver->clock)clock_delay(receiver->clock, 0);
@@ -548,13 +540,13 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
   while(NULL!=c) {
     x->flist = iemnet__chunk2list(c, x->flist);
-    (x->callback)(x->userdata, x->flist->argc, x->flist->argv);
+    (x->callback)(x->userdata, c, x->flist->argc, x->flist->argv);
     iemnet__chunk_destroy(c);
     c=queue_pop_noblock(x->queue);
   }
   if(!x->running) {
     // read terminated
-    x->callback(x->userdata, 0, NULL);
+    x->callback(x->userdata, NULL, 0, NULL);
   }
 }
 
