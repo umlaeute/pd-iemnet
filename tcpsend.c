@@ -71,7 +71,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  DEBUG("tcpsend_connect: send socket %d\n", sockfd);
+  DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0)
     {
       sys_sockerror("tcpsend: socket");

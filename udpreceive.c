@@ -63,7 +63,7 @@ static void *udpreceive_new(t_floatarg fportno)
 
     /* create a socket */
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    DEBUG("udpreceive_new: socket %d port %d", sockfd, portno);
+    DEBUG("socket %d port %d", sockfd, portno);
     if (sockfd < 0)
     {
         sys_sockerror("udpreceive: socket");

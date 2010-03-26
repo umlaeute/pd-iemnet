@@ -50,7 +50,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  DEBUG("udpsend_connect: send socket %d\n", sockfd);
+  DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0)
     {
       sys_sockerror("udpsend: socket");
@@ -79,7 +79,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   /* assign client port number */
   server.sin_port = htons((u_short)portno);
 
-  DEBUG("udpsend: connecting to port %d", portno);
+  DEBUG("connecting to port %d", portno);
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {

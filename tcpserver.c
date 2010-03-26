@@ -356,7 +356,7 @@ static void *tcpserver_new(t_floatarg fportno)
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  DEBUG("%s: receive socket %d", objName, sockfd);
+  DEBUG("receive socket %d", sockfd);
 
   if (sockfd < 0)
     {

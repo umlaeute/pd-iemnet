@@ -221,9 +221,7 @@ static void *tcpreceive_new(t_floatarg fportno)
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-#ifdef DEBUG
-  post("tcpreceive_new: socket %d port %d", sockfd, portno);
-#endif
+  DEBUG("socket %d port %d", sockfd, portno);
   if (sockfd < 0)
     {
       sys_sockerror("tcpreceive: socket");

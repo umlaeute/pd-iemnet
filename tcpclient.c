@@ -86,9 +86,7 @@ static void *tcpclient_child_connect(void *w)
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-#ifdef DEBUG
-  post("%s: send socket %d\n", objName, sockfd);
-#endif
+  DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0)
     {
       sys_sockerror("tcpclient: socket");
