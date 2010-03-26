@@ -1,87 +1,57 @@
-/* x_net_udpreceive.c 20060424. Martin Peach did it based on x_net.c. x_net.c header follows: */
-/* Copyright (c) 1997-1999 Miller Puckette.
-* For information on usage and redistribution, and for a DISCLAIMER OF ALL
-* WARRANTIES, see the file, "LICENSE.txt," in this distribution.  */
+/* udpreceive.c
+ * copyright (c) 2010 IOhannes m zmölnig, IEM
+ * copyright (c) 2006-2010 Martin Peach
+ * copyright (c) Miller Puckette
+ */
 
-#include "m_pd.h"
-#include "s_stuff.h"
+/*                                                                              */
+/* A client for unidirectional communication from within Pd.                     */
+/*                                                                              */
+/* This program is free software; you can redistribute it and/or                */
+/* modify it under the terms of the GNU General Public License                  */
+/* as published by the Free Software Foundation; either version 2               */
+/* of the License, or (at your option) any later version.                       */
+/*                                                                              */
+/* This program is distributed in the hope that it will be useful,              */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/* GNU General Public License for more details.                                 */
+/*                                                                              */
+/* You should have received a copy of the GNU General Public License            */
+/* along with this program; if not, write to the Free Software                  */
+/* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
+/*                                                                              */
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
-#include <stdio.h>
+
+#include "iemnet.h"
+#ifndef _WIN32
+# include <netinet/tcp.h>
 #endif
-
 
 /* ----------------------------- udpreceive ------------------------- */
 
 static t_class *udpreceive_class;
 
-#define MAX_UDP_RECEIVE 65536L // longer than data in maximum UDP packet
-
 typedef struct _udpreceive
 {
-    t_object  x_obj;
-    t_outlet  *x_msgout;
-    t_outlet  *x_addrout;
-    int       x_connectsocket;
-    t_atom    x_addrbytes[5];
-    t_atom    x_msgoutbuf[MAX_UDP_RECEIVE];
-    char      x_msginbuf[MAX_UDP_RECEIVE];
+  t_object  x_obj;
+  t_outlet  *x_msgout;
+  t_outlet  *x_addrout;
+  int       x_connectsocket;
+  t_iemnet_receiver*x_receiver;
 } t_udpreceive;
 
-void udpreceive_setup(void);
-static void udpreceive_free(t_udpreceive *x);
-static void *udpreceive_new(t_floatarg fportno);
-static void udpreceive_read(t_udpreceive *x, int sockfd);
 
-static void udpreceive_read(t_udpreceive *x, int sockfd)
-{
-    int                 i, read = 0;
-    struct sockaddr_in  from;
-    socklen_t           fromlen = sizeof(from);
-    long                addr;
-    unsigned short      port;
-
-    read = recvfrom(sockfd, x->x_msginbuf, MAX_UDP_RECEIVE, 0, (struct sockaddr *)&from, &fromlen);
-#ifdef DEBUG
-    post("udpreceive_read: read %lu x->x_connectsocket = %d",
-        read, x->x_connectsocket);
-#endif
-    /* get the sender's ip */
-    addr = ntohl(from.sin_addr.s_addr);
-    port = ntohs(from.sin_port);
-
-    x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
-    x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
-    x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
-    x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-    x->x_addrbytes[4].a_w.w_float = port;
-    outlet_list(x->x_addrout, &s_list, 5L, x->x_addrbytes);
-
-    if (read < 0)
-    {
-        sys_sockerror("udpreceive_read");
-        sys_closesocket(x->x_connectsocket);
-        return;
-    }
-    if (read > 0)
-    {
-        for (i = 0; i < read; ++i)
-        {
-            /* convert the bytes in the buffer to floats in a list */
-            x->x_msgoutbuf[i].a_w.w_float = (float)(unsigned char)x->x_msginbuf[i];
-        }
-        /* send the list out the outlet */
-        if (read > 1) outlet_list(x->x_msgout, &s_list, read, x->x_msgoutbuf);
-        else outlet_float(x->x_msgout, x->x_msgoutbuf[0].a_w.w_float);
-    }
+static void udpreceive_read_callback(void*y,
+				     t_iemnet_chunk*c, 
+				     int argc, t_atom*argv) {
+  t_udpreceive*x=(t_udpreceive*)y;
+  if(argc) {
+    iemnet__addrout(NULL, x->x_addrout, c->addr, c->port);
+    outlet_list(x->x_msgout, gensym("list"), argc, argv);
+  } else {
+    post("nothing received");
+  }
 }
 
 static void *udpreceive_new(t_floatarg fportno)
@@ -89,13 +59,11 @@ static void *udpreceive_new(t_floatarg fportno)
     t_udpreceive       *x;
     struct sockaddr_in server;
     int                sockfd, portno = fportno;
-    int                intarg, i;
+    int                intarg;
 
     /* create a socket */
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-#ifdef DEBUG
-    post("udpreceive_new: socket %d port %d", sockfd, portno);
-#endif
+    DEBUG("udpreceive_new: socket %d port %d", sockfd, portno);
     if (sockfd < 0)
     {
         sys_sockerror("udpreceive: socket");
@@ -121,33 +89,25 @@ static void *udpreceive_new(t_floatarg fportno)
         sys_closesocket(sockfd);
         return (0);
     }
+
     x = (t_udpreceive *)pd_new(udpreceive_class);
     x->x_msgout = outlet_new(&x->x_obj, &s_anything);
     x->x_addrout = outlet_new(&x->x_obj, &s_list);
     x->x_connectsocket = sockfd;
 
-    /* convert the bytes in the buffer to floats in a list */
-    for (i = 0; i < MAX_UDP_RECEIVE; ++i)
-    {
-        x->x_msgoutbuf[i].a_type = A_FLOAT;
-        x->x_msgoutbuf[i].a_w.w_float = 0;
-    }
-    for (i = 0; i < 5; ++i)
-    {
-        x->x_addrbytes[i].a_type = A_FLOAT;
-        x->x_addrbytes[i].a_w.w_float = 0;
-    }
-    sys_addpollfn(x->x_connectsocket, (t_fdpollfn)udpreceive_read, x);
+    //    sys_addpollfn(x->x_connectsocket, (t_fdpollfn)udpreceive_read, x);
+
+    x->x_receiver=iemnet__receiver_create(sockfd,
+					  x, 
+					  udpreceive_read_callback);
+
     return (x);
 }
 
 static void udpreceive_free(t_udpreceive *x)
 {
-    if (x->x_connectsocket >= 0)
-    {
-        sys_rmpollfn(x->x_connectsocket);
-        sys_closesocket(x->x_connectsocket);
-    }
+  iemnet__receiver_destroy(x->x_receiver);
+  x->x_connectsocket=0;
 }
 
 void udpreceive_setup(void)
