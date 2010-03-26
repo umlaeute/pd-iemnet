@@ -6,7 +6,7 @@ LIBRARY_VERSION = 0.1
 
 # Next, add your .c source files to the SOURCES variable.  The help files will
 # be included automatically
-SOURCES = tcpserver.c tcpclient.c tcpsend.c tcpreceive.c udpreceive.c udpsend.c
+SOURCES = tcpserver.c tcpclient.c tcpsend.c tcpreceive.c udpreceive.c udpsend.c udpclient.c
 #SOURCES = tcpclient.c  tcpreceive.c  tcpsend.c  tcpserver.c  udpreceive~.c  udpreceive.c  udpsend~.c  udpsend.c
 
 # For objects that only build on certain platforms, add those to the SOURCES
@@ -29,7 +29,7 @@ PDOBJECTS =
 # if you want to include any other files in the source and binary tarballs,
 # list them here.  This can be anything from header files, READMEs, example
 # patches, documentation, etc.
-EXTRA_DIST = README.txt
+EXTRA_DIST = 
 
 
 #------------------------------------------------------------------------------#
@@ -181,9 +181,9 @@ install-doc:
 	test -z "$(PDOBJECTS)" || \
 		$(INSTALL_FILE) $(PDOBJECTS:.pd=-help.pd) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	$(INSTALL_FILE) README $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/README.txt
-	$(INSTALL_FILE) VERSION $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/VERSION.txt
-	$(INSTALL_FILE) CHANGES $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
+	$(INSTALL_FILE) README.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/README.txt
+	$(INSTALL_FILE) VERSION.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/VERSION.txt
+	$(INSTALL_FILE) CHANGES.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
 
 
 clean:
