@@ -23,6 +23,7 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
+//#define DEBUG
 
 #include "iemnet.h"
 #include <string.h>
@@ -147,11 +148,16 @@ static void tcpclient_disconnect(t_tcpclient *x)
 {
   if (x->x_fd >= 0)
     {
+      int fd=x->x_fd;
+      x->x_fd = -1;
+
+      DEBUG("disconnecting %x", x);
       if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
       if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver); x->x_receiver=NULL;
+      DEBUG("disconnect cleaning up %x", x);
+      sys_closesocket(fd);
 
-      sys_closesocket(x->x_fd);
-      x->x_fd = -1;
+
       x->x_connectstate = 0;
       outlet_float(x->x_connectout, 0);
     }

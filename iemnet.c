@@ -2,7 +2,7 @@
  *  copyright (c) 2010 IOhannes m zmölnig, IEM
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include "iemnet.h"
 
@@ -308,10 +308,13 @@ t_iemnet_chunk* queue_pop(t_queue* const _this) {
 
 
 void queue_finish(t_queue* q) {
+  DEBUG("queue_finish: %x", q);
   if(NULL==q) 
     return;
   q->done=1;
+  DEBUG("queue signaling: %x", q);
   pthread_cond_signal(&q->cond);
+  DEBUG("queue signaled", q);
 }
 
 void queue_destroy(t_queue* q) {
@@ -418,10 +421,11 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   DEBUG("destroy sender %x", s);
   s->cont=0;
   queue_finish(s->queue);
+  DEBUG("queue finished");
   s->sockfd = -1;
   pthread_join(s->thread, NULL);
+  DEBUG("thread joined");
   queue_destroy(s->queue);
-
   freebytes(s, sizeof(t_iemnet_sender));
   s=NULL;
   DEBUG("destroyed sender");
@@ -499,6 +503,10 @@ static void iemnet_signalNewData(t_iemnet_receiver*x) {
   pthread_mutex_lock(&x->newdatamtx);
   already=x->newdataflag;
   x->newdataflag=1;
+
+  /* don't schedule ticks at the end of life */
+  if(x->sockfd<0)already=1;
+
   pthread_mutex_unlock(&x->newdatamtx);
 
   if(already)return;
@@ -603,16 +611,17 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
   return rec;
 }
 void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
+  int sockfd;
   DEBUG("destroy receiver %x", rec);
   if(NULL==rec)return;
+  sockfd=rec->sockfd;
+  rec->sockfd=-1;
 
-  shutdown(rec->sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-  sys_closesocket(rec->sockfd); 
+  shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+  sys_closesocket(sockfd); 
 
-  rec->sockfd=0;
   pthread_join(rec->thread, NULL);
   iemnet__receiver_tick(rec);
-
 
   if(rec->data)iemnet__chunk_destroy(rec->data);
   if(rec->flist)iemnet__floatlist_destroy(rec->flist);

@@ -89,20 +89,29 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
 
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 {
+  DEBUG("freeing %x", x);
   if (x != NULL)
     {
-      if(x->sr_sender)  iemnet__sender_destroy(x->sr_sender);
-      if(x->sr_receiver)iemnet__receiver_destroy(x->sr_receiver);
+      int sockfd=x->sr_fd;
+      t_iemnet_sender*sender=x->sr_sender;
+      t_iemnet_receiver*receiver=x->sr_receiver;
 
-      sys_closesocket(x->sr_fd);
+
 
       x->sr_owner=NULL;
       x->sr_sender=NULL;
       x->sr_receiver=NULL;
+
       x->sr_fd=-1;
 
       freebytes(x, sizeof(*x));
+
+      if(sender)  iemnet__sender_destroy(sender);
+      if(receiver)iemnet__receiver_destroy(receiver);
+
+      sys_closesocket(sockfd);
     }
+  DEBUG("freeed %x", x);
 }
 
 static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
@@ -257,7 +266,7 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 static void tcpserver_disconnect(t_tcpserver *x, int client)
 {
   int k;
-
+  DEBUG("disconnect %x %d", x, client);
   tcpserver_socketreceiver_free(x->x_sr[client]);
   x->x_sr[client]=NULL;
 
@@ -419,7 +428,9 @@ static void tcpserver_free(t_tcpserver *x)
   for(i = 0; i < MAX_CONNECT; i++)
     {
       if (NULL!=x->x_sr[i]) {
+        DEBUG("tcpserver_free %x", x);
         tcpserver_socketreceiver_free(x->x_sr[i]);
+        x->x_sr[i]=NULL;
       }
     }
   if (x->x_connectsocket >= 0)
