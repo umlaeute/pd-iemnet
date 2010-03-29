@@ -91,8 +91,8 @@ static void *udpreceive_new(t_floatarg fportno)
     }
 
     x = (t_udpreceive *)pd_new(udpreceive_class);
-    x->x_msgout = outlet_new(&x->x_obj, &s_anything);
-    x->x_addrout = outlet_new(&x->x_obj, &s_list);
+    x->x_msgout = outlet_new(&x->x_obj, 0);
+    x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
     x->x_connectsocket = sockfd;
 
     //    sys_addpollfn(x->x_connectsocket, (t_fdpollfn)udpreceive_read, x);

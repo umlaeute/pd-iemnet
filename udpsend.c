@@ -119,7 +119,7 @@ static void udpsend_free(t_udpsend *x)
 static void *udpsend_new(void)
 {
   t_udpsend *x = (t_udpsend *)pd_new(udpsend_class);
-  outlet_new(&x->x_obj, &s_float);
+  outlet_new(&x->x_obj, gensym("float"));
   x->x_sender=NULL;
   return (x);
 }

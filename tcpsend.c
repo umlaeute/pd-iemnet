@@ -130,7 +130,7 @@ static void tcpsend_free(t_tcpsend *x)
 static void *tcpsend_new(void)
 {
   t_tcpsend *x = (t_tcpsend *)pd_new(tcpsend_class);
-  outlet_new(&x->x_obj, &s_float);
+  outlet_new(&x->x_obj, gensym("float"));
   x->x_fd = -1;
   return (x);
 }
