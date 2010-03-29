@@ -16,3 +16,11 @@ alternatives:
            sent a notification which has not yet been handled...no need to notify again
 
  #4 looks most promising
+
+
+tests for tcpclient/server:
+	client disconnects -> server should get notified
+	server disconnects -> client should get notified
+	client crashes -> server should disconnect
+	server crashes -> client should disconnect
+	
