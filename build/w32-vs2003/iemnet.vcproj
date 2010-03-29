@@ -85,7 +85,22 @@
 				RelativePath="..\..\tcpclient.c">
 			</File>
 			<File
+				RelativePath="..\..\tcpreceive.c">
+			</File>
+			<File
+				RelativePath="..\..\tcpsend.c">
+			</File>
+			<File
 				RelativePath="..\..\tcpserver.c">
+			</File>
+			<File
+				RelativePath="..\..\udpclient.c">
+			</File>
+			<File
+				RelativePath="..\..\udpreceive.c">
+			</File>
+			<File
+				RelativePath="..\..\udpsend.c">
 			</File>
 		</Filter>
 		<Filter

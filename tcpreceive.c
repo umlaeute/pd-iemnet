@@ -72,8 +72,9 @@ static int tcpreceive_disconnect(t_tcpreceive *x, int id);
 static void tcpreceive_read_callback(t_tcpconnection *y, int argc, t_atom*argv)
 {
   t_tcpreceive*x=NULL;
+  int index=-1;
   if(NULL==y || NULL==(x=y->owner))return;
-  int index=tcpreceive_find_socket(x, y->socket);
+  index=tcpreceive_find_socket(x, y->socket);
   if(index>=0) {
 
     if(argc) {

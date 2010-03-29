@@ -114,13 +114,11 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long addre
 
 
 #if defined(_MSC_VER)
+# define snprintf _snprintf
 # define IEMNET_EXTERN __declspec(dllexport) extern
 # define CCALL __cdecl
-# pragma section(".CRT$XCU",read)
 # define IEMNET_INITIALIZER(f) \
-   static void __cdecl autoinit__ ## f(void); \
-   __declspec(allocate(".CRT$XCU")) void (__cdecl*f##_)(void) = f; \
-  static void __cdecl autoinit__ ## f(void) { f(); }
+   static void autoinit__ ## f(void) { f(); }
 #elif defined(__GNUC__)
 # define IEMNET_EXTERN extern
 # define CCALL
