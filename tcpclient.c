@@ -141,7 +141,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fpo
   x->x_connectstate = 0;
   /* start child thread */
   if(pthread_create(&x->x_threadid, &x->x_threadattr, tcpclient_child_connect, x) < 0)
-    post("%s: could not create new thread", objName);
+    error("%s: could not create new thread", objName);
 }
 
 static void tcpclient_disconnect(t_tcpclient *x)
@@ -222,9 +222,9 @@ static void *tcpclient_new(void)
 
   /* prepare child thread */
   if(pthread_attr_init(&x->x_threadattr) < 0)
-    post("%s: warning: could not prepare child thread", objName);
+    error("%s: warning: could not prepare child thread", objName);
   if(pthread_attr_setdetachstate(&x->x_threadattr, PTHREAD_CREATE_DETACHED) < 0)
-    post("%s: warning: could not prepare child thread", objName);
+    error("%s: warning: could not prepare child thread", objName);
     
 
   return (x);
@@ -238,9 +238,6 @@ static void tcpclient_free(t_tcpclient *x)
 
 IEMNET_EXTERN void tcpclient_setup(void)
 {
-    post("tcpclient");
-  //static int again=0; if(again)return; again=1;
-
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
                               sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
