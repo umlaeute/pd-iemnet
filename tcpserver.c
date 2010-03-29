@@ -24,7 +24,7 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
-#define DEBUG
+//#define DEBUG
 #include "iemnet.h"
 #include <stdio.h>
 
