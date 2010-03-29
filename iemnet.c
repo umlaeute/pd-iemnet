@@ -373,6 +373,7 @@ struct _iemnet_sender {
   int sockfd; /* owned outside; must call iemnet__sender_destroy() before freeing socket yourself */
   t_queue*queue;
   int keepsending; // indicates whether we want to thread to continue or to terminate
+  int isrunning;
 };
 
 /* the workhorse of the family */
@@ -384,9 +385,15 @@ static int iemnet__sender_dosend(int sockfd, t_queue*q) {
     unsigned int size=c->size;
     int result=-1;
     //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
-
+    DEBUG("sending %d bytes", size);
     result = send(sockfd, data, size, 0);
+    if(result<0) {
+      // broken pipe
+      return 0;
+    }
+
     // shouldn't we do something with the result here?
+    DEBUG("sent %d bytes", result);
     iemnet__chunk_destroy(c);
   } else {
     return 0;
@@ -403,13 +410,15 @@ static void*iemnet__sender_sendthread(void*arg) {
   while(sender->keepsending) {
     if(!iemnet__sender_dosend(sockfd, q))break;
   }
-  //fprintf(stderr, "write thread terminated\n");
+  sender->isrunning=0;
+  DEBUG("send thread terminated");
   return NULL;
 }
 
 int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
   t_queue*q=s->queue;
-  int size=0;
+  int size=-1;
+  if(!s->isrunning)return -1;
   if(q) {
     t_iemnet_chunk*chunk=iemnet__chunk_create_chunk(c);
     size = queue_push(q, chunk);
@@ -448,6 +457,7 @@ t_iemnet_sender*iemnet__sender_create(int sock) {
   result->queue = queue_create();
   result->sockfd = sock;
   result->keepsending =1;
+  result->isrunning=1;
 
   res=pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
 

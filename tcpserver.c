@@ -148,7 +148,7 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
 }
 
 /* ---------------- main tcpserver (send) stuff --------------------- */
-
+static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
 {
   if(x && x->x_sr && x->x_sr[client]) {
@@ -166,6 +166,11 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
     outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
+
+    if(size<0) {
+      // disconnected!
+      tcpserver_disconnect_socket(x, sockfd);
+    }
   }
 }
 
