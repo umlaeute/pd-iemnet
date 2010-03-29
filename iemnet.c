@@ -372,7 +372,7 @@ struct _iemnet_sender {
 
   int sockfd; /* owned outside; must call iemnet__sender_destroy() before freeing socket yourself */
   t_queue*queue;
-  int cont; // indicates whether we want to thread to continue or to terminate
+  int keepsending; // indicates whether we want to thread to continue or to terminate
 };
 
 /* the workhorse of the family */
@@ -400,7 +400,7 @@ static void*iemnet__sender_sendthread(void*arg) {
   int sockfd=sender->sockfd;
   t_queue*q=sender->queue;
 
-  while(sender->cont) {
+  while(sender->keepsending) {
     if(!iemnet__sender_dosend(sockfd, q))break;
   }
   //fprintf(stderr, "write thread terminated\n");
@@ -418,8 +418,14 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
 }
 
 void iemnet__sender_destroy(t_iemnet_sender*s) {
+  /* simple protection against recursive calls:
+   * s->keepsending is only set to "0" in here, 
+   * so if it is false, we know that we are already being called
+   */
+  if(!s->keepsending)return;
+
   DEBUG("destroy sender %x", s);
-  s->cont=0;
+  s->keepsending=0;
   queue_finish(s->queue);
   DEBUG("queue finished");
   s->sockfd = -1;
@@ -441,7 +447,7 @@ t_iemnet_sender*iemnet__sender_create(int sock) {
 
   result->queue = queue_create();
   result->sockfd = sock;
-  result->cont =1;
+  result->keepsending =1;
 
   res=pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
 
@@ -492,6 +498,8 @@ struct _iemnet_receiver {
   int running;
   t_clock *clock;
   t_iemnet_floatlist*flist;
+
+  int keepreceiving;
 
   int newdataflag;
   pthread_mutex_t newdatamtx;
@@ -574,7 +582,10 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
 
   if(!x->running) {
     // read terminated
-    x->callback(x->userdata, NULL, 0, NULL);
+    
+    /* keepreceiving is set, if receiver is not yet in shutdown mode */
+    if(x->keepreceiving) 
+      x->callback(x->userdata, NULL, 0, NULL);
   }
 }
 
@@ -592,6 +603,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
       DEBUG("create receiver failed");
       return NULL;
     }
+    rec->keepreceiving=1;
     rec->sockfd=sock;
     rec->userdata=userdata;
     rec->data=data;
@@ -611,17 +623,34 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
   return rec;
 }
 void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
+  static int instance=0;
+  int inst=instance++;
+
   int sockfd;
-  DEBUG("destroy receiver %x", rec);
+  DEBUG("[%d] destroy receiver %x", inst, rec);
   if(NULL==rec)return;
+  if(!rec->keepreceiving)return;
+  rec->keepreceiving=0;
+
+
   sockfd=rec->sockfd;
   rec->sockfd=-1;
 
-  shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-  sys_closesocket(sockfd); 
+  DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
+
+  if(sockfd>=0) {
+    shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    sys_closesocket(sockfd); 
+  }
+  DEBUG("[%d] closed socket %d", inst, sockfd);
 
   pthread_join(rec->thread, NULL);
+
+
+  // empty the queue
+  DEBUG("[%d] tick %d", inst, rec->running);
   iemnet__receiver_tick(rec);
+  DEBUG("[%d] tack", inst);
 
   if(rec->data)iemnet__chunk_destroy(rec->data);
   if(rec->flist)iemnet__floatlist_destroy(rec->flist);
@@ -638,7 +667,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   freebytes(rec, sizeof(t_iemnet_receiver));
   rec=NULL;
-  DEBUG("destroyed receiver");
+  DEBUG("[%d] destroyed receiver", inst);
 }
 
 
