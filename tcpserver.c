@@ -24,8 +24,9 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
-//#define DEBUG
+#define DEBUG
 #include "iemnet.h"
+#include <stdio.h>
 
 #ifndef _WIN32
 # include <arpa/inet.h>
@@ -57,7 +58,7 @@ typedef struct _tcpserver
   t_outlet                    *x_connectout;
   t_outlet                    *x_sockout; // legacy
   t_outlet                    *x_addrout; // legacy
-  t_outlet                    *x_status_outlet; 
+  t_outlet                    *x_statout; 
 
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
   t_int                       x_nconnections;
@@ -147,10 +148,45 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
   return (client-1);
 }
 
+
+/* ---------------- tcpserver info ---------------------------- */
+static void tcpserver_info_client(t_tcpserver *x, int client)
+{
+  // "client <id> <socket> <IP> <port>
+  static t_atom output_atom[4];
+  if(x&&x->x_sr&&x->x_sr[client]) {
+    int sockfd = x->x_sr[client]->sr_fd;
+    unsigned short port   = x->x_sr[client]->sr_port;
+    long address = x->x_sr[client]->sr_host;
+    char hostname[MAXPDSTRING];
+    snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d", 
+             (address & 0xFF000000)>>24,
+             (address & 0x0FF0000)>>16,
+             (address & 0x0FF00)>>8,
+             (address & 0x0FF));
+    hostname[MAXPDSTRING-1]=0;
+
+    SETFLOAT (output_atom+0, client+1);
+    SETFLOAT (output_atom+1, sockfd);
+    SETSYMBOL(output_atom+2, gensym(hostname));
+    SETFLOAT (output_atom+3, port);
+
+    outlet_anything( x->x_statout, gensym("client"), 4, output_atom);
+  }
+}
+
+static void tcpserver_info_connection(t_tcpserver *x, t_tcpserver_socketreceiver*y)
+{
+  iemnet__addrout(x->x_statout, x->x_addrout, y->sr_host, y->sr_port);
+  outlet_float(x->x_sockout, y->sr_fd);
+}
+
 /* ---------------- main tcpserver (send) stuff --------------------- */
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
 {
+  DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
+  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
   if(x && x->x_sr && x->x_sr[client]) {
     t_atom                  output_atom[3];
     int size=0;
@@ -165,7 +201,7 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_status_outlet, gensym("sent"), 3, output_atom);
+    outlet_anything( x->x_statout, gensym("sent"), 3, output_atom);
 
     if(size<0) {
       // disconnected!
@@ -179,19 +215,24 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
 /* clients start at 1 but our index starts at 0 */
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  if (argc > 1)
+  if (argc > 0)
     {
       t_iemnet_chunk*chunk=NULL;
       int client=tcpserver_fixindex(x, atom_getint(argv));
       if(client<0)return;
-      chunk=iemnet__chunk_create_list(argc-1, argv+1);
-      --client;/* zero based index*/
-      tcpserver_send_bytes(x, client, chunk);
+      if(argc==1) {
+        tcpserver_info_client(x, client);
+      } else {
+        chunk=iemnet__chunk_create_list(argc-1, argv+1);
+        tcpserver_send_bytes(x, client, chunk);
+      }
       return;
     }
   else 
     {
-      pd_error(x, "[%s] no client specified", objName);
+      int client=0;
+      for(client=0; client<x->x_nconnections; client++)
+        tcpserver_info_client(x, client);
     }
 }
 
@@ -272,6 +313,8 @@ static void tcpserver_disconnect(t_tcpserver *x, int client)
 {
   int k;
   DEBUG("disconnect %x %d", x, client);
+  tcpserver_info_connection(x, x->x_sr[client]);
+
   tcpserver_socketreceiver_free(x->x_sr[client]);
   x->x_sr[client]=NULL;
 
@@ -282,6 +325,7 @@ static void tcpserver_disconnect(t_tcpserver *x, int client)
     }
   x->x_sr[k + 1]=NULL;
   x->x_nconnections--;
+
 
   outlet_float(x->x_connectout, x->x_nconnections);
 }
@@ -325,8 +369,7 @@ static void tcpserver_receive_callback(void *y0,
   if(NULL==y || NULL==(x=y->sr_owner))return;
   
   if(argc) {
-
-    iemnet__addrout(x->x_status_outlet, x->x_addrout, y->sr_host, y->sr_port);
+    tcpserver_info_connection(x, y);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     // disconnected
@@ -356,6 +399,8 @@ static void tcpserver_connectpoll(t_tcpserver *x)
       x->x_nconnections++;
       i = x->x_nconnections - 1;
       x->x_sr[i] = y;
+
+      tcpserver_info_connection(x, y);
     }
 
   outlet_float(x->x_connectout, x->x_nconnections);
@@ -400,7 +445,7 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* 2nd outlet for number of connected clients */
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
-  x->x_status_outlet = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
+  x->x_statout = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
 
 
 
@@ -459,10 +504,11 @@ IEMNET_EXTERN void tcpserver_setup(void)
   class_addmethod(tcpserver_class, (t_method)tcpserver_send_client, gensym("client"), A_GIMME, 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
+  class_addlist(tcpserver_class, (t_method)tcpserver_broadcast);
+
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcastbut, gensym("broadcastbut"), A_GIMME, 0);
 
-  class_addlist(tcpserver_class, (t_method)tcpserver_broadcast);
 
   post("iemnet: networking with Pd :: %s", objName);
   post("        (c) 2010 IOhannes m zmoelnig, IEM");
