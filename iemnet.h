@@ -52,7 +52,12 @@ EXTERN void sys_rmpollfn(int fd);
 # include <sys/socket.h>
 #endif
 
-/* sender */
+/* iemnet_data.c */
+
+/**
+ * chunk of data as sent to a socket or received from it
+ * for received data, this might additionally hold the originator (if available)
+ */
 typedef struct _iemnet_chunk {
   unsigned char* data;
   size_t size;
@@ -61,58 +66,160 @@ typedef struct _iemnet_chunk {
   unsigned short port;
 } t_iemnet_chunk;
 
+/**
+ * free a "chunk" (de-allocate memory,...)
+ */
 void iemnet__chunk_destroy(t_iemnet_chunk*);
-t_iemnet_chunk*iemnet__chunk_create_empty(int);
-t_iemnet_chunk*iemnet__chunk_create_data(int, unsigned char*);
-t_iemnet_chunk*iemnet__chunk_create_dataaddr(int, unsigned char*, struct sockaddr_in*addr);
-t_iemnet_chunk*iemnet__chunk_create_list(int, t_atom*);
-t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*);
 
-/* sender */
-#define t_iemnet_sender struct _iemnet_sender
+/**
+ * initialize a "chunk" (allocate memory,...) of fixed size
+ * receiver address will be set to 0
+ *
+ * \param size of the chunk (data will be zeroed out)
+ * \return a new chunk of given size
+ */
+t_iemnet_chunk*iemnet__chunk_create_empty(int);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data
+ * receiver address will be set to 0
+ *
+ * \param size of data
+ * \param data of size
+ * \return a new chunk that holds a copy of data
+ */
+t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data from specified address
+ * \param size of data
+ * \param data of size
+ * \param addr originating address (can be NULL)
+ * \return a new chunk that holds a copy of data
+ */
+t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data, struct sockaddr_in*addr);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data
+ * receiver address will be set to 0
+ *
+ * \param argc size of list
+ * \param argv list of atoms containing only "bytes" (t_floats [0..255])
+ * \return a new chunk that holds a copy of the list data
+ */
+t_iemnet_chunk*iemnet__chunk_create_list(int argc, t_atom*argv);
+/**
+ * initialize a "chunk" (allocate memory,...) from another chunk
+ *
+ * \param src the source chunk
+ * \return a new chunk that holds a copy of the source data
+ */
+t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
+
+
+/* iemnet_sender.c */
+
+/**
+ * opaque data type used for sending data over a socket
+ */
+typedef struct _iemnet_sender t_iemnet_sender;
 EXTERN_STRUCT _iemnet_sender;
 
+/**
+ * create a sender to a given socket
+ *
+ * \param sock a previously opened socket
+ * \return pointer to a sender object
+ * \note the socket must be writeable
+ */
 t_iemnet_sender*iemnet__sender_create(int sock);
+/**
+ * destroy a sender to a given socket
+ * destroying a sender will free all resources of the sender
+ *
+ * \param pointer to a sender object to be destroyed
+ *
+ * \note  it will also close() the socket
+ */
 void iemnet__sender_destroy(t_iemnet_sender*);
 
+/**
+ * send data over a socket
+ *
+ * \param pointer to a sender object 
+ * \param pointer to a chunk of data to be sent
+ * \return the current fill state of the send buffer
+ */
 int iemnet__sender_send(t_iemnet_sender*, t_iemnet_chunk*);
 
-int iemnet__sender_getlasterror(t_iemnet_sender*);
-int iemnet__sender_getsockopt(t_iemnet_sender*, int level, int optname, void      *optval, socklen_t*optlen);
-int iemnet__sender_setsockopt(t_iemnet_sender*, int level, int optname, const void*optval, socklen_t optlen);
+/**
+ * query the fill state of the send buffer
+ *
+ * \param pointer to a sender object 
+ * \return the current fill state of the send buffer
+ */
+int iemnet__sender_getsize(t_iemnet_sender*);
 
 
-/* receiver */
-#define t_iemnet_receiver struct _iemnet_receiver
+/* iemnet_receiver.c */
+
+/**
+ * opaque data type used for receiving data from a socket
+ */
+typedef struct _iemnet_receiver t_iemnet_receiver;
 EXTERN_STRUCT _iemnet_receiver;
-
+/**
+ * callback function for receiving
+ * whenever data arrives at the socket, a callback will be called synchronously
+ */
 typedef void (*t_iemnet_receivecallback)(void*userdata, 
 					 t_iemnet_chunk*rawdata,
 					 int argc, t_atom*argv);
 
 /**
- * create a receiver object: whenever something is received on the socket,
- * the callback is called with the payload
+ * create a receiver object
+ *
+ *  whenever something is received on the socket, the callback is called with the payload in the main thread of the caller
+ *
+ * \param sock the (readable) socket to receive from
+ * \param data user data to be passed to callback
+ * \param callback a callback function that is called on the caller's side
+ *
+ * \note the callback will be scheduled in the caller's thread with clock_delay()
  */
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback);
+/**
+ * destroy a receiver at a given socket
+ * destroying a receiver will free all resources of the receiver
+ *
+ * \param pointer to a receiver object to be destroyed
+ *
+ * \note  it will also close() the socket
+ */
 void iemnet__receiver_destroy(t_iemnet_receiver*);
 
-
+/**
+ * query the fill state of the receive buffer
+ *
+ * \param pointer to a receiver object 
+ * \return the current fill state of the receive buffer
+ */
+int iemnet__receiver_getsize(t_iemnet_receiver*);
 
 
 
 /* convenience functions */
 
-/* output the address */
+/**
+ * output the address  (IP, port)
+ * the given address is first output through the status_outlet as a "host" message
+ * and then as a list through the address_outlet
+ *
+ * \param status_outlet outlet for general status messages
+ * \param address_outlet outlet for addresses only
+ * \param address the host ip
+ * \param port the host port
+ *
+ * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
+ */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
-
-
-
-
-
-
-
-
 
 #if defined(_MSC_VER)
 # define snprintf _snprintf
@@ -129,7 +236,12 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long addre
 #endif
 
 
-
+/**
+ * \fn void DEBUG(const char* format,...);
+ *
+ * \brief debug output
+ * \note this will only take effect if DEBUG is not undefined
+ */
 #ifdef DEBUG
 # undef DEBUG
 # define DEBUG startpost("[%s:%d]", __FUNCTION__, __LINE__); post
@@ -137,9 +249,6 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long addre
 static void debug_dummy(const char *format, ...)  {;}
 # define DEBUG debug_dummy
 #endif
-
-
-
 
 
 #endif /* INCLUDE_IEMNET_H_ */

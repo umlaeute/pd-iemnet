@@ -187,7 +187,7 @@ typedef struct _node {
   t_iemnet_chunk*data;
 } t_node;
 
-typedef struct _queue {
+struct _iemnet_queue {
   t_node* head; /* = 0 */
   t_node* tail; /* = 0 */
   pthread_mutex_t mtx;
@@ -195,7 +195,7 @@ typedef struct _queue {
 
   int done; // in cleanup state
   int size;
-} t_iemnet_queue;
+};
 
 
 int queue_push(
