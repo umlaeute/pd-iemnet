@@ -146,6 +146,8 @@ void iemnet__sender_destroy(t_iemnet_sender*);
  * \param pointer to a sender object 
  * \param pointer to a chunk of data to be sent
  * \return the current fill state of the send buffer
+ *
+ * \note the sender creates a local copy of chunk; the caller has to delete their own copy
  */
 int iemnet__sender_send(t_iemnet_sender*, t_iemnet_chunk*);
 

@@ -64,6 +64,9 @@ typedef struct _tcpserver
   t_int                       x_nconnections;
 
   t_int                       x_connectsocket;    /* socket waiting for new connections */
+
+
+  int                         x_defaultclient; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
@@ -220,27 +223,52 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   }
 }
 
+
+
+/* broadcasts a message to all connected clients but the given one */
+static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *argv)
+{
+  int client=0;
+  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+
+  /* enumerate through the clients and send each the message */
+  for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
+    {
+      /* socket exists for this client */
+      if(client!=but)tcpserver_send_bytes(x, client, chunk);
+    }
+  iemnet__chunk_destroy(chunk);
+}
+/* sends a message to a given client */
+static void tcpserver_send_toclient(t_tcpserver *x, int client, int argc, t_atom *argv)
+{
+  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  tcpserver_send_bytes(x, client, chunk);
+  iemnet__chunk_destroy(chunk);
+}
+
+
+
 /* send message to client using client number
    note that the client numbers might change in case a client disconnects! */
 /* clients start at 1 but our index starts at 0 */
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
+  int client=0;
+      
   if (argc > 0)
     {
-      t_iemnet_chunk*chunk=NULL;
-      int client=tcpserver_fixindex(x, atom_getint(argv));
+      client=tcpserver_fixindex(x, atom_getint(argv));
       if(client<0)return;
       if(argc==1) {
         tcpserver_info_client(x, client);
       } else {
-        chunk=iemnet__chunk_create_list(argc-1, argv+1);
-        tcpserver_send_bytes(x, client, chunk);
+        tcpserver_send_toclient(x, client, argc-1, argv+1);
       }
       return;
     }
   else 
     {
-      int client=0;
       for(client=0; client<x->x_nconnections; client++)
         tcpserver_info_client(x, client);
     }
@@ -266,23 +294,36 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom
 {
   int client=0;
   int but=-1;
+
   t_iemnet_chunk*chunk=NULL;
 
   if(argc<2) {
     return;
   }
   if((but=tcpserver_fixindex(x, atom_getint(argv)))<0)return;
-
-  chunk=iemnet__chunk_create_list(argc+1, argv+1);
-
-  /* enumerate through the clients and send each the message */
-  for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
-    {
-      /* socket exists for this client */
-      if(client!=but)tcpserver_send_bytes(x, client, chunk);
-    }
-  iemnet__chunk_destroy(chunk);
+  tcpserver_send_butclient(x, but, argc-1, argv+1);
 }
+
+static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+{
+  int client=x->x_defaultclient;
+  if(0==client) 
+    tcpserver_broadcast(x, s, argc, argv);
+  else if(client>0) {
+    client=tcpserver_fixindex(x, client);
+    tcpserver_send_toclient(x, client, argc, argv);
+  } else if(client<0) {
+    client=tcpserver_fixindex(x, -client);
+    tcpserver_send_butclient(x, client, argc, argv);     
+  }
+}
+static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
+{
+  int client=f;
+  x->x_defaultclient=client;
+}
+
+
 
 /* send message to client using socket number */
 static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
@@ -458,7 +499,6 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_statout = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
 
 
-
   /* streaming protocol */
   if (listen(sockfd, 5) < 0)
     {
@@ -478,6 +518,9 @@ static void *tcpserver_new(t_floatarg fportno)
     {
       x->x_sr[i] = NULL;
     }
+
+  x->x_defaultclient=0;
+
   return (x);
 }
 
@@ -514,10 +557,9 @@ IEMNET_EXTERN void tcpserver_setup(void)
   class_addmethod(tcpserver_class, (t_method)tcpserver_send_client, gensym("client"), A_GIMME, 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
-  class_addlist(tcpserver_class, (t_method)tcpserver_broadcast);
 
-
-  class_addmethod(tcpserver_class, (t_method)tcpserver_broadcastbut, gensym("broadcastbut"), A_GIMME, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget, gensym("target"), A_DEFFLOAT, 0);
+  class_addlist(tcpserver_class, (t_method)tcpserver_defaultsend);
 
 
   post("iemnet: networking with Pd :: %s", objName);
