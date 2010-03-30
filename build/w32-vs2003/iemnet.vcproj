@@ -112,6 +112,18 @@
 			<File
 				RelativePath="..\..\iemnet.h">
 			</File>
+			<File
+				RelativePath="..\..\iemnet_data.c">
+			</File>
+			<File
+				RelativePath="..\..\iemnet_data.h">
+			</File>
+			<File
+				RelativePath="..\..\iemnet_receiver.c">
+			</File>
+			<File
+				RelativePath="..\..\iemnet_sender.c">
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
