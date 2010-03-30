@@ -52,6 +52,7 @@ EXTERN void sys_rmpollfn(int fd);
 # include <sys/socket.h>
 #endif
 
+/* sender */
 typedef struct _iemnet_chunk {
   unsigned char* data;
   size_t size;
