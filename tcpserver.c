@@ -64,7 +64,7 @@ typedef struct _tcpserver
   t_int                       x_nconnections;
 
   t_int                       x_connectsocket;    /* socket waiting for new connections */
-
+  t_int                       x_port;
 
   int                         x_defaultclient; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
 } t_tcpserver;
@@ -187,6 +187,15 @@ static void tcpserver_info_client(t_tcpserver *x, int client)
     outlet_anything( x->x_statout, gensym("bufsize"), 3, output_atom);
   }
 }
+
+
+static void tcpserver_info(t_tcpserver *x) {
+  static t_atom output_atom[4];
+
+  SETFLOAT (output_atom+0, x->x_port);
+  outlet_anything( x->x_statout, gensym("port"), 1, output_atom);
+}
+
 
 static void tcpserver_info_connection(t_tcpserver *x, t_tcpserver_socketreceiver*y)
 {
@@ -457,23 +466,28 @@ static void tcpserver_connectpoll(t_tcpserver *x)
   outlet_float(x->x_connectout, x->x_nconnections);
 }
 
-static void *tcpserver_new(t_floatarg fportno)
+static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
 {
-  t_tcpserver         *x;
-  int                 i;
+  static t_atom ap[1];
+  int                 portno = fportno;
   struct sockaddr_in  server;
-  int                 sockfd, portno = fportno;
+  int sockfd = x->x_connectsocket;
+  SETFLOAT(ap, -1);
+  if(x->x_port == portno) {
+    return;
+  }
 
-  /* create a socket */
+  /* cleanup any open ports */
+  if(sockfd>=0) {
+    sys_rmpollfn(sockfd);
+    sys_closesocket(sockfd);
+    x->x_connectsocket=-1;
+    x->x_port=-1;
+  }
+
+
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  DEBUG("receive socket %d", sockfd);
 
-  if (sockfd < 0)
-    {
-      sys_sockerror("tcpserver: socket");
-      // LATER allow creation even if port is in use
-      return (0);
-    }
 
   server.sin_family = AF_INET;
 
@@ -487,8 +501,40 @@ static void *tcpserver_new(t_floatarg fportno)
     {
       sys_sockerror("tcpserver: bind");
       sys_closesocket(sockfd);
-      return (0);
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+      return;
     }
+
+  // LATER find out which port is used (useful when assigning "0")
+  portno=ntohs((uint16_t)server.sin_port);
+
+  /* streaming protocol */
+  if (listen(sockfd, 5) < 0)
+    {
+      sys_sockerror("tcpserver: listen");
+      sys_closesocket(sockfd);
+      sockfd = -1;
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+      return;
+    }
+  else
+    {
+      sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
+    }
+
+  x->x_connectsocket = sockfd;
+  x->x_port = portno;
+
+
+  SETFLOAT(ap, x->x_port);
+  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+
+}
+
+static void *tcpserver_new(t_floatarg fportno)
+{
+  t_tcpserver         *x;
+  int                 i;
 
   x = (t_tcpserver *)pd_new(tcpserver_class);
 
@@ -499,19 +545,8 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_statout = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
 
 
-  /* streaming protocol */
-  if (listen(sockfd, 5) < 0)
-    {
-      sys_sockerror("tcpserver: listen");
-      sys_closesocket(sockfd);
-      sockfd = -1;
-    }
-  else
-    {
-      sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections 
-    }
-
-  x->x_connectsocket = sockfd;
+  x->x_connectsocket = -1;
+  x->x_port = -1;
   x->x_nconnections = 0;
 
   for(i = 0; i < MAX_CONNECT; i++)
@@ -520,6 +555,8 @@ static void *tcpserver_new(t_floatarg fportno)
     }
 
   x->x_defaultclient=0;
+
+  tcpserver_port(x, fportno);
 
   return (x);
 }
@@ -559,8 +596,11 @@ IEMNET_EXTERN void tcpserver_setup(void)
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget, gensym("target"), A_DEFFLOAT, 0);
-  class_addlist(tcpserver_class, (t_method)tcpserver_defaultsend);
+  class_addlist  (tcpserver_class, (t_method)tcpserver_defaultsend);
 
+
+  class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"), A_DEFFLOAT, 0);
+  class_addbang  (tcpserver_class, (t_method)tcpserver_info);
 
   post("iemnet: networking with Pd :: %s", objName);
   post("        (c) 2010 IOhannes m zmoelnig, IEM");
