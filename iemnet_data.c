@@ -296,7 +296,15 @@ t_iemnet_chunk* queue_pop(t_iemnet_queue* const _this) {
   return queue_pop_block(_this);
 }
 
-
+int queue_getsize(t_iemnet_queue* const _this) {
+  int size=-1;
+  if(_this) {
+    pthread_mutex_lock(&_this->mtx);
+    size=_this->size;
+    pthread_mutex_unlock(&_this->mtx);
+  }
+  return size;
+}
 void queue_finish(t_iemnet_queue* q) {
   DEBUG("queue_finish: %x", q);
   if(NULL==q) 

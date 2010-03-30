@@ -162,3 +162,13 @@ int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname, const v
   }
   return result;
 }
+
+
+
+int iemnet__sender_getsize(t_iemnet_sender*x) {
+  int size=-1;
+  if(x && x->queue)
+    size=queue_getsize(x->queue);
+
+  return size;
+}

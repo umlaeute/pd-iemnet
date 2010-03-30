@@ -152,13 +152,18 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
 /* ---------------- tcpserver info ---------------------------- */
 static void tcpserver_info_client(t_tcpserver *x, int client)
 {
-  // "client <id> <socket> <IP> <port>
+  // "client <id> <socket> <IP> <port>"
+  // "bufsize <id> <insize> <outsize>"
   static t_atom output_atom[4];
   if(x&&x->x_sr&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port   = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
     char hostname[MAXPDSTRING];
+
+    int insize =iemnet__receiver_getsize(x->x_sr[client]->sr_receiver);
+    int outsize=iemnet__sender_getsize  (x->x_sr[client]->sr_sender  );
+
     snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d", 
              (address & 0xFF000000)>>24,
              (address & 0x0FF0000)>>16,
@@ -172,6 +177,11 @@ static void tcpserver_info_client(t_tcpserver *x, int client)
     SETFLOAT (output_atom+3, port);
 
     outlet_anything( x->x_statout, gensym("client"), 4, output_atom);
+
+    SETFLOAT (output_atom+0, client+1);
+    SETFLOAT (output_atom+1, insize);
+    SETFLOAT (output_atom+2, outsize);
+    outlet_anything( x->x_statout, gensym("bufsize"), 3, output_atom);
   }
 }
 

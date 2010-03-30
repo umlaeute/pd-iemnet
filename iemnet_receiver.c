@@ -126,6 +126,15 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   }
 }
 
+int iemnet__receiver_getsize(t_iemnet_receiver*x) {
+  int size=-1;
+  if(x && x->queue)
+    size=queue_getsize(x->queue);
+
+  return size;
+}
+
+
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_receiver*rec=(t_iemnet_receiver*)getbytes(sizeof(t_iemnet_receiver));

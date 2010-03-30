@@ -106,6 +106,15 @@ t_iemnet_chunk* queue_pop_block(t_iemnet_queue* const q);
  */
 t_iemnet_chunk* queue_pop_noblock(t_iemnet_queue* const);
 /**
+ * get size if queue
+ *
+ * \param q the queue to get the size of
+ * \return the fill state of the queue, -1 if something goes wrong
+ *
+ * \note thread safe
+ */
+int queue_getsize(t_iemnet_queue* const q);
+/**
  * initiate cleanup process
  *
  * unblocks all blocking calls to queue_pop_block(t_iemnet_queue* const q);
