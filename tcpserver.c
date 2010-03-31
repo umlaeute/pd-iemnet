@@ -191,8 +191,29 @@ static void tcpserver_info_client(t_tcpserver *x, int client)
 
 static void tcpserver_info(t_tcpserver *x) {
   static t_atom output_atom[4];
+  int sockfd=x->x_connectsocket;
 
-  SETFLOAT (output_atom+0, x->x_port);
+
+  int port=x->x_port;
+
+  if(sockfd<0) {
+    // no open port
+    post("no valid sock");
+  }
+
+
+  if(x->x_port<=0) {
+    struct sockaddr_in  server;
+    socklen_t           serversize=sizeof(server);
+    if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
+      x->x_port=ntohs(server.sin_port);
+      port=x->x_port;
+    } else {
+      post("gesockname failed for %d", sockfd);
+    }
+  }
+
+  SETFLOAT (output_atom+0, port);
   outlet_anything( x->x_statout, gensym("port"), 1, output_atom);
 }
 
@@ -471,6 +492,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   static t_atom ap[1];
   int                 portno = fportno;
   struct sockaddr_in  server;
+  socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
@@ -497,16 +519,13 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   /* assign server port number */
   server.sin_port = htons((u_short)portno);
   /* name the socket */
-  if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
+  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
     {
       sys_sockerror("tcpserver: bind");
       sys_closesocket(sockfd);
       outlet_anything(x->x_statout, gensym("port"), 1, ap);
       return;
     }
-
-  // LATER find out which port is used (useful when assigning "0")
-  portno=ntohs((uint16_t)server.sin_port);
 
   /* streaming protocol */
   if (listen(sockfd, 5) < 0)
@@ -526,9 +545,14 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   x->x_port = portno;
 
 
+  // find out which port is actually used (useful when assigning "0")
+  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
+    x->x_port=ntohs(server.sin_port);
+  }
+
+
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
-
 }
 
 static void *tcpserver_new(t_floatarg fportno)
