@@ -2,7 +2,9 @@ iemnet - networking for Pd
 ==========================
 
 this is a fork of martin peach's "net" library, that allows low-level
-interaction with networks on OSI-layer 5 (transport layer)
+interaction with networks on OSI-layer 5 (transport layer).
+
+for a list of features, see FEATURES.txt
 
 Why fork?
 =========
@@ -52,13 +54,12 @@ connection and still keep Pd reactive.
 dropouts; this is not necessarily related to the network but rather to the 
 amount of data processed by Pd...)
 
-
-
-
 easy to use:
-probably not
-
-
+probably not; but at least it has the same (basic) API as mrpeach/net so a
+switch should be easy. "basic" means "not everything", so messages for special
+workarounds in mrpeach/net (e.g. the block/unblock stuff) are not supported, as
+well as debugging features ("dump") and features not related to networking (e.g.
+the ability to read a file from harddisk)
 
 
 Authors:
