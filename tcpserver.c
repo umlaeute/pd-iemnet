@@ -66,7 +66,7 @@ typedef struct _tcpserver
   t_int                       x_connectsocket;    /* socket waiting for new connections */
   t_int                       x_port;
 
-  int                         x_defaultclient; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
+  int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
@@ -336,21 +336,42 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom
 
 static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int client=x->x_defaultclient;
-  if(0==client) 
+  int client=-1;
+  int sockfd=x->x_defaulttarget;
+  if(0==sockfd) 
     tcpserver_broadcast(x, s, argc, argv);
-  else if(client>0) {
-    client=tcpserver_fixindex(x, client);
+  else if(sockfd>0) {
+    client=tcpserver_socket2index(x, sockfd);
     tcpserver_send_toclient(x, client, argc, argv);
-  } else if(client<0) {
-    client=tcpserver_fixindex(x, -client);
+  } else if(sockfd<0) {
+    client=tcpserver_socket2index(x, -sockfd);
     tcpserver_send_butclient(x, client, argc, argv);     
   }
 }
 static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
 {
-  int client=f;
-  x->x_defaultclient=client;
+  int sockfd=0;
+  int rawclient=f;
+  int client=(rawclient<0)?(-rawclient):rawclient;
+
+  if(client > x->x_nconnections) {
+    error("[%s] target %d out of range [0..%d]", objName, client,  x->x_nconnections);
+    return;
+  }
+
+  // map the client to a persistant socket
+  if(client>0) {
+    sockfd=x->x_sr[client-1]->sr_fd;
+  }
+
+  if(rawclient<0)sockfd=-sockfd;  
+
+  x->x_defaulttarget=sockfd;
+}
+static void tcpserver_targetsocket(t_tcpserver *x, t_floatarg f)
+{
+  int sockfd=f;
+  x->x_defaulttarget=sockfd;
 }
 
 
@@ -578,7 +599,7 @@ static void *tcpserver_new(t_floatarg fportno)
       x->x_sr[i] = NULL;
     }
 
-  x->x_defaultclient=0;
+  x->x_defaulttarget=0;
 
   tcpserver_port(x, fportno);
 
@@ -620,6 +641,7 @@ IEMNET_EXTERN void tcpserver_setup(void)
   class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget, gensym("target"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_targetsocket, gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist  (tcpserver_class, (t_method)tcpserver_defaultsend);
 
 
