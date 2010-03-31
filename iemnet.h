@@ -223,6 +223,20 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
 
+/**
+ * output a list as a stream (serialize)
+ *
+ * the given list of atoms will be sent to the output one-by-one
+ *
+ * \param outlet outlet to sent the data to
+ * \param argc size of the list
+ * \param argv data
+ *
+ * \note with stream based protocols (TCP/IP) the length of the received lists has no meaning, so the data has to be serialized anyhow
+ */
+void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv);
+
+
 #if defined(_MSC_VER)
 # define snprintf _snprintf
 # define IEMNET_EXTERN __declspec(dllexport) extern

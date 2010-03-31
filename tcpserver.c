@@ -451,7 +451,7 @@ static void tcpserver_receive_callback(void *y0,
   
   if(argc) {
     tcpserver_info_connection(x, y);
-    outlet_list(x->x_msgout, gensym("list"), argc, argv);
+    iemnet__streamout(x->x_msgout, argc, argv);
   } else {
     // disconnected
     int sockfd=y->sr_fd;

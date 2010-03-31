@@ -29,6 +29,15 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
 }
 
 
+void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv) {
+  if(NULL==outlet)return;
+  while(argc-->0) {
+    outlet_list(outlet, gensym("list"), 1, argv);
+    argv++;
+  }
+
+}
+
 
 #ifdef _MSC_VER
 void tcpclient_setup(void);

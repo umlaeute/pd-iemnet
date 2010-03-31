@@ -78,8 +78,8 @@ static void tcpreceive_read_callback(t_tcpconnection *y, int argc, t_atom*argv)
   if(index>=0) {
 
     if(argc) {
-      // outlet info about connection
-      outlet_list(x->x_msgout, gensym("list"), argc, argv);
+      // TODO?: outlet info about connection
+      iemnet__streamout(x->x_msgout, argc, argv);
     } else {
       // disconnected
       int sockfd=y->socket;
