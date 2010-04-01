@@ -26,6 +26,7 @@
 /* ---------------------------------------------------------------------------- */
 //#define DEBUG
 #include "iemnet.h"
+#include "iemnet_data.h"
 #include <stdio.h>
 
 #define MAX_CONNECT 32 /* maximum number of connections */
@@ -62,6 +63,7 @@ typedef struct _tcpserver
   t_int                       x_port;
 
   int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
+	t_iemnet_floatlist*x_floatlist;
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
@@ -95,17 +97,18 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       t_iemnet_sender*sender=x->sr_sender;
       t_iemnet_receiver*receiver=x->sr_receiver;
 
-      if(sender)  iemnet__sender_destroy(sender);
-      if(receiver)iemnet__receiver_destroy(receiver);
-
-      sys_closesocket(sockfd);
-
-
       x->sr_owner=NULL;
       x->sr_sender=NULL;
       x->sr_receiver=NULL;
 
       x->sr_fd=-1;
+		
+		
+	  if(sender)  iemnet__sender_destroy(sender);
+	  if(receiver)iemnet__receiver_destroy(receiver);
+		
+	   sys_closesocket(sockfd);
+		
 
       freebytes(x, sizeof(*x));
     }
@@ -195,7 +198,6 @@ static void tcpserver_info(t_tcpserver *x) {
     post("no valid sock");
   }
 
-
   if(x->x_port<=0) {
     struct sockaddr_in  server;
     socklen_t           serversize=sizeof(server);
@@ -226,7 +228,7 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
   if(x && x->x_sr && x->x_sr[client]) {
     t_atom                  output_atom[3];
-    int size=0;
+    int size=-1;
 
     t_iemnet_sender*sender=sender=x->x_sr[client]->sr_sender;
     int sockfd = x->x_sr[client]->sr_fd;
@@ -466,7 +468,9 @@ static void tcpserver_receive_callback(void *y0,
   
   if(argc) {
     tcpserver_info_connection(x, y);
-    iemnet__streamout(x->x_msgout, argc, argv);
+	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
+	  
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
     // disconnected
     int sockfd=y->sr_fd;
@@ -594,6 +598,9 @@ static void *tcpserver_new(t_floatarg fportno)
     }
 
   x->x_defaulttarget=0;
+	
+	
+  x->x_floatlist=iemnet__floatlist_create(1024);
 
   tcpserver_port(x, fportno);
 
@@ -617,6 +624,7 @@ static void tcpserver_free(t_tcpserver *x)
       sys_rmpollfn(x->x_connectsocket);
       sys_closesocket(x->x_connectsocket);
     }
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);
 }
 
 IEMNET_EXTERN void tcpserver_setup(void)
