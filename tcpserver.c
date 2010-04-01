@@ -95,6 +95,10 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       t_iemnet_sender*sender=x->sr_sender;
       t_iemnet_receiver*receiver=x->sr_receiver;
 
+      if(sender)  iemnet__sender_destroy(sender);
+      if(receiver)iemnet__receiver_destroy(receiver);
+
+      sys_closesocket(sockfd);
 
 
       x->sr_owner=NULL;
@@ -104,11 +108,6 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       x->sr_fd=-1;
 
       freebytes(x, sizeof(*x));
-
-      if(sender)  iemnet__sender_destroy(sender);
-      if(receiver)iemnet__receiver_destroy(receiver);
-
-      sys_closesocket(sockfd);
     }
   DEBUG("freeed %x", x);
 }
