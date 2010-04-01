@@ -102,6 +102,9 @@
 			<File
 				RelativePath="..\..\udpsend.c">
 			</File>
+			<File
+				RelativePath="..\..\udpserver.c">
+			</File>
 		</Filter>
 		<Filter
 			Name="lib"

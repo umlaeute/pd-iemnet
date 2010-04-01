@@ -96,16 +96,28 @@ int iemnet__register(const char*name) {
 
 #ifdef _MSC_VER
 void tcpclient_setup(void);
-void tcpserver_setup(void);
+void tcpreceive_setup(void);
 void tcpsend_setup(void);
+void tcpserver_setup(void);
+
+void udpclient_setup(void);
+void udpreceive_setup(void);
+void udpsend_setup(void);
+void udpserver_setup(void);
 #endif
 
 
 
 IEMNET_EXTERN void iemnet_setup(void) {
 #ifdef _MSC_VER
-  tcpclient_setup();
-  tcpserver_setup();
-  tcpserver_setup();
+ tcpclient_setup();
+ tcpreceive_setup();
+ tcpsend_setup();
+ tcpserver_setup();
+
+ udpclient_setup();
+ udpreceive_setup();
+ udpsend_setup();
+ udpserver_setup();
 #endif
 }
