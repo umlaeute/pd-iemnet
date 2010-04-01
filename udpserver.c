@@ -195,7 +195,7 @@ static void udpserver_info(t_udpserver *x) {
 
   if(sockfd<0) {
     // no open port
-    post("no valid sock");
+    error("[%s] no valid sock", objName);
   }
 
 
@@ -206,7 +206,7 @@ static void udpserver_info(t_udpserver *x) {
       x->x_port=ntohs(server.sin_port);
       port=x->x_port;
     } else {
-      post("gesockname failed for %d", sockfd);
+      error("[%s] gesockname failed for %d", objName, sockfd);
     }
   }
 
@@ -393,13 +393,13 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc, t_atom 
       client = udpserver_socket2index(x, sockfd);
       if(client < 0)
         {
-          post("%s_send: no connection on socket %d", objName, sockfd);
+          error("[%s]: no connection on socket %d", objName, sockfd);
           return;
         }
     }
   else
     {
-      post("%s_send: no socket specified", objName);
+      error("[%s]: no socket specified", objName);
       return;
     }
   
@@ -476,7 +476,7 @@ static void udpserver_receive_callback(void *y0,
     udpserver_disconnect_socket(x, sockfd);
   }
 
-  //  post("udpserver: %d bytes in %d packets", bytecount, packetcount);
+  //  error("[%s]: %d bytes in %d packets", objName, bytecount, packetcount);
 }
 
 static void udpserver_connectpoll(t_udpserver *x)
@@ -486,7 +486,7 @@ static void udpserver_connectpoll(t_udpserver *x)
   int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
   int                 i;
 
-  if (fd < 0) post("%s: accept failed", objName);
+  if (fd < 0) error("[%s] accept failed", objName);
   else
     {
       t_udpserver_socketreceiver *y = udpserver_socketreceiver_new((void *)x, fd, &incomer_address);
