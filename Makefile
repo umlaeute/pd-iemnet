@@ -83,7 +83,7 @@ ifeq ($(UNAME),Darwin)
     SOURCES += $(SOURCES_macosx)
     EXTENSION = pd_darwin
     OS = macosx
-    OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=2 -fast
+    OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=0 -fast
     FAT_FLAGS = -arch i386 -arch ppc -mmacosx-version-min=10.4
     CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include \
       -I/Applications/Pd-extended.app/Contents/Resources/include
