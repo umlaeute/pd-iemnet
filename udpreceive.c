@@ -35,7 +35,10 @@ typedef struct _udpreceive
   t_object  x_obj;
   t_outlet  *x_msgout;
   t_outlet  *x_addrout;
+  t_outlet  *x_statout;
+
   int       x_connectsocket;
+  int       x_port;
   t_iemnet_receiver*x_receiver;
 } t_udpreceive;
 
@@ -45,59 +48,92 @@ static void udpreceive_read_callback(void*y,
 				     int argc, t_atom*argv) {
   t_udpreceive*x=(t_udpreceive*)y;
   if(argc) {
-    iemnet__addrout(NULL, x->x_addrout, c->addr, c->port);
+    iemnet__addrout(x->x_statout, x->x_addrout, c->addr, c->port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
     post("[%s] nothing received", objName);
   }
 }
 
+static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
+{
+  static t_atom ap[1];
+  int                 portno = fportno;
+  struct sockaddr_in  server;
+  socklen_t           serversize=sizeof(server);
+  int sockfd = x->x_connectsocket;
+  int intarg;
+
+  SETFLOAT(ap, -1);
+  if(x->x_port == portno) {
+    return;
+  }
+
+  /* cleanup any open ports */
+  if(sockfd>=0) {
+    iemnet__receiver_destroy(x->x_receiver);
+    x->x_connectsocket=-1;
+    x->x_port=-1;
+  }
+
+
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  if(sockfd<0) {
+    error("[%s]: unable to create socket", objName);
+    return;
+  }
+
+  /* ask OS to allow another Pd to reopen this port after we close it. */
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+		 (char *)&intarg, sizeof(intarg)) 
+      < 0)
+    error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+
+
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons((u_short)portno);
+
+  /* name the socket */
+  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
+    {
+      sys_sockerror("[udpreceive] bind failed");
+      sys_closesocket(sockfd);
+      sockfd = -1;
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+      return;
+    }
+
+  x->x_connectsocket = sockfd;
+  x->x_port = portno;
+
+  // find out which port is actually used (useful when assigning "0")
+  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
+    x->x_port=ntohs(server.sin_port);
+  }
+
+  x->x_receiver=iemnet__receiver_create(sockfd,
+					x, 
+					udpreceive_read_callback);
+
+  SETFLOAT(ap, x->x_port);
+  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+}
+
+
 static void *udpreceive_new(t_floatarg fportno)
 {
-    t_udpreceive       *x;
-    struct sockaddr_in server;
-    int                sockfd, portno = fportno;
-    int                intarg;
+    t_udpreceive*x = (t_udpreceive *)pd_new(udpreceive_class);
 
-    /* create a socket */
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    DEBUG("socket %d port %d", sockfd, portno);
-    if (sockfd < 0)
-    {
-        sys_sockerror("udpreceive: socket");
-        return (0);
-    }
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-
-    /* enable delivery of all multicast or broadcast (but not unicast)
-    * UDP datagrams to all sockets bound to the same port */
-    intarg = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-        (char *)&intarg, sizeof(intarg)) < 0)
-      error("[%s] setsockopt (SO_REUSEADDR) failed", objName);
-
-    /* assign server port number */
-    server.sin_port = htons((u_short)portno);
-
-    /* name the socket */
-    if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
-    {
-        sys_sockerror("udpreceive: bind");
-        sys_closesocket(sockfd);
-        return (0);
-    }
-
-    x = (t_udpreceive *)pd_new(udpreceive_class);
     x->x_msgout = outlet_new(&x->x_obj, 0);
     x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
-    x->x_connectsocket = sockfd;
+    x->x_statout = outlet_new(&x->x_obj, 0);
 
-    //    sys_addpollfn(x->x_connectsocket, (t_fdpollfn)udpreceive_read, x);
-
-    x->x_receiver=iemnet__receiver_create(sockfd,
-					  x, 
-					  udpreceive_read_callback);
+    x->x_connectsocket = -1;
+    x->x_port = -1;
+    x->x_receiver = NULL;
+    udpreceive_port(x, fportno);
 
     return (x);
 }
@@ -106,6 +142,10 @@ static void udpreceive_free(t_udpreceive *x)
 {
   iemnet__receiver_destroy(x->x_receiver);
   x->x_connectsocket=0;
+
+  outlet_free(x->x_msgout);
+  outlet_free(x->x_addrout);
+  outlet_free(x->x_statout);
 }
 
 IEMNET_EXTERN void udpreceive_setup(void)
@@ -113,7 +153,11 @@ IEMNET_EXTERN void udpreceive_setup(void)
   if(!iemnet__register(objName))return;
     udpreceive_class = class_new(gensym(objName),
         (t_newmethod)udpreceive_new, (t_method)udpreceive_free,
-        sizeof(t_udpreceive), CLASS_NOINLET, A_DEFFLOAT, 0);
+        sizeof(t_udpreceive), 0, A_DEFFLOAT, 0);
+
+    class_addmethod(udpreceive_class, (t_method)udpreceive_port, 
+		    gensym("port"), A_DEFFLOAT, 0);
+
 }
 
 IEMNET_INITIALIZER(udpreceive_setup);
