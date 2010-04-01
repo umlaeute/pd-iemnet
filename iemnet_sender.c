@@ -95,6 +95,7 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
 }
 
 void iemnet__sender_destroy(t_iemnet_sender*s) {
+  int sockfd=s->sockfd;
   /* simple protection against recursive calls:
    * s->keepsending is only set to "0" in here, 
    * so if it is false, we know that we are already being called
@@ -106,6 +107,11 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   queue_finish(s->queue);
   DEBUG("queue finished");
   s->sockfd = -1;
+
+  if(sockfd>=0) {
+    shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    sys_closesocket(sockfd); 
+  }
   pthread_join(s->thread, NULL);
   DEBUG("thread joined");
   queue_destroy(s->queue);
