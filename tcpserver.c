@@ -28,11 +28,6 @@
 #include "iemnet.h"
 #include <stdio.h>
 
-#ifndef _WIN32
-# include <arpa/inet.h>
-#endif
-
-
 #define MAX_CONNECT 32 /* maximum number of connections */
 
 /* ----------------------------- tcpserver ------------------------- */
