@@ -28,6 +28,14 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
   if(address_outlet)outlet_list    (address_outlet, gensym("list"   ), 5, addr);
 }
 
+void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int numconnections) {
+  t_atom atom[1];
+  SETFLOAT(atom, numconnections);
+
+  if(status_outlet )outlet_anything(status_outlet , gensym("connections"), 1, atom);
+  if(address_outlet)outlet_float   (address_outlet, numconnections);
+}
+
 
 void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv) {
   if(NULL==outlet)return;

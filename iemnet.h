@@ -224,6 +224,18 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
 
 /**
+ * output the number of connections
+ * the given number of connections is first output through the status_outlet as a "connections" message
+ * and then as a single number through the numconn_outlet
+ *
+ * \param status_outlet outlet for general status messages
+ * \param address_outlet outlet for numconnections only
+ * \param numconnections the number of connections
+ */
+void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int numconnections);
+
+
+/**
  * output a list as a stream (serialize)
  *
  * the given list of atoms will be sent to the output one-by-one
