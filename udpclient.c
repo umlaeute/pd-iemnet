@@ -150,7 +150,7 @@ static void udpclient_disconnect(t_udpclient *x)
       x->x_connectstate = 0;
       outlet_float(x->x_connectout, 0);
     }
-  else pd_error(x, "%s: not connected", objName);
+  else pd_error(x, "[%s] not connected", objName);
 }
 
 
@@ -164,7 +164,7 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fpo
   x->x_connectstate = 0;
   /* start child thread */
   if(pthread_create(&x->x_threadid, &x->x_threadattr, udpclient_child_connect, x) < 0)
-    post("%s: could not create new thread", objName);
+    error("%s: could not create new thread", objName);
 }
 
 /* sending/receiving */
@@ -221,9 +221,9 @@ static void *udpclient_new(void)
 
   /* prepare child thread */
   if(pthread_attr_init(&x->x_threadattr) < 0)
-    post("%s: warning: could not prepare child thread", objName);
+    verbose(1, "[%s] warning: could not prepare child thread", objName);
   if(pthread_attr_setdetachstate(&x->x_threadattr, PTHREAD_CREATE_DETACHED) < 0)
-    post("%s: warning: could not prepare child thread", objName);
+    verbose(1, "[%s] warning: could not prepare child thread", objName);
     
 
   return (x);
