@@ -50,10 +50,8 @@ EXTERN void sys_rmpollfn(int fd);
 # include <netdb.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
+# include <sys/types.h>
 #endif
-
-/* for types.h; esp. needed on OSX 10.4 */
-#include <stdlib.h>
 
 /* iemnet_data.c */
 
