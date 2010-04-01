@@ -30,8 +30,6 @@
 
 #include <pthread.h>
 
-
-
 static t_class *tcpclient_class;
 static char objName[] = "tcpclient";
 
@@ -54,7 +52,6 @@ typedef struct _tcpclient
   int             x_connectstate; // 0 = not connected, 1 = connected
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int
-
 
   /* multithread stuff */
   pthread_t       x_threadid; /* id of child thread */
@@ -102,6 +99,9 @@ static void *tcpclient_child_connect(void *w)
   struct hostent      *hp;
   int                 sockfd;
 
+  t_iemnet_sender*sender;
+  t_iemnet_receiver*receiver;
+
   if (x->x_fd >= 0)
     {
       error("%s_connect: already connected", objName);
@@ -136,16 +136,23 @@ static void *tcpclient_child_connect(void *w)
       sys_closesocket(sockfd);
       return (x);
     }
+
+  sender=iemnet__sender_create(sockfd);
+  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback);
+
+  /* update the tcpclient-object (thread safe) */
+  sys_lock();
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
-  x->x_sender=iemnet__sender_create(sockfd);
-  x->x_receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback);
+  x->x_sender=sender;
+  x->x_receiver=receiver;
 
   x->x_connectstate = 1;
 
   /* use callback to set outlet in main thread */
   clock_delay(x->x_clock, 0);
+  sys_unlock();
   return (x);
 }
 static void tcpclient_tick(t_tcpclient *x)
