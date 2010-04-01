@@ -224,6 +224,17 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
 
 /**
+ * output the socket we received data from
+ * the given socket is first output through the status_outlet as a "socket" message
+ * and then as a single number through the socket_outlet
+ *
+ * \param status_outlet outlet for general status messages
+ * \param socket_outlet outlet for sockets only
+ * \param sockfd the socket
+ */
+void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockfd);
+
+/**
  * output the number of connections
  * the given number of connections is first output through the status_outlet as a "connections" message
  * and then as a single number through the numconn_outlet
