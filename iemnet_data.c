@@ -204,7 +204,9 @@ int queue_push(
                       ) {
   t_node* tail;
   t_node* n=NULL;
-  int size=_this->size;
+	int size=-1;
+		if(_this) {
+	size=_this->size;
 
   if(NULL == data) return size;
   //fprintf(stderr, "pushing %d bytes\n", data->size);
@@ -224,21 +226,22 @@ int queue_push(
   _this->size+=data->size;
   size=_this->size;
 
-
   //fprintf(stderr, "pushed %d bytes\n", data->size);
 
   pthread_mutex_unlock(&_this->mtx);
   pthread_cond_signal(&_this->cond);
-
+		}
   return size;
 }
 
 t_iemnet_chunk* queue_pop_block(
                    t_iemnet_queue* const _this
                    ) {
+
   t_node* head=0;
   t_iemnet_chunk*data=0;
-  pthread_mutex_lock(&_this->mtx);
+	if(_this) {
+	pthread_mutex_lock(&_this->mtx);
   while (! (head = _this->head)) {
     if(_this->done) {
       pthread_mutex_unlock(&_this->mtx);
@@ -262,6 +265,7 @@ t_iemnet_chunk* queue_pop_block(
     freebytes(head, sizeof(t_node));
     head=NULL;
   }
+	}
   return data;
 }
 
@@ -270,6 +274,7 @@ t_iemnet_chunk* queue_pop_noblock(
                    ) {
   t_node* head=0;
   t_iemnet_chunk*data=0;
+		if(_this) {
   pthread_mutex_lock(&_this->mtx);
   if (! (head = _this->head)) {
     // empty head
@@ -289,6 +294,7 @@ t_iemnet_chunk* queue_pop_noblock(
     freebytes(head, sizeof(t_node));
     head=NULL;
   }
+		}
   return data;
 }
 
