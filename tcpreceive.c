@@ -22,9 +22,11 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+static const char*objName="tcpreceive";
 
 #include "iemnet.h"
 #ifndef _WIN32
+/* needed for TCP_NODELAY */
 # include <netinet/tcp.h>
 #endif
 
@@ -49,13 +51,12 @@ typedef struct _tcpreceive
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
   t_outlet        *x_connectout;
-
+  t_outlet        *x_statout;
   int             x_connectsocket;
+  int             x_port;
 
   int             x_nconnections;
   t_tcpconnection x_connection[MAX_CONNECTIONS];
-
-  t_atom          x_addrbytes[5];
 } t_tcpreceive;
 
 
@@ -69,26 +70,24 @@ static int tcpreceive_find_socket(t_tcpreceive *x, int fd) {
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id);
 
-static void tcpreceive_read_callback(t_tcpconnection *y, int argc, t_atom*argv)
+static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c, int argc, t_atom*argv)
 {
+  t_tcpconnection*y=(t_tcpconnection*)w;
   t_tcpreceive*x=NULL;
   int index=-1;
   if(NULL==y || NULL==(x=y->owner))return;
+
   index=tcpreceive_find_socket(x, y->socket);
   if(index>=0) {
-
     if(argc) {
       // TODO?: outlet info about connection
       iemnet__streamout(x->x_msgout, argc, argv);
     } else {
       // disconnected
-      int sockfd=y->socket;
       tcpreceive_disconnect(x, index);
     }
   }
-
 }
-
 
 /* tcpreceive_addconnection tries to add the socket fd to the list */
 /* returns 1 on success, else 0 */
@@ -106,7 +105,7 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr, unsigned
 	  x->x_connection[i].receiver=
 	    iemnet__receiver_create(fd, 
 				    x->x_connection+i, 
-				    (t_iemnet_receivecallback)tcpreceive_read_callback);
+				    tcpreceive_read_callback);
 	  
 	  return 1;
         }
@@ -138,13 +137,9 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
       port = ntohs(from.sin_port);
       if (tcpreceive_addconnection(x, fd, addr, port))
 	{
-	  outlet_float(x->x_connectout, ++x->x_nconnections);
-	  x->x_addrbytes[0].a_w.w_float = (addr & 0xFF000000)>>24;
-	  x->x_addrbytes[1].a_w.w_float = (addr & 0x0FF0000)>>16;
-	  x->x_addrbytes[2].a_w.w_float = (addr & 0x0FF00)>>8;
-	  x->x_addrbytes[3].a_w.w_float = (addr & 0x0FF);
-	  x->x_addrbytes[4].a_w.w_float = port;
-	  outlet_list(x->x_addrout, gensym("list"), 5L, x->x_addrbytes);
+	  x->x_nconnections++;
+	  outlet_float(x->x_connectout, x->x_nconnections);
+	  iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
         }
       else
         {
@@ -203,6 +198,93 @@ static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
   return 0;
 }
 
+static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
+{
+  static t_atom ap[1];
+  int                 portno = fportno;
+  struct sockaddr_in  server;
+  socklen_t           serversize=sizeof(server);
+  int sockfd = x->x_connectsocket;
+  int intarg;
+
+  SETFLOAT(ap, -1);
+  if(x->x_port == portno) {
+    return;
+  }
+
+  /* cleanup any open ports */
+  if(sockfd>=0) {
+    sys_rmpollfn(sockfd);
+    sys_closesocket(sockfd);
+    x->x_connectsocket=-1;
+    x->x_port=-1;
+  }
+
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfd<0) {
+    error("[%s]: unable to create socket", objName);
+    return;
+  }
+
+  /* ask OS to allow another Pd to reopen this port after we close it. */
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+		 (char *)&intarg, sizeof(intarg)) 
+      < 0)
+    error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+
+  /* Stream (TCP) sockets are set NODELAY */
+  intarg = 1;
+  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+		 (char *)&intarg, sizeof(intarg)) < 0)
+    post("[%s]: setsockopt (TCP_NODELAY) failed", objName);
+
+
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons((u_short)portno);
+
+  /* name the socket */
+  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
+    {
+      sys_sockerror("[tcpreceive] bind failed");
+      sys_closesocket(sockfd);
+      sockfd = -1;
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+      return;
+    }
+
+  /* streaming protocol */
+  if (listen(sockfd, 5) < 0)
+    {
+      sys_sockerror("tcpreceive: listen");
+      sys_closesocket(sockfd);
+      sockfd = -1;
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+      return;
+    }
+  else
+    {
+      sys_addpollfn(sockfd, 
+		    (t_fdpollfn)tcpreceive_connectpoll, 
+		    x); // wait for new connections 
+    }
+
+  x->x_connectsocket = sockfd;
+  x->x_port = portno;
+
+  // find out which port is actually used (useful when assigning "0")
+  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
+    x->x_port=ntohs(server.sin_port);
+  }
+
+
+  SETFLOAT(ap, x->x_port);
+  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+}
+
+
 static void tcpreceive_free(t_tcpreceive *x)
 { /* is this ever called? */
   if (x->x_connectsocket >= 0)
@@ -216,46 +298,19 @@ static void tcpreceive_free(t_tcpreceive *x)
 static void *tcpreceive_new(t_floatarg fportno)
 {
   t_tcpreceive       *x;
-  struct sockaddr_in server;
-  int                sockfd, portno = fportno;
-  int                intarg, i;
+  int                portno = fportno;
+  int                i;
 
-  /* create a socket */
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  DEBUG("socket %d port %d", sockfd, portno);
-  if (sockfd < 0)
-    {
-      sys_sockerror("tcpreceive: socket");
-      return (0);
-    }
-  server.sin_family = AF_INET;
-  server.sin_addr.s_addr = INADDR_ANY;
-
-  /* ask OS to allow another Pd to repoen this port after we close it. */
-  intarg = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-		 (char *)&intarg, sizeof(intarg)) < 0)
-    post("tcpreceive: setsockopt (SO_REUSEADDR) failed");
-  /* Stream (TCP) sockets are set NODELAY */
-  intarg = 1;
-  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
-		 (char *)&intarg, sizeof(intarg)) < 0)
-    post("setsockopt (TCP_NODELAY) failed\n");
-
-  /* assign server port number */
-  server.sin_port = htons((u_short)portno);
-
-  /* name the socket */
-  if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0)
-    {
-      sys_sockerror("tcpreceive: bind");
-      sys_closesocket(sockfd);
-      return (0);
-    }
   x = (t_tcpreceive *)pd_new(tcpreceive_class);
   x->x_msgout = outlet_new(&x->x_obj, 0);
-  x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
-  x->x_connectout = outlet_new(&x->x_obj, gensym("float"));
+  x->x_addrout = outlet_new(&x->x_obj, gensym("list")); /* legacy */
+  x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* legacy */
+  x->x_statout = outlet_new(&x->x_obj, 0);/* outlet for everything else */
+
+  x->x_connectsocket=-1;
+  x->x_port=-1;
+  x->x_nconnections=0;
+
   /* clear the connection list */
   for (i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -263,24 +318,12 @@ static void *tcpreceive_new(t_floatarg fportno)
       x->x_connection[i].addr = 0L;
       x->x_connection[i].port = 0;
     }
-  for (i = 0; i < 5; ++i)
-    {
-      SETFLOAT(x->x_addrbytes+i, 0);
-    }
 
-  /* streaming protocol */
-  if (listen(sockfd, 5) < 0)
-    {
-      sys_sockerror("tcpreceive: listen");
-      sys_closesocket(sockfd);
-      sockfd = -1;
-    }
-  else
-    {
-      sys_addpollfn(sockfd, (t_fdpollfn)tcpreceive_connectpoll, x);
-    }
-  x->x_connectsocket = sockfd;
-  x->x_nconnections = 0;
+
+
+
+
+  tcpreceive_port(x, portno);
 
   return (x);
 }
@@ -290,8 +333,13 @@ void tcpreceive_setup(void)
 {
   tcpreceive_class = class_new(gensym("tcpreceive"),
 			       (t_newmethod)tcpreceive_new, (t_method)tcpreceive_free,
-			       sizeof(t_tcpreceive), CLASS_NOINLET, A_DEFFLOAT, 0);
+			       sizeof(t_tcpreceive), 
+			       0, 
+			       A_DEFFLOAT, 0);
+  
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_port, gensym("port"), A_DEFFLOAT, 0);
 }
 
 /* end x_net_tcpreceive.c */
+
 
