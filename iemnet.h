@@ -52,6 +52,9 @@ EXTERN void sys_rmpollfn(int fd);
 # include <sys/socket.h>
 #endif
 
+/* for types.h; esp. needed on OSX 10.4 */
+#include <stdlib.h>
+
 /* iemnet_data.c */
 
 /**
