@@ -113,10 +113,12 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
     iemnet__chunk_destroy(c);
     c=queue_pop_noblock(x->queue);
   }
+	DEBUG("tick cleanup");
   pthread_mutex_lock(&x->newdatamtx);
   x->newdataflag=0;
   pthread_mutex_unlock(&x->newdatamtx);
-
+	
+	DEBUG("tick running %d", x->running);
   if(!x->running) {
     // read terminated
     
@@ -124,6 +126,7 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
     if(x->keepreceiving) 
       x->callback(x->userdata, NULL, 0, NULL);
   }
+	DEBUG("tick DONE");
 }
 
 int iemnet__receiver_getsize(t_iemnet_receiver*x) {
@@ -196,6 +199,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   // empty the queue
   DEBUG("[%d] tick %d", inst, rec->running);
   iemnet__receiver_tick(rec);
+  queue_destroy(rec->queue);  
   DEBUG("[%d] tack", inst);
 
   if(rec->data)iemnet__chunk_destroy(rec->data);
@@ -210,6 +214,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   rec->data=NULL;
   rec->callback=NULL;
   rec->flist=NULL;
+	rec->queue=NULL;
 
   freebytes(rec, sizeof(t_iemnet_receiver));
   rec=NULL;
