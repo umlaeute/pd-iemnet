@@ -33,7 +33,7 @@
 /* ----------------------------- tcpserver ------------------------- */
 
 static t_class *tcpserver_class;
-static char objName[] = "tcpserver";
+static const char objName[] = "tcpserver";
 
 typedef struct _tcpserver_socketreceiver
 {
@@ -608,7 +608,7 @@ static void tcpserver_free(t_tcpserver *x)
   for(i = 0; i < MAX_CONNECT; i++)
     {
       if (NULL!=x->x_sr[i]) {
-        DEBUG("tcpserver_free %x", x);
+        DEBUG("[%s] free %x", objName, x);
         tcpserver_socketreceiver_free(x->x_sr[i]);
         x->x_sr[i]=NULL;
       }
@@ -622,7 +622,7 @@ static void tcpserver_free(t_tcpserver *x)
 
 IEMNET_EXTERN void tcpserver_setup(void)
 {
-  static int again=0; if(again)return; again=1;
+  if(!iemnet__register(objName))return;
 
   tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new, (t_method)tcpserver_free,
                               sizeof(t_tcpserver), 0, A_DEFFLOAT, 0);
@@ -642,10 +642,6 @@ IEMNET_EXTERN void tcpserver_setup(void)
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"), A_DEFFLOAT, 0);
   class_addbang  (tcpserver_class, (t_method)tcpserver_info);
-
-  post("iemnet: networking with Pd :: %s", objName);
-  post("        (c) 2010 IOhannes m zmoelnig, IEM");
-  post("        based on mrpeach/net, based on maxlib");
 }
 
 IEMNET_INITIALIZER(tcpserver_setup);

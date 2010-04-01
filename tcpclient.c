@@ -270,7 +270,7 @@ static void tcpclient_free(t_tcpclient *x)
 
 IEMNET_EXTERN void tcpclient_setup(void)
 {
-  static int again=0; if(again)return; again=1;
+  if(!iemnet__register(objName))return;
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
                               sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
@@ -281,13 +281,6 @@ IEMNET_EXTERN void tcpclient_setup(void)
   class_addlist(tcpclient_class, (t_method)tcpclient_send);
 
   class_addbang(tcpclient_class, (t_method)tcpclient_info);
-
-
-
-
-  post("iemnet: networking with Pd :: %s", objName);
-  post("        (c) 2010 IOhannes m zmoelnig, IEM");
-  post("        based on mrpeach/net, based on maxlib");
 }
 
 

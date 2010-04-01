@@ -245,7 +245,6 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockf
  */
 void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int numconnections);
 
-
 /**
  * output a list as a stream (serialize)
  *
@@ -258,6 +257,18 @@ void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int num
  * \note with stream based protocols (TCP/IP) the length of the received lists has no meaning, so the data has to be serialized anyhow
  */
 void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv);
+
+/**
+ * register an objectname and printout a banner
+ *
+ * this will printout a copyright notice
+ * additionally, it will return whether it has already been called for the given name
+ *
+ * \param name an objectname to "register"
+ * \return 1 if this function has been called the first time with the given name, 0 otherwise
+ *
+ */
+int iemnet__register(const char*name);
 
 
 #if defined(_MSC_VER)

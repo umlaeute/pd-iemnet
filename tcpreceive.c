@@ -125,7 +125,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
   int                 fd;
 
   fd = accept(x->x_connectsocket, (struct sockaddr *)&from, &fromlen);
-  if (fd < 0) post("tcpreceive: accept failed");
+  if (fd < 0) error("[%s]  accept failed", objName);
   else
     {
       //       t_socketreceiver *y = socketreceiver_new((void *)x,
@@ -143,7 +143,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
         }
       else
         {
-	  error ("tcpreceive: Too many connections");
+	  error ("[%s] Too many connections", objName);
 	  sys_closesocket(fd);
         }
     }
@@ -258,7 +258,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   /* streaming protocol */
   if (listen(sockfd, 5) < 0)
     {
-      sys_sockerror("tcpreceive: listen");
+      sys_sockerror("[tcpreceive] listen");
       sys_closesocket(sockfd);
       sockfd = -1;
       outlet_anything(x->x_statout, gensym("port"), 1, ap);
@@ -319,19 +319,16 @@ static void *tcpreceive_new(t_floatarg fportno)
       x->x_connection[i].port = 0;
     }
 
-
-
-
-
   tcpreceive_port(x, portno);
 
   return (x);
 }
 
 
-void tcpreceive_setup(void)
+IEMNET_EXTERN void tcpreceive_setup(void)
 {
-  tcpreceive_class = class_new(gensym("tcpreceive"),
+  if(!iemnet__register(objName))return;
+  tcpreceive_class = class_new(gensym(objName),
 			       (t_newmethod)tcpreceive_new, (t_method)tcpreceive_free,
 			       sizeof(t_tcpreceive), 
 			       0, 
@@ -339,6 +336,9 @@ void tcpreceive_setup(void)
   
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port, gensym("port"), A_DEFFLOAT, 0);
 }
+
+IEMNET_INITIALIZER(tcpreceive_setup);
+
 
 /* end x_net_tcpreceive.c */
 

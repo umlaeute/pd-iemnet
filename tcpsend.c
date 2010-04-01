@@ -22,6 +22,7 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+static const char objName[] = "tcpserver";
 
 #include "iemnet.h"
 #include <string.h>
@@ -135,9 +136,10 @@ static void *tcpsend_new(void)
   return (x);
 }
 
-void tcpsend_setup(void)
+IEMNET_EXTERN void tcpsend_setup(void)
 {
-  tcpsend_class = class_new(gensym("tcpsend"), 
+  if(!iemnet__register(objName))return;
+  tcpsend_class = class_new(gensym(objName), 
 			    (t_newmethod)tcpsend_new, (t_method)tcpsend_free,
 			    sizeof(t_tcpsend), 
 			    0, 0);
@@ -150,5 +152,8 @@ void tcpsend_setup(void)
 		  A_GIMME, 0);
   class_addlist(tcpsend_class, (t_method)tcpsend_send);
 }
+
+IEMNET_INITIALIZER(tcpsend_setup);
+
 
 /* end tcpsend.c */

@@ -22,6 +22,8 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+static const char objName[] = "udpsend";
+
 #include "iemnet.h"
 #include <string.h>
 
@@ -44,7 +46,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 
   if (x->x_sender)
     {
-      error("udpsend: already connected");
+      error("[%s] already connected", objName);
       return;
     }
 
@@ -53,7 +55,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0)
     {
-      sys_sockerror("udpsend: socket");
+      sys_sockerror("[udpsend] socket");
       return;
     }
 
@@ -62,7 +64,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
     {
-      error("udpsend: couldn't switch to broadcast mode");
+      error("[%s] couldn't switch to broadcast mode", objName);
     }
 #endif /* SO_BROADCAST */
     
@@ -71,7 +73,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   hp = gethostbyname(hostname->s_name);
   if (hp == 0)
     {
-      error("udpsend: bad host '%s'?", hostname->s_name);
+      error("[%s] bad host '%s'?", objName, hostname->s_name);
       return;
     }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
@@ -83,7 +85,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
-      sys_sockerror("udpsend: connecting stream socket");
+      sys_sockerror("[udpsend] connecting stream socket");
       sys_closesocket(sockfd);
       return;
     }
@@ -107,7 +109,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
   } else {
-    error("udpsend: not connected");
+    error("[%s]: not connected");
   }
 }
 
@@ -124,9 +126,10 @@ static void *udpsend_new(void)
   return (x);
 }
 
-void udpsend_setup(void)
+IEMNET_EXTERN void udpsend_setup(void)
 {
-  udpsend_class = class_new(gensym("udpsend"), (t_newmethod)udpsend_new,
+  if(!iemnet__register(objName))return;
+  udpsend_class = class_new(gensym(objName), (t_newmethod)udpsend_new,
 			    (t_method)udpsend_free,
 			    sizeof(t_udpsend), 0, 0);
 
@@ -139,6 +142,8 @@ void udpsend_setup(void)
 		  A_GIMME, 0);
   class_addlist(udpsend_class, (t_method)udpsend_send);
 }
+
+IEMNET_INITIALIZER(udpsend_setup);
 
 /* end udpsend.c*/
 

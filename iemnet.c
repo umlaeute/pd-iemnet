@@ -51,8 +51,47 @@ void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv) {
     outlet_list(outlet, gensym("list"), 1, argv);
     argv++;
   }
-
 }
+
+typedef struct _names {
+  t_symbol*name;
+  struct _names*next;
+} t_iemnet_names;
+static t_iemnet_names*namelist=0;
+static int iemnet__nametaken(const char*namestring) {
+  t_symbol*name=gensym(namestring);
+  t_iemnet_names*curname=namelist;
+  t_iemnet_names*lastname=curname;
+  while(curname) {
+    if(name==(curname->name)) {
+      return 1;
+    }
+    lastname=curname;
+    curname=curname->next;
+  }
+
+  // new name!
+  curname=(t_iemnet_names*)getbytes(sizeof(t_iemnet_names));
+  curname->name=name;
+  curname->next=0;
+
+  if(lastname)
+    lastname->next=curname;
+  else
+    namelist=curname;
+
+  return 0;
+}
+
+int iemnet__register(const char*name) {
+  if(iemnet__nametaken(name))return 0;
+  post("iemnet: networking with Pd :: %s", name);
+  post("        (c) 2010 IOhannes m zmoelnig, IEM");
+  post("        based on mrpeach/net, based on maxlib");
+  return 1;
+}
+
+
 
 
 #ifdef _MSC_VER

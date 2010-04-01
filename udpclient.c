@@ -30,7 +30,7 @@
 
 
 static t_class *udpclient_class;
-static char objName[] = "udpclient";
+static const char objName[] = "udpclient";
 
 
 typedef struct _udpclient
@@ -78,7 +78,7 @@ static void *udpclient_child_connect(void *w)
 
   if (x->x_sender)
     {
-      error("udpsend: already connected");
+      error("[%s] already connected", objName);
       return (x);
     }
 
@@ -87,7 +87,7 @@ static void *udpclient_child_connect(void *w)
   DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0)
     {
-      sys_sockerror("udpsend: socket");
+      sys_sockerror("udpclient: socket");
       return (x);
     }
 
@@ -96,7 +96,7 @@ static void *udpclient_child_connect(void *w)
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
     {
-      error("udpsend: couldn't switch to broadcast mode");
+      error("[%s] couldn't switch to broadcast mode", objName);
     }
 #endif /* SO_BROADCAST */
     
@@ -105,7 +105,7 @@ static void *udpclient_child_connect(void *w)
   hp = gethostbyname(x->x_hostname);
   if (hp == 0)
     {
-      error("udpsend: bad host '%s'?", x->x_hostname);
+      error("[%s] bad host '%s'?", objName, x->x_hostname);
       return (x);
     }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
@@ -117,7 +117,7 @@ static void *udpclient_child_connect(void *w)
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
-      sys_sockerror("udpsend: connecting stream socket");
+      sys_sockerror("udpclient: connecting stream socket");
       sys_closesocket(sockfd);
       return (x);
     }
@@ -237,9 +237,7 @@ static void udpclient_free(t_udpclient *x)
 
 IEMNET_EXTERN void udpclient_setup(void)
 {
-  post("udpclient");
-  //static int again=0; if(again)return; again=1;
-
+  if(!iemnet__register(objName))return;
   udpclient_class = class_new(gensym(objName), (t_newmethod)udpclient_new,
                               (t_method)udpclient_free,
                               sizeof(t_udpclient), 0, A_DEFFLOAT, 0);
@@ -248,10 +246,6 @@ IEMNET_EXTERN void udpclient_setup(void)
   class_addmethod(udpclient_class, (t_method)udpclient_disconnect, gensym("disconnect"), 0);
   class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"), A_GIMME, 0);
   class_addlist(udpclient_class, (t_method)udpclient_send);
-
-  post("iemnet: networking with Pd :: %s", objName);
-  post("        (c) 2010 IOhannes m zmoelnig, IEM");
-  post("        based on mrpeach/net, based on maxlib");
 }
 
 

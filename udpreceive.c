@@ -22,11 +22,9 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+static const char objName[] = "udpreceive";
 
 #include "iemnet.h"
-#ifndef _WIN32
-# include <netinet/tcp.h>
-#endif
 
 /* ----------------------------- udpreceive ------------------------- */
 
@@ -50,7 +48,7 @@ static void udpreceive_read_callback(void*y,
     iemnet__addrout(NULL, x->x_addrout, c->addr, c->port);
     outlet_list(x->x_msgout, gensym("list"), argc, argv);
   } else {
-    post("nothing received");
+    post("[%s] nothing received", objName);
   }
 }
 
@@ -77,7 +75,7 @@ static void *udpreceive_new(t_floatarg fportno)
     intarg = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
         (char *)&intarg, sizeof(intarg)) < 0)
-        post("udpreceive: setsockopt (SO_REUSEADDR) failed");
+      error("[%s] setsockopt (SO_REUSEADDR) failed", objName);
 
     /* assign server port number */
     server.sin_port = htons((u_short)portno);
@@ -110,11 +108,14 @@ static void udpreceive_free(t_udpreceive *x)
   x->x_connectsocket=0;
 }
 
-void udpreceive_setup(void)
+IEMNET_EXTERN void udpreceive_setup(void)
 {
-    udpreceive_class = class_new(gensym("udpreceive"),
+  if(!iemnet__register(objName))return;
+    udpreceive_class = class_new(gensym(objName),
         (t_newmethod)udpreceive_new, (t_method)udpreceive_free,
         sizeof(t_udpreceive), CLASS_NOINLET, A_DEFFLOAT, 0);
 }
+
+IEMNET_INITIALIZER(udpreceive_setup);
 
 /* end udpreceive.c */
