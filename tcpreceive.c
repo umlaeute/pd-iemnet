@@ -57,6 +57,8 @@ typedef struct _tcpreceive
 
   int             x_nconnections;
   t_tcpconnection x_connection[MAX_CONNECTIONS];
+
+	t_iemnet_floatlist         *x_floatlist;
 } t_tcpreceive;
 
 
@@ -70,7 +72,7 @@ static int tcpreceive_find_socket(t_tcpreceive *x, int fd) {
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id);
 
-static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c, int argc, t_atom*argv)
+static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 {
   t_tcpconnection*y=(t_tcpconnection*)w;
   t_tcpreceive*x=NULL;
@@ -79,9 +81,10 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c, int argc, t_atom
 
   index=tcpreceive_find_socket(x, y->socket);
   if(index>=0) {
-    if(argc) {
+    if(c) {
       // TODO?: outlet info about connection
-      iemnet__streamout(x->x_msgout, argc, argv);
+      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
+      iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
     } else {
       // disconnected
       tcpreceive_disconnect(x, index);
@@ -293,6 +296,7 @@ static void tcpreceive_free(t_tcpreceive *x)
       sys_closesocket(x->x_connectsocket);
     }
   tcpreceive_disconnect_all(x);
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
 
 static void *tcpreceive_new(t_floatarg fportno)
@@ -318,6 +322,8 @@ static void *tcpreceive_new(t_floatarg fportno)
       x->x_connection[i].addr = 0L;
       x->x_connection[i].port = 0;
     }
+
+  x->x_floatlist=iemnet__floatlist_create(1024);
 
   tcpreceive_port(x, portno);
 

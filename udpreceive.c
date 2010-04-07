@@ -40,16 +40,15 @@ typedef struct _udpreceive
   int       x_connectsocket;
   int       x_port;
   t_iemnet_receiver*x_receiver;
+	t_iemnet_floatlist         *x_floatlist;
 } t_udpreceive;
 
 
-static void udpreceive_read_callback(void*y,
-				     t_iemnet_chunk*c, 
-				     int argc, t_atom*argv) {
+static void udpreceive_read_callback(void*y, t_iemnet_chunk*c) {
   t_udpreceive*x=(t_udpreceive*)y;
-  if(argc) {
-    iemnet__addrout(x->x_statout, x->x_addrout, c->addr, c->port);
-    outlet_list(x->x_msgout, gensym("list"), argc, argv);
+  if(c) {
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
+    outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
     post("[%s] nothing received", objName);
   }
@@ -133,6 +132,9 @@ static void *udpreceive_new(t_floatarg fportno)
     x->x_connectsocket = -1;
     x->x_port = -1;
     x->x_receiver = NULL;
+
+    x->x_floatlist=iemnet__floatlist_create(1024);
+
     udpreceive_port(x, fportno);
 
     return (x);
@@ -146,6 +148,8 @@ static void udpreceive_free(t_udpreceive *x)
   outlet_free(x->x_msgout);
   outlet_free(x->x_addrout);
   outlet_free(x->x_statout);
+
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void udpreceive_setup(void)

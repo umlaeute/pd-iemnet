@@ -11,15 +11,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <sys/types.h>
-
-#ifdef _WIN32
-# include <winsock2.h>
-# include <ws2tcpip.h> /* for socklen_t */
-#else
-# include <sys/socket.h>
-#endif
-
 #include <pthread.h>
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
@@ -34,7 +25,6 @@ struct _iemnet_receiver {
   t_iemnet_queue*queue;
   int running;
   t_clock *clock;
-  t_iemnet_floatlist*flist;
 
   int keepreceiving;
 
@@ -108,8 +98,7 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   // received data
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
   while(NULL!=c) {
-    x->flist = iemnet__chunk2list(c, x->flist);
-    (x->callback)(x->userdata, c, x->flist->argc, x->flist->argv);
+    (x->callback)(x->userdata, c);
     iemnet__chunk_destroy(c);
     c=queue_pop_noblock(x->queue);
   }
@@ -124,7 +113,7 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
     
     /* keepreceiving is set, if receiver is not yet in shutdown mode */
     if(x->keepreceiving) 
-      x->callback(x->userdata, NULL, 0, NULL);
+      x->callback(x->userdata, NULL);
   }
 	DEBUG("tick DONE");
 }
@@ -156,7 +145,6 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->userdata=userdata;
     rec->data=data;
     rec->callback=callback;
-    rec->flist=iemnet__floatlist_create(1024);
 
     memcpy(&rec->newdatamtx , &mtx, sizeof(pthread_mutex_t));
     rec->newdataflag=0;
@@ -174,6 +162,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
 void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   static int instance=0;
   int inst=instance++;
+  return;
 
   int sockfd;
   DEBUG("[%d] destroy receiver %x", inst, rec);
@@ -203,7 +192,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   DEBUG("[%d] tack", inst);
 
   if(rec->data)iemnet__chunk_destroy(rec->data);
-  if(rec->flist)iemnet__floatlist_destroy(rec->flist);
 
   pthread_mutex_destroy(&rec->newdatamtx);
 
@@ -213,7 +201,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   rec->userdata=NULL;
   rec->data=NULL;
   rec->callback=NULL;
-  rec->flist=NULL;
 	rec->queue=NULL;
 
   freebytes(rec, sizeof(t_iemnet_receiver));

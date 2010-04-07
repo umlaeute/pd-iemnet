@@ -56,14 +56,12 @@ typedef struct _tcpclient
   /* multithread stuff */
   pthread_t       x_threadid; /* id of child thread */
   pthread_attr_t  x_threadattr; /* attributes of child thread */
+
+	t_iemnet_floatlist         *x_floatlist;
 } t_tcpclient;
 
 
-static void tcpclient_receive_callback(void *x, 
-				       t_iemnet_chunk*,
-				       int argc, t_atom*argv);
-
-
+static void tcpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 static void tcpclient_info(t_tcpclient *x)
 {
@@ -217,12 +215,13 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
   }
 }
 
-static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c, int argc, t_atom*argv) {
+static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c) {
   t_tcpclient *x=(t_tcpclient*)y;
 
-  if(argc) {
+  if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    iemnet__streamout(x->x_msgout, argc, argv);
+	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
     // disconnected
     tcpclient_disconnect(x);
@@ -249,8 +248,8 @@ static void *tcpclient_new(void)
   x->x_sender=NULL;
   x->x_receiver=NULL;
 
-
   x->x_clock = clock_new(x, (t_method)tcpclient_tick);
+  x->x_floatlist=iemnet__floatlist_create(1024);
 
   /* prepare child thread */
   if(pthread_attr_init(&x->x_threadattr) < 0)
@@ -265,7 +264,8 @@ static void *tcpclient_new(void)
 static void tcpclient_free(t_tcpclient *x)
 {
   tcpclient_disconnect(x);
-  clock_free(x->x_clock);
+  if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void tcpclient_setup(void)

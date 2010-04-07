@@ -50,69 +50,11 @@ EXTERN void sys_rmpollfn(int fd);
 # include <netdb.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
-# include <sys/types.h>
 #endif
+#include <sys/types.h>
 
 /* iemnet_data.c */
-
-/**
- * chunk of data as sent to a socket or received from it
- * for received data, this might additionally hold the originator (if available)
- */
-typedef struct _iemnet_chunk {
-  unsigned char* data;
-  size_t size;
-
-  long addr;
-  unsigned short port;
-} t_iemnet_chunk;
-
-/**
- * free a "chunk" (de-allocate memory,...)
- */
-void iemnet__chunk_destroy(t_iemnet_chunk*);
-
-/**
- * initialize a "chunk" (allocate memory,...) of fixed size
- * receiver address will be set to 0
- *
- * \param size of the chunk (data will be zeroed out)
- * \return a new chunk of given size
- */
-t_iemnet_chunk*iemnet__chunk_create_empty(int);
-/**
- * initialize a "chunk" (allocate memory,...) with given data
- * receiver address will be set to 0
- *
- * \param size of data
- * \param data of size
- * \return a new chunk that holds a copy of data
- */
-t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
-/**
- * initialize a "chunk" (allocate memory,...) with given data from specified address
- * \param size of data
- * \param data of size
- * \param addr originating address (can be NULL)
- * \return a new chunk that holds a copy of data
- */
-t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data, struct sockaddr_in*addr);
-/**
- * initialize a "chunk" (allocate memory,...) with given data
- * receiver address will be set to 0
- *
- * \param argc size of list
- * \param argv list of atoms containing only "bytes" (t_floats [0..255])
- * \return a new chunk that holds a copy of the list data
- */
-t_iemnet_chunk*iemnet__chunk_create_list(int argc, t_atom*argv);
-/**
- * initialize a "chunk" (allocate memory,...) from another chunk
- *
- * \param src the source chunk
- * \return a new chunk that holds a copy of the source data
- */
-t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
+#include "iemnet_data.h"
 
 
 /* iemnet_sender.c */
@@ -173,8 +115,7 @@ EXTERN_STRUCT _iemnet_receiver;
  * whenever data arrives at the socket, a callback will be called synchronously
  */
 typedef void (*t_iemnet_receivecallback)(void*userdata, 
-					 t_iemnet_chunk*rawdata,
-					 int argc, t_atom*argv);
+					 t_iemnet_chunk*rawdata);
 
 /**
  * create a receiver object

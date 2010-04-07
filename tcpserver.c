@@ -63,10 +63,10 @@ typedef struct _tcpserver
   t_int                       x_port;
 
   int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
-	t_iemnet_floatlist*x_floatlist;
+	t_iemnet_floatlist         *x_floatlist;
 } t_tcpserver;
 
-static void tcpserver_receive_callback(void*x, t_iemnet_chunk*,int argc, t_atom*argv);
+static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
 {
@@ -460,16 +460,14 @@ static void tcpserver_disconnect_all(t_tcpserver *x)
 
 /* ---------------- main tcpserver (receive) stuff --------------------- */
 static void tcpserver_receive_callback(void *y0, 
-				       t_iemnet_chunk*c, 
-				       int argc, t_atom*argv) {
+				       t_iemnet_chunk*c) {
   t_tcpserver_socketreceiver *y=(t_tcpserver_socketreceiver*)y0;
   t_tcpserver*x=NULL;
   if(NULL==y || NULL==(x=y->sr_owner))return;
   
-  if(argc) {
+  if(c) {
     tcpserver_info_connection(x, y);
-	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
-	  
+	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
     // disconnected
@@ -624,7 +622,7 @@ static void tcpserver_free(t_tcpserver *x)
       sys_rmpollfn(x->x_connectsocket);
       sys_closesocket(x->x_connectsocket);
     }
-	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void tcpserver_setup(void)

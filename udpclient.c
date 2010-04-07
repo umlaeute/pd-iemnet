@@ -56,12 +56,12 @@ typedef struct _udpclient
   /* multithread stuff */
   pthread_t       x_threadid; /* id of child thread */
   pthread_attr_t  x_threadattr; /* attributes of child thread */
+
+	t_iemnet_floatlist         *x_floatlist;
 } t_udpclient;
 
 
-static void udpclient_receive_callback(void *x, 
-				       t_iemnet_chunk*,
-				       int argc, t_atom*argv);
+static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 
 
@@ -185,12 +185,13 @@ static void udpclient_send(t_udpclient *x, t_symbol *s, int argc, t_atom *argv)
   outlet_anything( x->x_statusout, gensym("sent"), 1, &output_atom);
 }
 
-static void udpclient_receive_callback(void*y, t_iemnet_chunk*c, int argc, t_atom*argv) {
+static void udpclient_receive_callback(void*y, t_iemnet_chunk*c) {
   t_udpclient *x=(t_udpclient*)y;
 
-  if(argc) {
+  if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    outlet_list(x->x_msgout, gensym("list"), argc, argv);
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
+    outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
     // disconnected
     DEBUG("disconnected");
@@ -219,6 +220,8 @@ static void *udpclient_new(void)
 
   x->x_clock = clock_new(x, (t_method)udpclient_tick);
 
+  x->x_floatlist=iemnet__floatlist_create(1024);
+
   /* prepare child thread */
   if(pthread_attr_init(&x->x_threadattr) < 0)
     verbose(1, "[%s] warning: could not prepare child thread", objName);
@@ -232,7 +235,8 @@ static void *udpclient_new(void)
 static void udpclient_free(t_udpclient *x)
 {
   udpclient_disconnect(x);
-  clock_free(x->x_clock);
+  if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
+	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void udpclient_setup(void)
