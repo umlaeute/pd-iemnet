@@ -47,14 +47,28 @@ struct _iemnet_sender {
 /* the workhorse of the family */
 
 static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
+  struct sockaddr_in  to;
+  socklen_t           tolen = sizeof(to);
+
   t_iemnet_chunk*c=queue_pop_block(q);
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
+    
     int result=-1;
+
     //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
-    DEBUG("sending %d bytes", size);
-    result = send(sockfd, data, size, 0);
+    if(c->port) {
+      DEBUG("sending %d bytes to %x:%d", size, c->addr, c->port);
+
+      to.sin_addr.s_addr=htonl(c->addr);
+      to.sin_port       =htons(c->port);
+
+      result = sendto(sockfd, data, size, 0, (struct sockaddr *)&to, tolen);
+    } else {
+      DEBUG("sending %d bytes", size);
+      result = send(sockfd, data, size, 0);
+    }
     if(result<0) {
       // broken pipe
       return 0;
@@ -103,6 +117,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   if(!s->keepsending)return;
 
   DEBUG("destroy sender %x", s);
+
   s->keepsending=0;
   queue_finish(s->queue);
   DEBUG("queue finished");
@@ -119,6 +134,8 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   s=NULL;
   DEBUG("destroyed sender");
 }
+
+
 t_iemnet_sender*iemnet__sender_create(int sock) {
   t_iemnet_sender*result=(t_iemnet_sender*)getbytes(sizeof(t_iemnet_sender));
   int res=0;
