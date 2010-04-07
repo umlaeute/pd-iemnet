@@ -55,6 +55,8 @@ typedef struct _tcpreceive
   int             x_connectsocket;
   int             x_port;
 
+  int             x_serialize;
+
   int             x_nconnections;
   t_tcpconnection x_connection[MAX_CONNECTIONS];
 
@@ -84,7 +86,7 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
     if(c) {
       // TODO?: outlet info about connection
       x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
-      iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
+      iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
     } else {
       // disconnected
       tcpreceive_disconnect(x, index);
@@ -287,6 +289,10 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
 
+static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit) {
+  x->x_serialize=doit;
+}
+
 
 static void tcpreceive_free(t_tcpreceive *x)
 { /* is this ever called? */
@@ -310,6 +316,8 @@ static void *tcpreceive_new(t_floatarg fportno)
   x->x_addrout = outlet_new(&x->x_obj, gensym("list")); /* legacy */
   x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* legacy */
   x->x_statout = outlet_new(&x->x_obj, 0);/* outlet for everything else */
+
+  x->x_serialize=1;
 
   x->x_connectsocket=-1;
   x->x_port=-1;
@@ -341,6 +349,9 @@ IEMNET_EXTERN void tcpreceive_setup(void)
 			       A_DEFFLOAT, 0);
   
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port, gensym("port"), A_DEFFLOAT, 0);
+
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize, gensym("serialize"), A_FLOAT, 0);
+
 }
 
 IEMNET_INITIALIZER(tcpreceive_setup);

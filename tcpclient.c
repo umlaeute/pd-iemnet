@@ -46,6 +46,7 @@ typedef struct _tcpclient
   t_iemnet_sender  *x_sender;
   t_iemnet_receiver*x_receiver;
 
+  int              x_serialize;
 
   int             x_fd; // the socket
   char           *x_hostname; // address we want to connect to as text
@@ -221,12 +222,17 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c) {
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
 	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
-    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
   } else {
     // disconnected
     tcpclient_disconnect(x);
   }
 }
+
+static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit) {
+  x->x_serialize=doit;
+}
+
 
 /* constructor/destructor */
 
@@ -239,6 +245,8 @@ static void *tcpclient_new(void)
   x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
   x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
   x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
+
+  x->x_serialize=1;
 
   x->x_fd = -1;
 
@@ -277,6 +285,9 @@ IEMNET_EXTERN void tcpclient_setup(void)
   class_addmethod(tcpclient_class, (t_method)tcpclient_connect, gensym("connect")
                   , A_SYMBOL, A_FLOAT, 0);
   class_addmethod(tcpclient_class, (t_method)tcpclient_disconnect, gensym("disconnect"), 0);
+
+  class_addmethod(tcpclient_class, (t_method)tcpclient_serialize, gensym("serialize"), A_FLOAT, 0);
+
   class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"), A_GIMME, 0);
   class_addlist(tcpclient_class, (t_method)tcpclient_send);
 

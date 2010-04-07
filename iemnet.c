@@ -45,11 +45,16 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int socke
 }
 
 
-void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv) {
+void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv, int stream) {
   if(NULL==outlet)return;
-  while(argc-->0) {
-    outlet_list(outlet, gensym("list"), 1, argv);
-    argv++;
+
+  if(stream) {
+    while(argc-->0) {
+      outlet_list(outlet, gensym("list"), 1, argv);
+      argv++;
+    }
+  } else {
+    outlet_list(outlet, gensym("list"), argc, argv);
   }
 }
 

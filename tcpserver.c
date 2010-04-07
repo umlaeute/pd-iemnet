@@ -56,6 +56,8 @@ typedef struct _tcpserver
   t_outlet                    *x_addrout; // legacy
   t_outlet                    *x_statout; 
 
+  int                          x_serialize;
+
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
   t_int                       x_nconnections;
 
@@ -468,7 +470,7 @@ static void tcpserver_receive_callback(void *y0,
   if(c) {
     tcpserver_info_connection(x, y);
 	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
-    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv);
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
   } else {
     // disconnected
     int sockfd=y->sr_fd;
@@ -572,6 +574,11 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
 
+static void tcpserver_serialize(t_tcpserver *x, t_floatarg doit) {
+  x->x_serialize=doit;
+}
+
+
 static void *tcpserver_new(t_floatarg fportno)
 {
   t_tcpserver         *x;
@@ -585,6 +592,7 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
   x->x_statout = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
 
+  x->x_serialize=1;
 
   x->x_connectsocket = -1;
   x->x_port = -1;
@@ -643,6 +651,9 @@ IEMNET_EXTERN void tcpserver_setup(void)
   class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget, gensym("target"), A_DEFFLOAT, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_targetsocket, gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist  (tcpserver_class, (t_method)tcpserver_defaultsend);
+
+
+  class_addmethod(tcpserver_class, (t_method)tcpserver_serialize, gensym("serialize"), A_FLOAT, 0);
 
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"), A_DEFFLOAT, 0);

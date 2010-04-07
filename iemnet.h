@@ -195,10 +195,11 @@ void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int num
  * \param outlet outlet to sent the data to
  * \param argc size of the list
  * \param argv data
+ * \param stream if true, serialize the data; if false output as "packets"
  *
- * \note with stream based protocols (TCP/IP) the length of the received lists has no meaning, so the data has to be serialized anyhow
+ * \note with stream based protocols (TCP/IP) the length of the received lists has no meaning, so the data has to be serialized anyhow; however when creating proxies, sending serialized data is often slow, so there is an option to disable serialization
  */
-void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv);
+void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv, int stream);
 
 /**
  * register an objectname and printout a banner
