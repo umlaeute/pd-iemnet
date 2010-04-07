@@ -28,6 +28,8 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
+#ifndef INCLUDE__IEMNET_DATA_H_
+#define INCLUDE__IEMNET_DATA_H_
 
 /**
  * a resizable list of float-only atoms
@@ -52,6 +54,66 @@ t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size);
  * \param  pointer to a float-atom list
  */
 void iemnet__floatlist_destroy(t_iemnet_floatlist*cl);
+
+
+/**
+ * chunk of data as sent to a socket or received from it
+ * for received data, this might additionally hold the originator (if available)
+ */
+typedef struct _iemnet_chunk {
+  unsigned char* data;
+  size_t size;
+
+  long addr;
+  unsigned short port;
+} t_iemnet_chunk;
+
+/**
+ * free a "chunk" (de-allocate memory,...)
+ */
+void iemnet__chunk_destroy(t_iemnet_chunk*);
+
+/**
+ * initialize a "chunk" (allocate memory,...) of fixed size
+ * receiver address will be set to 0
+ *
+ * \param size of the chunk (data will be zeroed out)
+ * \return a new chunk of given size
+ */
+t_iemnet_chunk*iemnet__chunk_create_empty(int);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data
+ * receiver address will be set to 0
+ *
+ * \param size of data
+ * \param data of size
+ * \return a new chunk that holds a copy of data
+ */
+t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data from specified address
+ * \param size of data
+ * \param data of size
+ * \param addr originating address (can be NULL)
+ * \return a new chunk that holds a copy of data
+ */
+t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data, struct sockaddr_in*addr);
+/**
+ * initialize a "chunk" (allocate memory,...) with given data
+ * receiver address will be set to 0
+ *
+ * \param argc size of list
+ * \param argv list of atoms containing only "bytes" (t_floats [0..255])
+ * \return a new chunk that holds a copy of the list data
+ */
+t_iemnet_chunk*iemnet__chunk_create_list(int argc, t_atom*argv);
+/**
+ * initialize a "chunk" (allocate memory,...) from another chunk
+ *
+ * \param src the source chunk
+ * \return a new chunk that holds a copy of the source data
+ */
+t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
 
 
 /**
@@ -136,3 +198,6 @@ void queue_destroy(t_iemnet_queue* q);
  * \return the newly created queue; if something went wrong NULL is returned
  */
 t_iemnet_queue* queue_create(void);
+
+
+#endif /* INCLUDE__IEMNET_DATA_H_ */
