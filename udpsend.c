@@ -109,7 +109,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
   } else {
-    error("[%s]: not connected");
+    error("[%s]: not connected", objName);
   }
 }
 
