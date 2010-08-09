@@ -64,6 +64,10 @@ t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size) {
 
 t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int size) {
   t_atom*tmp;
+  if (NULL==cl) {
+    return iemnet__floatlist_create(size);
+  }
+
   if(size<=cl->size) {
     cl->argc=size;
     return cl;
