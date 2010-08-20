@@ -22,6 +22,8 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+//#define DEBUG
+
 static const char objName[] = "udpsend";
 
 #include "iemnet.h"
@@ -39,7 +41,6 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 			    t_floatarg fportno)
 {
   struct sockaddr_in  server;
-  struct hostent      *hp;
   int                 sockfd;
   int                 portno = fportno;
   int                 broadcast = 1;/* nonzero is true */
@@ -70,13 +71,33 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
-  hp = gethostbyname(hostname->s_name);
-  if (hp == 0)
-    {
+
+  do {
+#if 0
+    struct addrinfo * addr=NULL;
+    if(getaddrinfo(hostname->s_name, NULL, NULL, &addr)) {
       error("[%s] bad host '%s'?", objName, hostname->s_name);
       return;
+    } else {
+      struct addrinfo * res;
+      for (res = addr; res != NULL; res = res->ai_next) {
+	struct sockaddr_in *sa = (struct sockaddr_in *) res->ai_addr;
+	int len = res->ai_addrlen;
+	//      memcpy((char *)&server.sin_addr, (char *)res->ai_addr, hp->h_length);
+	// LATER check how to do that...
+      }
     }
-  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+    freeaddrinfo(addr);
+#else
+    struct hostent      *hp = gethostbyname(hostname->s_name);
+    if (hp == 0)
+      {
+	error("[%s] bad host '%s'?", objName, hostname->s_name);
+	return;
+      }
+    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+#endif
+  } while(0);
 
   /* assign client port number */
   server.sin_port = htons((u_short)portno);
@@ -97,8 +118,8 @@ static void udpsend_disconnect(t_udpsend *x)
 {
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender);
-    outlet_float(x->x_obj.ob_outlet, 0);    
     x->x_sender=NULL;
+    outlet_float(x->x_obj.ob_outlet, 0);
   }
 }
 
