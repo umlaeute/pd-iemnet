@@ -235,9 +235,13 @@ int iemnet__register(const char*name);
  * \brief debug output
  * \note this will only take effect if DEBUG is not undefined
  */
+#ifdef IEMNET_HAVE_DEBUG
+# undef IEMNET_HAVE_DEBUG
+#endif
 #ifdef DEBUG
 # undef DEBUG
 # define DEBUG startpost("[%s:%d]", __FUNCTION__, __LINE__); post
+# define IEMNET_HAVE_DEBUG 1
 #else
 static void debug_dummy(const char *format, ...)  {;}
 # define DEBUG debug_dummy
