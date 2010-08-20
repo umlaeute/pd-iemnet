@@ -114,11 +114,10 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
    * s->keepsending is only set to "0" in here, 
    * so if it is false, we know that we are already being called
    */
+  DEBUG("destroy sender %x with queue %x (%d)", s, s->queue, s->keepsending);
   if(!s->keepsending)return;
-
-  DEBUG("destroy sender %x", s);
-
   s->keepsending=0;
+
   queue_finish(s->queue);
   DEBUG("queue finished");
   s->sockfd = -1;
@@ -130,6 +129,8 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   pthread_join(s->thread, NULL);
   DEBUG("thread joined");
   queue_destroy(s->queue);
+
+  memset(s, 0, sizeof(t_iemnet_sender));
   freebytes(s, sizeof(t_iemnet_sender));
   s=NULL;
   DEBUG("destroyed sender");
@@ -149,7 +150,7 @@ t_iemnet_sender*iemnet__sender_create(int sock) {
   result->sockfd = sock;
   result->keepsending =1;
   result->isrunning=1;
-
+  DEBUG("create_sender queue=%x", result->queue);
   res=pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
 
   if(0==res) {
