@@ -47,6 +47,7 @@ typedef struct _udpreceive
 static void udpreceive_read_callback(void*y, t_iemnet_chunk*c) {
   t_udpreceive*x=(t_udpreceive*)y;
   if(c) {
+    iemnet__addrout(x->x_statout, x->x_addrout, c->addr, c->port);
     x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
     outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc, x->x_floatlist->argv);
   } else {
