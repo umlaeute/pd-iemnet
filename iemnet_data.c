@@ -322,13 +322,14 @@ void queue_finish(t_iemnet_queue* q) {
   q->done=1;
   DEBUG("queue signaling: %x", q);
   pthread_cond_signal(&q->cond);
-  DEBUG("queue signaled", q);
+  DEBUG("queue signaled: %x", q);
 }
 
 void queue_destroy(t_iemnet_queue* q) {
   t_iemnet_chunk*c=NULL;
   if(NULL==q) 
     return;
+  DEBUG("queue destroy %x", q);
 
   queue_finish(q);
 
@@ -345,6 +346,7 @@ void queue_destroy(t_iemnet_queue* q) {
 
   freebytes(q, sizeof(t_iemnet_queue));
   q=NULL;
+  DEBUG("queue destroyed %x", q);
 }
 
 t_iemnet_queue* queue_create(void) {
@@ -352,6 +354,7 @@ t_iemnet_queue* queue_create(void) {
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
   t_iemnet_queue*q=(t_iemnet_queue*)getbytes(sizeof(t_iemnet_queue));
+  DEBUG("queue create %x", q);
   if(NULL==q)return NULL;
 
   q->head = NULL;
@@ -362,6 +365,6 @@ t_iemnet_queue* queue_create(void) {
 
   q->done = 0;
   q->size = 0;
-
+  DEBUG("queue created %x", q);
   return q;
 }
