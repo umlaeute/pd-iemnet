@@ -59,12 +59,12 @@ typedef struct _udpserver
 
   t_int                       x_connectsocket;    /* socket waiting for new connections */
   t_int                       x_port;
+  unsigned char               x_accept; /* whether we accept new connections or not */
 
   int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
 
   t_iemnet_receiver          *x_receiver;
-
-	t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist         *x_floatlist;
 } t_udpserver;
 
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,  unsigned long host, unsigned short port)
@@ -109,7 +109,9 @@ static void udpserver_sender_free(t_udpserver_sender *x)
   DEBUG("freeed %x", x);
 }
 
-
+static t_udpserver_sender* udpserver_sender_copy(t_udpserver_sender*x) {
+  return udpserver_sender_new(x->sr_owner,x->sr_host, x->sr_port);
+}
 
 static int udpserver_socket2index(t_udpserver*x, int sockfd)
 {
@@ -167,9 +169,15 @@ static int udpserver__find_sender(t_udpserver*x,  unsigned long host, unsigned s
  * check whether the sender is already registered
  * if not, add it to the list of registered senders
  */
-static void udpserver_sender_add(t_udpserver*x, unsigned long host, unsigned short port )
+static t_udpserver_sender* udpserver_sender_add(t_udpserver*x, 
+						unsigned long host, unsigned short port )
 {
-  int id=udpserver__find_sender(x, host, port);
+
+  int id=-1;
+
+  if(!x->x_accept)return NULL;
+
+  id=udpserver__find_sender(x, host, port);
   DEBUG("%X:%d -> %d", host, port, id);
   if(id<0) {
     id=x->x_nconnections;
@@ -180,7 +188,31 @@ static void udpserver_sender_add(t_udpserver*x, unsigned long host, unsigned sho
       x->x_nconnections++;
     } else {
       // oops, no more senders!
+      id=-1;
     }
+  }
+
+  if(id>=0) {
+    return x->x_sr[id];
+  }
+
+  return NULL;
+}
+
+static void udpserver_sender_remove(t_udpserver*x, int id) {
+  if(id>=0 && id<x->x_nconnections && x->x_sr[id]) {
+    int i;
+
+    t_udpserver_sender* sdr=x->x_sr[id];
+    udpserver_sender_free(sdr);
+
+    // close the gap by shifting the remaining connections to the left
+    for(i=id; i<x->x_nconnections; i++) {
+      x->x_sr[id]=x->x_sr[id+1];
+    }
+    x->x_sr[id]=NULL;
+
+    x->x_nconnections--;
   }
 }
 
@@ -203,10 +235,11 @@ static void udpserver_info_client(t_udpserver *x, int client)
     int outsize=iemnet__sender_getsize  (x->x_sr[client]->sr_sender  );
 
     snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d", 
-             (address & 0xFF000000)>>24,
-             (address & 0x0FF0000)>>16,
-             (address & 0x0FF00)>>8,
-             (address & 0x0FF));
+             (unsigned char)((address & 0xFF000000)>>24),
+             (unsigned char)((address & 0x0FF0000)>>16),
+             (unsigned char)((address & 0x0FF00)>>8),
+	     (unsigned char)((address & 0x0FF))
+	     );
     hostname[MAXPDSTRING-1]=0;
 
     SETFLOAT (output_atom+0, client+1);
@@ -453,20 +486,19 @@ static void udpserver_disconnect(t_udpserver *x, int client)
 {
   int k;
   DEBUG("disconnect %x %d", x, client);
-  udpserver_info_connection(x, x->x_sr[client]);
+  t_udpserver_sender*sdr;
+  int conns;
 
-  udpserver_sender_free(x->x_sr[client]);
-  x->x_sr[client]=NULL;
+  if(client<0 || client >= x->x_nconnections)return;
 
-  /* rearrange list now: move entries to close the gap */
-  for(k = client; k < x->x_nconnections; k++)
-    {
-      x->x_sr[k] = x->x_sr[k + 1];
-    }
-  x->x_sr[k + 1]=NULL;
-  x->x_nconnections--;
+  sdr=udpserver_sender_copy(x->x_sr[client]);
 
-  outlet_float(x->x_connectout, x->x_nconnections);
+  udpserver_sender_remove(x, client);
+  conns=x->x_nconnections;
+
+
+  udpserver_info_connection(x, sdr);
+  outlet_float(x->x_connectout, conns);
 }
 
 
@@ -499,30 +531,50 @@ static void udpserver_disconnect_all(t_udpserver *x)
   }
 }
 
+/* whether we should accept new connections */
+static void udpserver_accept(t_udpserver *x, t_float f) {
+  x->x_accept=(unsigned char)f;
+}
+
+
 /* ---------------- main udpserver (receive) stuff --------------------- */
 static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
   t_udpserver*x=(t_udpserver*)y;
   if(NULL==y)return;
 
   if(c) {
-    udpserver_info_connection(x, y);
-    udpserver_sender_add(x, c->addr, c->port);
-    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
-    outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc, x->x_floatlist->argv);
+    int conns = x->x_nconnections;
+    t_udpserver_sender*sdr=udpserver_sender_add(x, c->addr, c->port);
+    if(sdr) {
+      udpserver_info_connection(x, sdr);
+      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
+
+      /* here we might have a reentrancy problem */
+      if(conns!=x->x_nconnections) {
+	outlet_float(x->x_connectout, x->x_nconnections);
+      }
+      outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc, x->x_floatlist->argv);
+    }
   } else {
     // disconnection never happens with a connectionless protocol like UDP
     pd_error(x, "[%s] received disconnection event", objName);
   }
 }
 
+
+// this get's never called
 static void udpserver_connectpoll(t_udpserver *x)
 {
   struct sockaddr_in  incomer_address;
   unsigned int        sockaddrl = sizeof( struct sockaddr );
-  int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
+  int                 fd = -1;
   int                 i;
 
-  post("connectpoll");
+  // TODO: provide a way to not accept connection
+  // idea: add a message "accept $1" to turn off/on acceptance of new connections
+  fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
+
+  bug("connectpoll");
 
   if (fd < 0) error("[%s] accept failed", objName);
   else
@@ -631,6 +683,8 @@ static void *udpserver_new(t_floatarg fportno)
 
   udpserver_port(x, fportno);
 
+  x->x_accept=1;
+
   return (x);
 }
 
@@ -664,6 +718,8 @@ IEMNET_EXTERN void udpserver_setup(void)
   class_addmethod(udpserver_class, (t_method)udpserver_disconnect_client, gensym("disconnectclient"), A_DEFFLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_disconnect_socket, gensym("disconnectsocket"), A_DEFFLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_disconnect_all, gensym("disconnect"), 0);
+
+  class_addmethod(udpserver_class, (t_method)udpserver_accept, gensym("accept"), A_FLOAT, 0);
 
   class_addmethod(udpserver_class, (t_method)udpserver_send_socket, gensym("send"), A_GIMME, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_send_client, gensym("client"), A_GIMME, 0);
