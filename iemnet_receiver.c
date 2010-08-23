@@ -85,20 +85,23 @@ static void*iemnet__receiver_readthread(void*arg) {
     iemnet_signalNewData(receiver);
 
   }
+  // oha
+  DEBUG("readthread loop termination: %d", result);
   if(result>=0)iemnet_signalNewData(receiver);
 
   receiver->running=0;
 
   //fprintf(stderr, "read thread terminated\n");
-  pthread_exit(NULL);
   return NULL;
 }
 
 /* callback from Pd's main thread to fetch queued data */
 static void iemnet__receiver_tick(t_iemnet_receiver *x)
 {
+  int running=0, keepreceiving=0;
   // received data
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
+
   while(NULL!=c) {
     (x->callback)(x->userdata, c);
     iemnet__chunk_destroy(c);
@@ -107,14 +110,16 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
 	DEBUG("tick cleanup");
   pthread_mutex_lock(&x->newdatamtx);
   x->newdataflag=0;
+  running = x->running;
+  keepreceiving=x->keepreceiving;
   pthread_mutex_unlock(&x->newdatamtx);
 	
-	DEBUG("tick running %d", x->running);
-  if(!x->running) {
+	DEBUG("tick running %d (%d)", running, keepreceiving);
+  if(!running) {
     // read terminated
     
     /* keepreceiving is set, if receiver is not yet in shutdown mode */
-    if(x->keepreceiving) 
+    if(keepreceiving) 
       x->callback(x->userdata, NULL);
   }
 	DEBUG("tick DONE");
@@ -185,7 +190,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   DEBUG("[%d] closed socket %d", inst, sockfd);
 
   pthread_join(rec->thread, NULL);
-
 
   // empty the queue
   DEBUG("[%d] tick %d", inst, rec->running);
