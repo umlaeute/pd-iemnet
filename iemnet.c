@@ -5,7 +5,7 @@
 //#define DEBUG
 
 #include "iemnet.h"
-
+#include <stdlib.h>
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, 
 		     long address, unsigned short port) {
 
@@ -76,7 +76,7 @@ static int iemnet__nametaken(const char*namestring) {
   }
 
   // new name!
-  curname=(t_iemnet_names*)getbytes(sizeof(t_iemnet_names));
+  curname=(t_iemnet_names*)malloc(sizeof(t_iemnet_names));
   curname->name=name;
   curname->next=0;
 

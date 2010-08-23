@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #include <pthread.h>
@@ -89,6 +90,7 @@ static void*iemnet__receiver_readthread(void*arg) {
   receiver->running=0;
 
   //fprintf(stderr, "read thread terminated\n");
+  pthread_exit(NULL);
   return NULL;
 }
 
@@ -129,7 +131,7 @@ int iemnet__receiver_getsize(t_iemnet_receiver*x) {
 
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-  t_iemnet_receiver*rec=(t_iemnet_receiver*)getbytes(sizeof(t_iemnet_receiver));
+  t_iemnet_receiver*rec=(t_iemnet_receiver*)malloc(sizeof(t_iemnet_receiver));
   DEBUG("create new receiver for 0x%X:%d", userdata, sock);
   //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
   if(rec) {
@@ -203,7 +205,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   rec->callback=NULL;
 	rec->queue=NULL;
 
-  freebytes(rec, sizeof(t_iemnet_receiver));
+  free(rec);
   rec=NULL;
   DEBUG("[%d] destroyed receiver", inst);
 }

@@ -27,6 +27,7 @@
 //#define DEBUG
 #include "iemnet.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
@@ -69,7 +70,7 @@ typedef struct _udpserver
 
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,  unsigned long host, unsigned short port)
 {
-  t_udpserver_sender *x = (t_udpserver_sender *)getbytes(sizeof(*x));
+  t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(t_udpserver_sender));
   if(NULL==x) {
     error("%s_sender: unable to allocate %d bytes", objName, sizeof(*x));
     return NULL;
@@ -100,7 +101,7 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
       x->sr_fd=-1;
 
-      freebytes(x, sizeof(*x));
+      free(x);
 
       if(sender)  iemnet__sender_destroy(sender);
 
@@ -551,7 +552,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
 
       /* here we might have a reentrancy problem */
       if(conns!=x->x_nconnections) {
-	outlet_float(x->x_connectout, x->x_nconnections);
+        outlet_float(x->x_connectout, x->x_nconnections);
       }
       outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc, x->x_floatlist->argv);
     }
@@ -612,7 +613,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
 
   /* cleanup any open ports */
   if(sockfd>=0) {
-    sys_rmpollfn(sockfd);
+    //sys_rmpollfn(sockfd);
     sys_closesocket(sockfd);
     x->x_connectsocket=-1;
     x->x_port=-1;
@@ -702,7 +703,7 @@ static void udpserver_free(t_udpserver *x)
     }
   if (x->x_connectsocket >= 0)
     {
-      sys_rmpollfn(x->x_connectsocket);
+      //sys_rmpollfn(x->x_connectsocket);
       sys_closesocket(x->x_connectsocket);
     }
 	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;

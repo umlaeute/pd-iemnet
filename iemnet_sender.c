@@ -15,6 +15,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #include <sys/types.h>
@@ -159,7 +160,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   pthread_mutex_destroy (&s->mtx);
 
   memset(s, 0, sizeof(t_iemnet_sender));
-  freebytes(s, sizeof(t_iemnet_sender));
+  free(s);
   s=NULL;
   DEBUG("destroyed sender");
 }
@@ -167,7 +168,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
 
 t_iemnet_sender*iemnet__sender_create(int sock) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-  t_iemnet_sender*result=(t_iemnet_sender*)getbytes(sizeof(t_iemnet_sender));
+  t_iemnet_sender*result=(t_iemnet_sender*)malloc(sizeof(t_iemnet_sender));
   int res=0;
   DEBUG("create sender %x", result);
   if(NULL==result){

@@ -11,6 +11,8 @@
 #include "iemnet.h"
 #include "iemnet_data.h"
 
+#include <stdlib.h>
+
 #include <string.h>
 #include <stdio.h>
 
@@ -36,19 +38,19 @@ t_iemnet_floatlist*iemnet__floatlist_init(t_iemnet_floatlist*cl) {
 
 void iemnet__floatlist_destroy(t_iemnet_floatlist*cl) {
   if(NULL==cl)return;
-  if(cl->argv) freebytes(cl->argv, sizeof(t_atom)*cl->size);
+  if(cl->argv) free(cl->argv);
   cl->argv=NULL;
   cl->argc=0;
   cl->size=0;
 
-  freebytes(cl, sizeof(t_iemnet_floatlist));
+  free(cl);
 }
 
 t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size) {
-  t_iemnet_floatlist*result=(t_iemnet_floatlist*)getbytes(sizeof(t_iemnet_floatlist));
+  t_iemnet_floatlist*result=(t_iemnet_floatlist*)malloc(sizeof(t_iemnet_floatlist));
   if(NULL==result)return NULL;
 
-  result->argv = (t_atom*)getbytes(size*sizeof(t_atom));
+  result->argv = (t_atom*)malloc(size*sizeof(t_atom));
   if(NULL==result->argv) {
     iemnet__floatlist_destroy(result);
     return NULL;
@@ -73,10 +75,10 @@ t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int 
     return cl;
   }
 
-  tmp=(t_atom*)getbytes(size*sizeof(t_atom));
+  tmp=(t_atom*)malloc(size*sizeof(t_atom));
   if(NULL==tmp) return NULL;
 
-  freebytes(cl->argv, sizeof(t_atom)*cl->size);
+  free(cl->argv);
 
   cl->argv=tmp;
   cl->argc=cl->size=size;
@@ -89,19 +91,19 @@ t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int 
 void iemnet__chunk_destroy(t_iemnet_chunk*c) {
   if(NULL==c)return;
 
-  if(c->data)freebytes(c->data, c->size*sizeof(unsigned char));
+  if(c->data)free(c->data);
 
   c->data=NULL;
   c->size=0;
 
-  freebytes(c, sizeof(t_iemnet_chunk));
+  free(c);
 }
 
 t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
-  t_iemnet_chunk*result=(t_iemnet_chunk*)getbytes(sizeof(t_iemnet_chunk));
+  t_iemnet_chunk*result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
   if(result) {
     result->size=size;
-    result->data=(unsigned char*)getbytes(sizeof(unsigned char)*size); 
+    result->data=(unsigned char*)malloc(sizeof(unsigned char)*size); 
 
     if(NULL == result->data) {
       result->size=0;
@@ -220,7 +222,7 @@ int queue_push(
 
   if(NULL == data) return size;
 
-  n=(t_node*)getbytes(sizeof(t_node));
+  n=(t_node*)malloc(sizeof(t_node));
 
   n->next = 0;
   n->data = data;
@@ -258,7 +260,6 @@ t_iemnet_chunk* queue_pop_block(
   if(NULL == _this)return NULL;
 
   pthread_mutex_lock(&_this->mtx);
-#if 1
 
   /* if the queue is empty, wait */
   if(NULL == _this->head) {
@@ -283,30 +284,10 @@ t_iemnet_chunk* queue_pop_block(
   }
 
   pthread_mutex_unlock(&_this->mtx);
-#else
-  /* wait until there is something in the queue or the "done" flag is set */
-  while (! (head = _this->head)) {
-    if(_this->done) {
-      pthread_mutex_unlock(&_this->mtx);
-      return NULL;
-    } else {
-      pthread_cond_wait(&_this->cond, &_this->mtx);
-    }
-  }
-
-  if (! (_this->head = head->next)) {
-    _this->tail = 0;
-  }
-  if(head && head->data) {
-    _this->size-=head->data->size;
-  }
-
-  pthread_mutex_unlock(&_this->mtx);
-#endif
 
   if(head) {
     data=head->data;
-    freebytes(head, sizeof(t_node));
+    free(head);
     head=NULL;
   }
   return data;
@@ -340,7 +321,7 @@ t_iemnet_chunk* queue_pop_noblock(
 
   if(head) {
     data=head->data;
-    freebytes(head, sizeof(t_node));
+    free(head);
     head=NULL;
   }
   return data;
@@ -391,7 +372,7 @@ void queue_destroy(t_iemnet_queue* q) {
   pthread_mutex_destroy(&q->mtx);
   pthread_cond_destroy(&q->cond);
 
-  freebytes(q, sizeof(t_iemnet_queue));
+  free(q);
   q=NULL;
   DEBUG("queue destroyed %x", q);
 }
@@ -400,7 +381,7 @@ t_iemnet_queue* queue_create(void) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-  t_iemnet_queue*q=(t_iemnet_queue*)getbytes(sizeof(t_iemnet_queue));
+  t_iemnet_queue*q=(t_iemnet_queue*)malloc(sizeof(t_iemnet_queue));
   DEBUG("queue create %x", q);
   if(NULL==q)return NULL;
 
