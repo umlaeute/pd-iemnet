@@ -167,10 +167,10 @@ static void tcpserver_info_client(t_tcpserver *x, int client)
     int outsize=iemnet__sender_getsize  (x->x_sr[client]->sr_sender  );
 
     snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d", 
-             (address & 0xFF000000)>>24,
-             (address & 0x0FF0000)>>16,
-             (address & 0x0FF00)>>8,
-             (address & 0x0FF));
+             (unsigned char)((address & 0xFF000000)>>24),
+             (unsigned char)((address & 0x0FF0000)>>16),
+             (unsigned char)((address & 0x0FF00)>>8),
+             (unsigned char)((address & 0x0FF)));
     hostname[MAXPDSTRING-1]=0;
 
     SETFLOAT (output_atom+0, client+1);
