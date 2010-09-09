@@ -22,12 +22,12 @@
 
 /* ---------------------------------------------------------------------------- */
 
+//#define DEBUG
+
 #include "iemnet.h"
 #include <string.h>
 
 #include <pthread.h>
-
-
 
 static t_class *udpclient_class;
 static const char objName[] = "udpclient";
@@ -142,8 +142,10 @@ static void udpclient_disconnect(t_udpclient *x)
 {
   if (x->x_fd >= 0)
     {
-      if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
+
+      DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
       if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver); x->x_receiver=NULL;
+      if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
 
       sys_closesocket(x->x_fd);
       x->x_fd = -1;
@@ -195,7 +197,9 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c) {
   } else {
     // disconnected
     DEBUG("disconnected");
-    udpclient_disconnect(x);
+    if(x->x_fd >= 0) {
+      udpclient_disconnect(x);
+    }
   }
 }
 
