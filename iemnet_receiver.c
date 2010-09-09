@@ -76,7 +76,7 @@ static void*iemnet__receiver_readthread(void*arg) {
     //result = recv(sockfd, data, size, 0);
     result = recvfrom(sockfd, data, size, 0, (struct sockaddr *)&from, &fromlen);
     //fprintf(stderr, "read %d bytes...\n", result);
-    
+    DEBUG("recfrom %d bytes", result);
     if(result<=0)break;
     c= iemnet__chunk_create_dataaddr(result, data, &from);
     
