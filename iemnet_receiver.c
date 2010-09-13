@@ -176,7 +176,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   if(!rec->keepreceiving)return;
   rec->keepreceiving=0;
 
-
   sockfd=rec->sockfd;
   rec->sockfd=-1;
 

@@ -76,7 +76,6 @@ static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
     x->x_port=-1;
   }
 
-
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd<0) {
     error("[%s]: unable to create socket", objName);
