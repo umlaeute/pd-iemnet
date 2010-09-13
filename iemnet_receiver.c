@@ -169,7 +169,6 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
 void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   static int instance=0;
   int inst=instance++;
-  return;
 
   int sockfd;
   DEBUG("[%d] destroy receiver %x", inst, rec);
