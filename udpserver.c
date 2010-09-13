@@ -173,7 +173,6 @@ static int udpserver__find_sender(t_udpserver*x,  unsigned long host, unsigned s
 static t_udpserver_sender* udpserver_sender_add(t_udpserver*x, 
 						unsigned long host, unsigned short port )
 {
-
   int id=-1;
 
   if(!x->x_accept)return NULL;
@@ -181,6 +180,18 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
   id=udpserver__find_sender(x, host, port);
   DEBUG("%X:%d -> %d", host, port, id);
   if(id<0) {
+#if 1
+    /* since udp is a connection-less protocol we have no way of knowing the currently connected clients
+     * the following 3 lines assume, that there is only one client connected (the last we got data from 
+     */
+    id=0;
+    udpserver_sender_free(x->x_sr[id]);
+    x->x_sr[id]=udpserver_sender_new(x, host, port);
+#else
+    /* this is a more optimistic approach as above:
+     * every client that we received data from is added to the list of receivers
+     * the idea is to remove the sender, if it's known to not receive any data
+     */
     id=x->x_nconnections;
     /* an unknown address! add it */
     if(id<MAX_CONNECT) {
@@ -191,8 +202,9 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
       // oops, no more senders!
       id=-1;
     }
+#endif
   }
-
+  DEBUG("sender_add: %d", id);
   if(id>=0) {
     return x->x_sr[id];
   }
@@ -545,7 +557,9 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
 
   if(c) {
     int conns = x->x_nconnections;
+    DEBUG("add new sender from %d", c->port);
     t_udpserver_sender*sdr=udpserver_sender_add(x, c->addr, c->port);
+    DEBUG("added new sender from %d", c->port);
     if(sdr) {
       udpserver_info_connection(x, sdr);
       x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
