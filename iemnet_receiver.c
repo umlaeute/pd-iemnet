@@ -37,7 +37,7 @@ struct _iemnet_receiver {
 /* notifies Pd that there is new data to fetch */
 static void iemnet_signalNewData(t_iemnet_receiver*x) {
   int already=0;
-  int locked=0;
+  int trylock=0;
   pthread_mutex_lock(&x->newdata_mtx);
    already=x->newdataflag;
    x->newdataflag=1;
@@ -51,16 +51,22 @@ static void iemnet_signalNewData(t_iemnet_receiver*x) {
     return;
   }
 
-  /* 
+  /*
    * try to lock Pd's main mutex
    *  this is bound to deadlock if this function is called from within Pd's mainthread
    *  (which happens when we destroy the receiver and signalNewData is called on cleanup)
    *
    * - shan't we check whether sys_trylock() returns EBUSY ?
    */
-  locked=(0==sys_trylock());
-  if(x->clock)clock_delay(x->clock, 0);
-  if(locked)sys_unlock();
+  trylock=sys_trylock();
+  switch(trylock) {
+  case 0:
+  case EBUSY:
+    if(x->clock)clock_delay(x->clock, 0);
+    if(0==trylock)sys_unlock();
+  default:
+    break;
+  }
 }
 
 
@@ -79,6 +85,8 @@ static void*iemnet__receiver_readthread(void*arg) {
   struct sockaddr_in  from;
   socklen_t           fromlen = sizeof(from);
 
+  int recv_flags=0;
+
   struct timeval timout;
   fd_set readset;
   FD_ZERO(&readset);
@@ -93,10 +101,10 @@ static void*iemnet__receiver_readthread(void*arg) {
     t_iemnet_chunk*c=NULL;
 
     pthread_mutex_lock(&receiver->keeprec_mtx);
-    if(!receiver->keepreceiving) {
+     if(!receiver->keepreceiving) {
       pthread_mutex_unlock(&receiver->keeprec_mtx);
       break;
-    }
+     }
     pthread_mutex_unlock(&receiver->keeprec_mtx);
 
     fromlen = sizeof(from);
@@ -104,25 +112,26 @@ static void*iemnet__receiver_readthread(void*arg) {
     timout.tv_sec=0;
     timout.tv_usec=1000;
 
+    recv_flags|=MSG_DONTWAIT;
     select(sockfd+1, &rs, NULL, NULL,
            &timout);
-    if (FD_ISSET(sockfd, &rs)) {
-      DEBUG("select can read");
+    if (!FD_ISSET(sockfd, &rs))continue;
 
-      //fprintf(stderr, "reading %d bytes...\n", size);
-      //result = recv(sockfd, data, size, 0);
+    DEBUG("select can read");
 
-      result = recvfrom(sockfd, data, size, 0, (struct sockaddr *)&from, &fromlen);
-      //fprintf(stderr, "read %d bytes...\n", result);
-      DEBUG("recfrom %d bytes", result);
-      if(result<=0)break;
-      c= iemnet__chunk_create_dataaddr(result, data, &from);
-        DEBUG("pushing");  
-      queue_push(q, c);
-        DEBUG("signalling");  
-      iemnet_signalNewData(receiver);
-        DEBUG("rereceive");  
-    }
+    //fprintf(stderr, "reading %d bytes...\n", size);
+    //result = recv(sockfd, data, size, 0);
+
+    result = recvfrom(sockfd, data, size, recv_flags, (struct sockaddr *)&from, &fromlen);
+    //fprintf(stderr, "read %d bytes...\n", result);
+    DEBUG("recfrom %d bytes", result);
+    if(result<=0)break;
+    c= iemnet__chunk_create_dataaddr(result, data, &from);
+    DEBUG("pushing");  
+    queue_push(q, c);
+    DEBUG("signalling");  
+    iemnet_signalNewData(receiver);
+    DEBUG("rereceive");  
   }
   // oha
   DEBUG("readthread loop termination: %d", result);
