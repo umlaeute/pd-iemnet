@@ -122,7 +122,7 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   SOURCES += $(SOURCES_windows)
   EXTENSION = dll
   OS = windows
-  OPT_CFLAGS = -O3 -funroll-loops -fomit-frame-pointer -march=i686 -mtune=pentium4
+  OPT_CFLAGS = -O3 -funroll-loops -fomit-frame-pointer
   WINDOWS_HACKS = -D'O_NONBLOCK=1'
   CFLAGS += -mms-bitfields $(WINDOWS_HACKS)
   LDFLAGS += -s -shared -Wl,--enable-auto-import
