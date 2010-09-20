@@ -22,6 +22,8 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+#define DEBUGLEVEL 1
+
 static const char*objName="tcpreceive";
 
 #include "iemnet.h"
@@ -351,7 +353,7 @@ IEMNET_EXTERN void tcpreceive_setup(void)
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port, gensym("port"), A_DEFFLOAT, 0);
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize, gensym("serialize"), A_FLOAT, 0);
-
+  DEBUGMETHOD(tcpreceive_class);
 }
 
 IEMNET_INITIALIZER(tcpreceive_setup);

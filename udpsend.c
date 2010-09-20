@@ -22,7 +22,7 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
-//#define DEBUG
+#define DEBUGLEVEL 1
 
 static const char objName[] = "udpsend";
 
@@ -162,6 +162,7 @@ IEMNET_EXTERN void udpsend_setup(void)
   class_addmethod(udpsend_class, (t_method)udpsend_send, gensym("send"),
 		  A_GIMME, 0);
   class_addlist(udpsend_class, (t_method)udpsend_send);
+  DEBUGMETHOD(udpsend_class);
 }
 
 IEMNET_INITIALIZER(udpsend_setup);

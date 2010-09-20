@@ -2,7 +2,7 @@
  *  copyright (c) 2010 IOhannes m zmölnig, IEM
  */
 
-//#define DEBUG
+#define DEBUGLEVEL 4
 
 #include "iemnet.h"
 #include "iemnet_data.h"

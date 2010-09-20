@@ -23,7 +23,7 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
-//#define DEBUG
+#define DEBUGLEVEL 1
 
 #include "iemnet.h"
 #include <string.h>
@@ -292,6 +292,7 @@ IEMNET_EXTERN void tcpclient_setup(void)
   class_addlist(tcpclient_class, (t_method)tcpclient_send);
 
   class_addbang(tcpclient_class, (t_method)tcpclient_info);
+  DEBUGMETHOD(tcpclient_class);
 }
 
 

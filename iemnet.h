@@ -238,9 +238,13 @@ int iemnet__register(const char*name);
 #ifdef IEMNET_HAVE_DEBUG
 # undef IEMNET_HAVE_DEBUG
 #endif
+int debuglevel;
+void iemnet_debuglevel(void*,t_float);
+#define DEBUGMETHOD(c) class_addmethod(c, (t_method)iemnet_debuglevel, gensym("debug"), A_FLOAT, 0)
+
 #ifdef DEBUG
 # undef DEBUG
-# define DEBUG startpost("[%s:%d]", __FUNCTION__, __LINE__); post
+# define DEBUG if(debuglevel&DEBUGLEVEL)startpost("[%s:%d]", __FUNCTION__, __LINE__); if(debuglevel&DEBUGLEVEL)post
 # define IEMNET_HAVE_DEBUG 1
 #else
 static void debug_dummy(const char *format, ...)  {;}

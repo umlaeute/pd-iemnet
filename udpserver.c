@@ -24,7 +24,7 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
-//#define DEBUG
+#define DEBUGLEVEL 1
 #include "iemnet.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -747,6 +747,8 @@ IEMNET_EXTERN void udpserver_setup(void)
 
   class_addmethod(udpserver_class, (t_method)udpserver_port, gensym("port"), A_DEFFLOAT, 0);
   class_addbang  (udpserver_class, (t_method)udpserver_info);
+
+  DEBUGMETHOD(udpserver_class);
 }
 
 IEMNET_INITIALIZER(udpserver_setup);

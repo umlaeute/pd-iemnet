@@ -24,7 +24,8 @@
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
-//#define DEBUG
+#define DEBUGLEVEL 1
+
 #include "iemnet.h"
 #include "iemnet_data.h"
 #include <stdio.h>
@@ -658,6 +659,8 @@ IEMNET_EXTERN void tcpserver_setup(void)
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"), A_DEFFLOAT, 0);
   class_addbang  (tcpserver_class, (t_method)tcpserver_info);
+
+  DEBUGMETHOD(tcpserver_class);
 }
 
 IEMNET_INITIALIZER(tcpserver_setup);

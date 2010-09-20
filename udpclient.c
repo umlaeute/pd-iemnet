@@ -22,7 +22,7 @@
 
 /* ---------------------------------------------------------------------------- */
 
-//#define DEBUG
+#define DEBUGLEVEL 1
 
 #include "iemnet.h"
 #include <string.h>
@@ -254,6 +254,8 @@ IEMNET_EXTERN void udpclient_setup(void)
   class_addmethod(udpclient_class, (t_method)udpclient_disconnect, gensym("disconnect"), 0);
   class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"), A_GIMME, 0);
   class_addlist(udpclient_class, (t_method)udpclient_send);
+
+  DEBUGMETHOD(udpclient_class);
 }
 
 

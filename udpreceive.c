@@ -5,7 +5,7 @@
  */
 
 /*                                                                              */
-/* A server for unidirectional communication from within Pd.                     */
+/* A server for unidirectional communication from within Pd.                    */
 /*                                                                              */
 /* This program is free software; you can redistribute it and/or                */
 /* modify it under the terms of the GNU General Public License                  */
@@ -20,7 +20,8 @@
 /* You should have received a copy of the GNU General Public License            */
 /* along with this program; if not, write to the Free Software                  */
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
-/*                                                                              */
+
+#define DEBUGLEVEL 1
 
 static const char objName[] = "udpreceive";
 
@@ -162,6 +163,7 @@ IEMNET_EXTERN void udpreceive_setup(void)
     class_addmethod(udpreceive_class, (t_method)udpreceive_port, 
 		    gensym("port"), A_DEFFLOAT, 0);
 
+  DEBUGMETHOD(udpreceive_class);
 }
 
 IEMNET_INITIALIZER(udpreceive_setup);

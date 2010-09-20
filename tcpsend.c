@@ -22,6 +22,8 @@
 /* Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.  */
 /*                                                                              */
 
+#define DEBUGLEVEL 1
+
 static const char objName[] = "tcpsend";
 
 #include "iemnet.h"
@@ -151,6 +153,8 @@ IEMNET_EXTERN void tcpsend_setup(void)
   class_addmethod(tcpsend_class, (t_method)tcpsend_send, gensym("send"),
 		  A_GIMME, 0);
   class_addlist(tcpsend_class, (t_method)tcpsend_send);
+
+  DEBUGMETHOD(tcpsend_class);
 }
 
 IEMNET_INITIALIZER(tcpsend_setup);

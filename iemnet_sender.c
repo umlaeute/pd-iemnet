@@ -7,7 +7,7 @@
  *  copyright (c) 2010 IOhannes m zmölnig, IEM
  */
 
-//#define DEBUG
+#define DEBUGLEVEL 2
 
 #include "iemnet.h"
 #include "iemnet_data.h"
@@ -31,8 +31,8 @@
 
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {pthread_mutex_lock(x); debug_lockcount++; post("  LOCK %d (@%d)", debug_lockcount, __LINE__); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;post("UNLOCK %d (@%d)", debug_lockcount, __LINE__);pthread_mutex_unlock(x);}while(0)
+# define LOCK(x) do {pthread_mutex_lock(x);debug_lockcount++;  if(debuglevel&DEBUGLEVEL)post("  LOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__); } while(0)
+# define UNLOCK(x) do {debug_lockcount--;if(debuglevel&DEBUGLEVEL)post("UNLOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__);pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
 # define UNLOCK(x) pthread_mutex_unlock(x)

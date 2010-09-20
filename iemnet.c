@@ -2,7 +2,7 @@
  *  copyright (c) 2010 IOhannes m zmölnig, IEM
  */
 
-//#define DEBUG
+#define DEBUGLEVEL
 
 #include "iemnet.h"
 #include <stdlib.h>
@@ -110,6 +110,12 @@ void udpreceive_setup(void);
 void udpsend_setup(void);
 void udpserver_setup(void);
 #endif
+
+int debuglevel=0;
+void iemnet_debuglevel(void*x, t_float f) {
+  post("setting debuglevel from %d to %d", debuglevel, (int)f);
+  debuglevel=(int)f;
+}
 
 
 
