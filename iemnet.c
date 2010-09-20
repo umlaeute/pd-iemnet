@@ -113,7 +113,6 @@ void udpserver_setup(void);
 
 int debuglevel=0;
 void iemnet_debuglevel(void*x, t_float f) {
-  post("setting debuglevel from %d to %d", debuglevel, (int)f);
   debuglevel=(int)f;
 }
 
