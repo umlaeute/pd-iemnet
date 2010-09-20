@@ -151,6 +151,7 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   int running=0, keepreceiving=0;
   // received data
   t_iemnet_chunk*c=queue_pop_noblock(x->queue);
+	DEBUG("tick got chunk %p", c);
 
   while(NULL!=c) {
     (x->callback)(x->userdata, c);
