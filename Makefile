@@ -31,6 +31,10 @@ PDOBJECTS =
 # patches, documentation, etc.
 EXTRA_DIST = 
 
+# to enable debugging set this to "-DDEBUG"
+# you can slo just run make as "make DEBUG_CFLAGS='-DDEBUG'"
+DEBUG_CFLAGS =
+
 
 #------------------------------------------------------------------------------#
 #
@@ -133,6 +137,7 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
 endif
 
 CFLAGS += $(OPT_CFLAGS)
+CFLAGS += $(DEBUG_CFLAGS)
 
 
 .PHONY = install libdir_install single_install install-doc install-exec clean dist etags
