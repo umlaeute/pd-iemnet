@@ -1,108 +1,89 @@
-#N canvas 184 70 1096 649 12;
-#X msg -112 56 disconnect;
-#X obj 219 439 unpack 0 0 0 0;
-#X floatatom 219 462 3 0 0 0 - - -;
-#X floatatom 250 462 3 0 0 0 - - -;
-#X floatatom 282 462 3 0 0 0 - - -;
-#X floatatom 314 462 3 0 0 0 - - -;
-#X text 179 461 from;
-#X msg -175 -7 connect 132.205.142.12 80;
-#X obj 199 387 tcpclient;
-#X obj 239 413 tgl 15 0 empty empty connected 18 7 0 8 -24198 -241291
+#N canvas 184 70 1022 481 12;
+#X msg 134 135 disconnect;
+#X obj 255 328 unpack 0 0 0 0;
+#X floatatom 255 351 3 0 0 0 - - -;
+#X floatatom 286 351 3 0 0 0 - - -;
+#X floatatom 318 351 3 0 0 0 - - -;
+#X floatatom 350 351 3 0 0 0 - - -;
+#X text 219 351 from;
+#X msg 71 72 connect 132.205.142.12 80;
+#X obj 235 256 tcpclient;
+#X obj 275 307 tgl 15 0 empty empty connected 18 7 0 8 -24198 -241291
 -1 0 1;
-#X msg -88 80 dump \$1;
-#X obj -140 65 tgl 15 0 empty empty empty 0 -6 0 8 -4034 -257985 -1
-1 1;
-#X msg 11 179 receive;
-#X msg 35 203 recv;
-#X text -59 -58 connect with an IP address and port number;
-#X msg -200 -32 connect www.concordia.ca 80;
-#X text -17 79 print received messages to main window in hexdump format
-;
-#X text 270 386 tcpclient opens a tcp socket to send and receive bytes
+#X text 187 21 connect with an IP address and port number;
+#X msg 46 47 connect www.concordia.ca 80;
+#X text 306 255 tcpclient opens a tcp socket to send and receive bytes
 on;
-#X text -217 305 See also:;
-#X obj -212 329 netclient;
-#X msg -225 -57 connect 127.0.0.1 9997;
-#X obj -212 352 tcpreceive;
-#X text -214 374 can receive messages from tcpclient;
-#X text -136 328 is what tcpclient is based on;
-#X text 250 513 Received messages are output as a list of bytes;
-#X text 77 176 get any received data (not useful unless you need it
-faster than once per 20ms);
-#X text 220 225 semicolon-terminated string for netserver or netreceive
+#X text 44 257 See also:;
+#X msg 21 22 connect 127.0.0.1 9997;
+#X obj 45 279 tcpreceive;
+#X text 320 158 semicolon-terminated string for netserver or netreceive
 ;
-#X msg 59 227 send 49 127 128 51 59;
-#X obj -84 352 tcpserver;
-#X text -118 351 and;
-#X text 347 -55 tcpclient can connect to a server and send and receive
+#X msg 159 160 send 49 127 128 51 59;
+#X obj 45 302 tcpserver;
+#X text 593 24 tcpclient can connect to a server and send and receive
 messages as lists of bytes. Any integer value between 0 and 255 can
 be transmitted or received.;
-#X msg -63 105 send ../doc/5.reference/test.txt;
-#X obj -15 129 openpanel;
-#X msg -15 153 send \$1;
-#X obj -101 114 bng 15 250 50 0 empty empty empty 17 7 0 10 -24198
--241291 -1;
-#X text 172 105 send a file;
-#X text 62 128 ...any file;
-#X msg 99 251 71 69 84 32 104 116 116 112 58 47 47 47 105 110 100 101
-120 46 104 116 109 108 13 10;
-#X text 529 257 'send' prefix is optional;
-#X obj 199 514 spigot;
-#X obj 238 491 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
+#X msg 199 184 71 69 84 32 104 116 116 112 58 47 47 47 105 110 100
+101 120 46 104 116 109 108 13 10;
+#X text 226 220 'send' prefix is optional;
+#X obj 235 402 spigot;
+#X obj 274 379 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
 -1 0 1;
-#X obj 199 543 print >>>;
-#X text 272 24 GET http:///index.phpCRLF;
-#X floatatom 374 433 9 0 0 0 - - -;
-#X text 173 291 set send-buffer size;
-#X obj 374 407 route sent buf;
-#X floatatom 421 457 9 0 0 0 - - -;
-#X text 491 456 Size of the send buffer;
-#X text 448 432 Number of bytes sent (may still be in buffer);
-#X msg 147 315 buf;
-#X text 177 314 get send-buffer size;
-#X msg 123 291 buf 10;
-#X msg 170 338 timeout 100;
-#X text 258 337 set send timeout in microseconds (default is 1000)
-;
-#X msg 194 362 verbosity \$1;
-#X obj 139 347 tgl 15 1 empty empty empty 0 -6 0 8 -4034 -257985 -1
-0 1;
-#X text 289 362 print connection status messages to main window (default)
-;
-#X msg -136 16 send 71 69 84 32 104 116 116 112 58 47 47 47 105 110
+#X floatatom 797 190 9 0 0 0 - - -;
+#X msg 110 95 send 71 69 84 32 104 116 116 112 58 47 47 47 105 110
 100 101 120 46 112 104 112 13 10 13 10;
-#X text -208 540 2010/03/01 Martin Peach;
-#X text 271 542 Attempting to print long messages can hang Pd!;
+#X text 40 399 2010/03/01 Martin Peach;
+#X text 418 430 Attempting to print long messages can hang Pd!;
+#X text 40 415 2010/10/02 Roman Haefeli;
+#X obj 295 281 s \$0.tcpclient.o3;
+#X obj 797 166 route sent;
+#X text 869 190 sent bytes;
+#X obj 797 142 r \$0.tcpclient.o3;
+#X floatatom 797 347 3 0 0 0 - - -;
+#X floatatom 851 347 3 0 0 0 - - -;
+#X floatatom 824 347 3 0 0 0 - - -;
+#X obj 797 268 route address;
+#X obj 797 296 unpack f f f f f;
+#X floatatom 878 347 3 0 0 0 - - -;
+#X floatatom 906 321 6 0 0 0 - - -;
+#X text 904 347 ip;
+#X text 952 320 port;
+#X obj 797 242 r \$0.tcpclient.o3;
+#X obj 235 431 print tcpclient:received;
+#X obj 520 344 spigot;
+#X obj 559 321 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
+-1 0 1;
+#X obj 520 298 r \$0.tcpclient.o3;
+#X obj 520 373 print tcpclient:status;
+#X text 286 401 Received messages are output as a stream of bytes;
+#X text 515 103 GET http://index.phpCRLF;
 #X connect 0 0 8 0;
 #X connect 1 0 2 0;
 #X connect 1 1 3 0;
 #X connect 1 2 4 0;
 #X connect 1 3 5 0;
 #X connect 7 0 8 0;
-#X connect 8 0 39 0;
+#X connect 8 0 22 0;
 #X connect 8 1 1 0;
 #X connect 8 2 9 0;
-#X connect 8 3 45 0;
-#X connect 10 0 8 0;
-#X connect 11 0 10 0;
-#X connect 12 0 8 0;
-#X connect 13 0 8 0;
-#X connect 15 0 8 0;
+#X connect 8 3 29 0;
+#X connect 11 0 8 0;
+#X connect 14 0 8 0;
+#X connect 17 0 8 0;
 #X connect 20 0 8 0;
-#X connect 27 0 8 0;
-#X connect 31 0 8 0;
-#X connect 32 0 33 0;
-#X connect 33 0 8 0;
-#X connect 34 0 32 0;
-#X connect 37 0 8 0;
-#X connect 39 0 41 0;
-#X connect 40 0 39 1;
-#X connect 45 0 43 0;
-#X connect 45 1 46 0;
-#X connect 49 0 8 0;
-#X connect 51 0 8 0;
-#X connect 52 0 8 0;
-#X connect 54 0 8 0;
-#X connect 55 0 54 0;
-#X connect 57 0 8 0;
+#X connect 22 0 43 0;
+#X connect 23 0 22 1;
+#X connect 25 0 8 0;
+#X connect 30 0 24 0;
+#X connect 32 0 30 0;
+#X connect 36 0 37 0;
+#X connect 37 0 33 0;
+#X connect 37 1 35 0;
+#X connect 37 2 34 0;
+#X connect 37 3 38 0;
+#X connect 37 4 39 0;
+#X connect 42 0 36 0;
+#X connect 44 0 47 0;
+#X connect 45 0 44 1;
+#X connect 46 0 44 0;
