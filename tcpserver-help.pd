@@ -88,6 +88,8 @@ hang pd!;
 #X text 918 595 port;
 #X text 809 482 socket;
 #X text 20 585 2009/04/08 Martin Peach;
+#X text 848 462 insize (bytes);
+#X text 888 438 outsize (bytes);
 #X connect 8 0 24 0;
 #X connect 12 0 24 0;
 #X connect 13 0 24 0;
