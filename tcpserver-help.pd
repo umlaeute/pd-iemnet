@@ -26,7 +26,7 @@
 hang pd!;
 #X obj 295 540 spigot;
 #X obj 334 520 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
--45076 1 1;
+-45076 0 1;
 #X obj 295 376 tcpserver 9997;
 #X text 21 6 [tcpserver] waits for clients to connect to its port.
 ;
@@ -58,7 +58,7 @@ hang pd!;
 #X obj 524 493 r \$0.tcpserver.o4;
 #X obj 524 538 spigot;
 #X obj 563 518 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
--45076 1 1;
+-45076 0 1;
 #X obj 524 564 print tcpserver:status;
 #X text 242 153 disconnect by socket number;
 #X text 915 251 port;
@@ -88,7 +88,6 @@ hang pd!;
 #X text 918 595 port;
 #X text 809 482 socket;
 #X text 20 585 2009/04/08 Martin Peach;
-#X text 20 599 2010/10/02 Roman Haefeli;
 #X connect 8 0 24 0;
 #X connect 12 0 24 0;
 #X connect 13 0 24 0;
