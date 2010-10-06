@@ -1,4 +1,4 @@
-#N canvas 184 70 1022 481 12;
+#N canvas 3 62 1018 535 12;
 #X msg 134 135 disconnect;
 #X obj 255 328 unpack 0 0 0 0;
 #X floatatom 255 351 3 0 0 0 - - -;
@@ -57,6 +57,9 @@ be transmitted or received.;
 #X obj 520 373 print tcpclient:status;
 #X text 286 401 Received messages are output as a stream of bytes;
 #X text 515 103 GET http://index.phpCRLF;
+#X text 45 477 NOTE: outlet's #2 & #3 are for compatibility with mrpeach's
+net objects. all information is available via outlet#4 as well!;
+#X text 42 414 2010 rdz;
 #X connect 0 0 8 0;
 #X connect 1 0 2 0;
 #X connect 1 1 3 0;
