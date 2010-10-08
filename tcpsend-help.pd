@@ -11,6 +11,9 @@
 #X text 181 35 <--first connect;
 #X text 289 173 2007/06/20 Martin Peach;
 #X msg 15 36 connect 127.0.0.1 9997;
+#X obj 364 55 tcpclient;
+#X obj 364 81 tcpreceive;
+#X text 359 32 check also:;
 #X connect 0 0 2 0;
 #X connect 2 0 1 0;
 #X connect 3 0 2 0;

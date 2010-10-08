@@ -1,4 +1,4 @@
-#N canvas 431 102 590 348 12;
+#N canvas 76 70 590 348 12;
 #X msg 72 182 disconnect;
 #X msg 16 59 connect 127.0.0.1 9997;
 #X obj 16 306 tgl 15 0 empty empty connected 20 7 0 8 -24198 -241291
@@ -16,6 +16,9 @@
 #X text 201 311 (c) copyright 2010 IOhannes m zmoelnig;
 #X text 171 208 NOTE: with the iemnet version of [udpsend] you CANNOT
 send files directly! use mrpeach's [binfile] to read the file.;
+#X text 406 85 check also:;
+#X obj 409 110 udpclient;
+#X obj 409 137 udpreceive;
 #X connect 0 0 7 0;
 #X connect 1 0 7 0;
 #X connect 4 0 7 0;

@@ -1,4 +1,4 @@
-#N canvas 187 317 478 280 12;
+#N canvas 60 148 478 280 12;
 #X floatatom 158 142 3 0 0 0 - - -;
 #X floatatom 185 142 3 0 0 0 - - -;
 #X floatatom 212 142 3 0 0 0 - - -;
@@ -38,7 +38,10 @@ objects. you can get all info (and more) via outlet #3 as well.;
 #X connect 9 3 6 0;
 #X connect 9 4 8 0;
 #X connect 10 0 11 0;
-#X restore 317 110 pd get.info;
+#X restore 317 111 pd get.info;
+#X text 373 159 check also:;
+#X obj 375 182 udpsend;
+#X obj 375 208 udpserver;
 #X connect 6 0 5 0;
 #X connect 6 1 9 0;
 #X connect 6 2 14 0;

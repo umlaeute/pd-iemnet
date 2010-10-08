@@ -38,6 +38,9 @@
 #X obj 20 105 tcpreceive 9997;
 #X text 15 310 NOTE: outlet's #2 & #3 are for compatibility with mrpeach's
 net objects. all information is available via outlet#4 as well!;
+#X obj 500 286 tcpsend;
+#X obj 500 311 tcpserver;
+#X text 499 263 check also:;
 #X connect 1 0 35 0;
 #X connect 7 0 4 0;
 #X connect 7 1 6 0;
