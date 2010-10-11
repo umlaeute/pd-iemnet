@@ -84,11 +84,22 @@ static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
   }
 
   /* ask OS to allow another Pd to reopen this port after we close it. */
+#ifdef SO_REUSEADDR
   intarg = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-		 (char *)&intarg, sizeof(intarg)) 
-      < 0)
+                 (char *)&intarg, sizeof(intarg)) 
+      < 0) {
     error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+  }
+#endif /* SO_REUSEADDR */
+#ifdef SO_REUSEPORT
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+                 (char *)&intarg, sizeof(intarg)) 
+      < 0) {
+    error("[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+  }
+#endif /* SO_REUSEPORT */
 
 
   server.sin_family = AF_INET;

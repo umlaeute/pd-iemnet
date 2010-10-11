@@ -235,11 +235,22 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   }
 
   /* ask OS to allow another Pd to reopen this port after we close it. */
+#ifdef SO_REUSEADDR
   intarg = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 		 (char *)&intarg, sizeof(intarg)) 
-      < 0)
+      < 0) {
     error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+  }
+#endif /* SO_REUSEADDR */
+#ifdef SO_REUSEPORT
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+		 (char *)&intarg, sizeof(intarg)) 
+      < 0) {
+    error("[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+  }
+#endif /* SO_REUSEPORT */
 
   /* Stream (TCP) sockets are set NODELAY */
   intarg = 1;
