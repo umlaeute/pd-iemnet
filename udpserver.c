@@ -187,6 +187,7 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
     id=0;
     udpserver_sender_free(x->x_sr[id]);
     x->x_sr[id]=udpserver_sender_new(x, host, port);
+    x->x_nconnections=1;
 #else
     /* this is a more optimistic approach as above:
      * every client that we received data from is added to the list of receivers
@@ -394,6 +395,8 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *a
   int     client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
 
+  DEBUG("broadcasting to %d clients", x->x_nconnections);
+
   /* enumerate through the clients and send each the message */
   for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
     {
@@ -422,6 +425,7 @@ static void udpserver_defaultsend(t_udpserver *x, t_symbol *s, int argc, t_atom 
 {
   int client=-1;
   int sockfd=x->x_defaulttarget;
+  DEBUG("sending to sockfd: %d", sockfd);
   if(0==sockfd) 
     udpserver_broadcast(x, s, argc, argv);
   else if(sockfd>0) {
