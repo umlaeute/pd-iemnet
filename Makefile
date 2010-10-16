@@ -56,7 +56,7 @@ INSTALL_FILE    = $(INSTALL) -p -m 644
 INSTALL_LIB     = $(INSTALL) -p -m 644 -s
 INSTALL_DIR     = $(INSTALL) -p -m 755 -d
 
-CFLAGS = -DPD -I$(PD_PATH)/src -Wall -W -Wno-unused -g 
+CFLAGS = -DPD -DLIBRARY_VERSION=\"$(LIBRARY_VERSION)\" -I$(PD_PATH)/src -Wall -W -Wno-unused -g 
 LDFLAGS =  
 LIBS = 
 ALLSOURCES := $(SOURCES) $(SOURCES_android) $(SOURCES_cygwin) $(SOURCES_macosx) \

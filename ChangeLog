@@ -1,3 +1,24 @@
+2010-10-11 16:04  zmoelnig
+
+	* tcpreceive.c, udpreceive.c: use SO_REUSEPORT (if available during
+	  compile-time)
+
+2010-10-11 15:34  zmoelnig
+
+	* .: svn:ignore all *.pd_linux
+
+2010-10-11 12:15  zmoelnig
+
+	* AUTHORS: authors
+	  
+	  illiterati
+
+2010-10-11 12:13  zmoelnig
+
+	* ChangeLog, NEWS: ChangeLog and NEWS files
+	  
+	  with bugs bunny and bill clinton
+
 2010-10-11 12:04  zmoelnig
 
 	* udpserver.c: at least accept one(1) client

@@ -90,8 +90,12 @@ static int iemnet__nametaken(const char*namestring) {
 
 int iemnet__register(const char*name) {
   if(iemnet__nametaken(name))return 0;
-  post("iemnet: networking with Pd :: %s", name);
-  post("        (c) 2010 IOhannes m zmoelnig, IEM");
+  post("iemnet - networking with Pd: [%s]", name);
+#ifdef LIBRARY_VERSION
+  post("        version "LIBRARY_VERSION"");
+#endif
+  post("        compiled on "__DATE__" at " __TIME__"");
+  post("        copyright (c) 2010 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
   return 1;
 }
