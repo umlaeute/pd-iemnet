@@ -187,8 +187,7 @@ install-doc:
 		$(INSTALL_FILE) $(PDOBJECTS:.pd=-help.pd) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_FILE) README.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/README.txt
-	$(INSTALL_FILE) VERSION.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/VERSION.txt
-	$(INSTALL_FILE) CHANGES.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
+	$(INSTALL_FILE) ChangeLog $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
 
 
 clean:
