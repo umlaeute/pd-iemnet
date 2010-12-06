@@ -35,12 +35,29 @@ EXTRA_DIST =
 # you can slo just run make as "make DEBUG_CFLAGS='-DDEBUG'"
 DEBUG_CFLAGS =
 
+#------------------------------------------------------------------------------#
+#
+# things you might need to edit if you are using other C libraries
+#
+#------------------------------------------------------------------------------#
+
+# -I"$(PD_INCLUDE)/pd" supports the header location for 0.43
+ALL_CFLAGS = -I"$(PD_INCLUDE)/pd"
+ALL_LDFLAGS =  
+ALL_LIBS = 
+
+
 
 #------------------------------------------------------------------------------#
 #
 # you shouldn't need to edit anything below here, if we did it right :)
 #
 #------------------------------------------------------------------------------#
+
+# these can be set from outside without (usually) breaking the build
+CFLAGS = -Wall -W -g
+ALL_LDFLAGS=
+ALL_LIBS=
 
 # where Pd lives
 PD_PATH = ../../../pd
@@ -56,9 +73,8 @@ INSTALL_FILE    = $(INSTALL) -p -m 644
 INSTALL_LIB     = $(INSTALL) -p -m 644 -s
 INSTALL_DIR     = $(INSTALL) -p -m 755 -d
 
-CFLAGS = -DPD -DLIBRARY_VERSION=\"$(LIBRARY_VERSION)\" -I$(PD_PATH)/src -Wall -W -Wno-unused -g 
-LDFLAGS =  
-LIBS = 
+ALL_CFLAGS += -DPD -DVERSION='"$(LIBRARY_VERSION)"'
+
 ALLSOURCES := $(SOURCES) $(SOURCES_android) $(SOURCES_cygwin) $(SOURCES_macosx) \
 	         $(SOURCES_iphoneos) $(SOURCES_linux) $(SOURCES_windows)
 
@@ -74,12 +90,12 @@ ifeq ($(UNAME),Darwin)
     CPP=$(IPHONE_BASE)/cpp
     CXX=$(IPHONE_BASE)/g++
     ISYSROOT = -isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk
-    IPHONE_CFLAGS = -miphoneos-version-min=3.0 $(ISYSROOT) -arch armv6
+    IPHONE_ALL_CFLAGS = -miphoneos-version-min=3.0 $(ISYSROOT) -arch armv6
     OPT_CFLAGS = -fast -funroll-loops -fomit-frame-pointer
-	CFLAGS := $(IPHONE_CFLAGS) $(OPT_CFLAGS) $(CFLAGS) \
+	ALL_CFLAGS := $(IPHONE_ALL_CFLAGS) $(OPT_CFLAGS) $(ALL_CFLAGS) \
       -I/Applications/Pd-extended.app/Contents/Resources/include
-    LDFLAGS += -arch armv6 -bundle -undefined dynamic_lookup $(ISYSROOT)
-    LIBS += -lc 
+    ALL_LDFLAGS += -arch armv6 -bundle -undefined dynamic_lookup $(ISYSROOT)
+    ALL_LIBS += -lc 
     STRIP = strip -x
     DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
     DISTBINDIR=$(DISTDIR)-$(OS)
@@ -89,10 +105,10 @@ ifeq ($(UNAME),Darwin)
     OS = macosx
     OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=0 -fast
     FAT_FLAGS = -arch i386 -arch ppc -mmacosx-version-min=10.4
-    CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include \
+    ALL_CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include \
       -I/Applications/Pd-extended.app/Contents/Resources/include
-    LDFLAGS += $(FAT_FLAGS) -bundle -undefined dynamic_lookup -L/sw/lib
-    LIBS += -lc 
+    ALL_LDFLAGS += $(FAT_FLAGS) -bundle -undefined dynamic_lookup -L/sw/lib
+    ALL_LIBS += -lc 
     STRIP = strip -x
     DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
     DISTBINDIR=$(DISTDIR)-$(OS)
@@ -103,21 +119,22 @@ ifeq ($(UNAME),Linux)
   EXTENSION = pd_linux
   OS = linux
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
-  CFLAGS += -fPIC
-  LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
-  LIBS += -lc
+  ALL_CFLAGS += -fPIC
+  ALL_LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  ALL_LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
 endif
+
 ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   SOURCES += $(SOURCES_cygwin)
   EXTENSION = dll
   OS = cygwin
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
-  CFLAGS += 
-  LDFLAGS += -Wl,--export-dynamic -shared -L$(PD_PATH)/src
-  LIBS += -lc -lpd
+  ALL_CFLAGS += 
+  ALL_LDFLAGS += -Wl,--export-dynamic -shared -L$(PD_PATH)/src
+  ALL_LIBS += -lc -lpd
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
   DISTBINDIR=$(DISTDIR)-$(OS)
@@ -128,9 +145,9 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   OS = windows
   OPT_CFLAGS = -O3 -funroll-loops -fomit-frame-pointer
   WINDOWS_HACKS = -D'O_NONBLOCK=1'
-  CFLAGS += -mms-bitfields $(WINDOWS_HACKS)
-  LDFLAGS += -s -shared -Wl,--enable-auto-import
-  LIBS += -L$(PD_PATH)/src -L$(PD_PATH)/bin -L$(PD_PATH)/obj -lpd -lwsock32 -lkernel32 -luser32 -lgdi32
+  ALL_CFLAGS += -mms-bitfields $(WINDOWS_HACKS)
+  ALL_LDFLAGS += -s -shared -Wl,--enable-auto-import
+  ALL_LIBS += -L$(PD_PATH)/src -L$(PD_PATH)/bin -L$(PD_PATH)/obj -lpd -lwsock32 -lkernel32 -luser32 -lgdi32
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
   DISTBINDIR=$(DISTDIR)-$(OS)
@@ -139,21 +156,25 @@ endif
 CFLAGS += $(OPT_CFLAGS)
 CFLAGS += $(DEBUG_CFLAGS)
 
+ALL_CFLAGS := $(ALL_CFLAGS) $(CFLAGS)
+ALL_LDFLAGS := $(LDFLAGS) $(ALL_LDFLAGS)
+ALL_LIBS := $(LIBS) $(ALL_LIBS)
+
 
 .PHONY = install libdir_install single_install install-doc install-exec clean dist etags
 
 all: $(SOURCES:.c=.$(EXTENSION))
 
 %.o: %.c
-	$(CC) $(CFLAGS) -o "$@" -c "$<"
+	$(CC) $(ALL_CFLAGS) -o "$@" -c "$<"
 
 %.$(EXTENSION): %.o $(HELPERSOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -o "$@" $^  $(LIBS)
+	$(CC) $(ALL_LDFLAGS) -o "$@" $^  $(ALL_LIBS)
 	chmod a-x "$*.$(EXTENSION)"
 
 # this links everything into a single binary file
 $(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(HELPERSOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -o $@.$(EXTENSION) $^ $(LIBS)
+	$(CC) $(ALL_LDFLAGS) -o $@.$(EXTENSION) $^ $(ALL_LIBS)
 	chmod a-x $@.$(EXTENSION)
 
 
