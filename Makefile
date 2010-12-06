@@ -114,6 +114,7 @@ ifeq ($(UNAME),Darwin)
     DISTBINDIR=$(DISTDIR)-$(OS)
   endif
 endif
+
 ifeq ($(UNAME),Linux)
   SOURCES += $(SOURCES_linux)
   EXTENSION = pd_linux
@@ -124,6 +125,34 @@ ifeq ($(UNAME),Linux)
   ALL_LIBS += -lc
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTDIR=$(LIBRARY_NAME)-$(LIBRARY_VERSION)
+  DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
+endif
+ifeq ($(UNAME),GNU)
+  # GNU/Hurd, should work like GNU/Linux for basically all externals
+  CPU := $(shell uname -m)
+  SOURCES += $(SOURCES_linux)
+  EXTENSION = pd_linux
+  OS = linux
+  PD_PATH = /usr
+  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  ALL_CFLAGS += -fPIC
+  ALL_LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  ALL_LIBS += -lc
+  STRIP = strip --strip-unneeded -R .note -R .comment
+  DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
+endif
+ifeq ($(UNAME),GNU/kFreeBSD)
+  # Debian GNU/kFreeBSD, should work like GNU/Linux for basically all externals
+  CPU := $(shell uname -m)
+  SOURCES += $(SOURCES_linux)
+  EXTENSION = pd_linux
+  OS = linux
+  PD_PATH = /usr
+  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  ALL_CFLAGS += -fPIC
+  ALL_LDFLAGS += -Wl,--export-dynamic  -shared -fPIC
+  ALL_LIBS += -lc
+  STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)-$(shell uname -m)
 endif
 
