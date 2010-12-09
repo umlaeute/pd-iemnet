@@ -90,9 +90,9 @@ ifeq ($(UNAME),Darwin)
     CPP=$(IPHONE_BASE)/cpp
     CXX=$(IPHONE_BASE)/g++
     ISYSROOT = -isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk
-    IPHONE_ALL_CFLAGS = -miphoneos-version-min=3.0 $(ISYSROOT) -arch armv6
+    IPHONE_CFLAGS = -miphoneos-version-min=3.0 $(ISYSROOT) -arch armv6
     OPT_CFLAGS = -fast -funroll-loops -fomit-frame-pointer
-	ALL_CFLAGS := $(IPHONE_ALL_CFLAGS) $(OPT_CFLAGS) $(ALL_CFLAGS) \
+    ALL_CFLAGS := $(IPHONE_CFLAGS) $(OPT_CFLAGS) $(ALL_CFLAGS) \
       -I/Applications/Pd-extended.app/Contents/Resources/include
     ALL_LDFLAGS += -arch armv6 -bundle -undefined dynamic_lookup $(ISYSROOT)
     ALL_LIBS += -lc 
