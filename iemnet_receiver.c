@@ -145,13 +145,15 @@ static void*iemnet__receiver_readthread(void*arg) {
 
     result = recvfrom(sockfd, data, size, recv_flags, (struct sockaddr *)&from, &fromlen);
     //fprintf(stderr, "read %d bytes...\n", result);
-    DEBUG("recfrom %d bytes", result);
-    if(result<=0)break;
-    c= iemnet__chunk_create_dataaddr(result, data, &from);
+    DEBUG("recfrom %d bytes: %p", result, data);
+    c= iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
     DEBUG("pushing");  
     queue_push(q, c);
     DEBUG("signalling");  
     iemnet_signalNewData(receiver);
+
+    if(result<=0) break;
+
     DEBUG("rereceive");  
   }
   // oha
