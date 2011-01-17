@@ -476,6 +476,7 @@ static void tcpserver_receive_callback(void *y0,
   } else {
     // disconnected
     int sockfd=y->sr_fd;
+    verbose(1, "[%s] got disconnection for socket:%d", objName, sockfd);
     tcpserver_disconnect_socket(x, sockfd);
   }
 
