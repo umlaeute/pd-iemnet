@@ -149,7 +149,7 @@ t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
 					      unsigned char*data,
 					      struct sockaddr_in*addr) {
   t_iemnet_chunk*result=iemnet__chunk_create_data(size, data);
-  if(addr) {
+  if(result && addr) {
     result->addr = ntohl(addr->sin_addr.s_addr);
     result->port = ntohs(addr->sin_port);
   }
