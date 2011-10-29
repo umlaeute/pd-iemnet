@@ -42,7 +42,8 @@ DEBUG_CFLAGS =
 #------------------------------------------------------------------------------#
 
 # -I"$(PD_INCLUDE)/pd" supports the header location for 0.43
-ALL_CFLAGS = -I"$(PD_INCLUDE)/pd" -I"$(PD_INCLUDE)"
+# (luckily we don't need those headers)
+ALL_CFLAGS = -I"$(PD_INCLUDE)"
 ALL_LDFLAGS =  
 ALL_LIBS = 
 
