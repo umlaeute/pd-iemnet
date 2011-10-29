@@ -133,7 +133,9 @@ static void*iemnet__receiver_readthread(void*arg) {
     timout.tv_sec=0;
     timout.tv_usec=1000;
 
+#ifdef MSG_DONTWAIT
     recv_flags|=MSG_DONTWAIT;
+#endif
     select(sockfd+1, &rs, NULL, NULL,
            &timout);
     if (!FD_ISSET(sockfd, &rs))continue;
