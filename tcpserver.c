@@ -322,10 +322,9 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
 /* broadcasts a message to all connected clients */
 static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int client=0;
   int but=-1;
-
-  t_iemnet_chunk*chunk=NULL;
+  //int client=0;
+  //  t_iemnet_chunk*chunk=NULL;
 
   if(argc<2) {
     return;

@@ -413,10 +413,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *a
 /* broadcasts a message to all connected clients */
 static void udpserver_broadcastbut(t_udpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int client=0;
   int but=-1;
-
-  t_iemnet_chunk*chunk=NULL;
 
   if(argc<2) {
     return;
@@ -505,10 +502,9 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc, t_atom 
 
 static void udpserver_disconnect(t_udpserver *x, int client)
 {
-  int k;
-  DEBUG("disconnect %x %d", x, client);
   t_udpserver_sender*sdr;
   int conns;
+  DEBUG("disconnect %x %d", x, client);
 
   if(client<0 || client >= x->x_nconnections)return;
 
