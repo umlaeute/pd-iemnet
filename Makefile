@@ -205,7 +205,7 @@ ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += 
   ALL_LDFLAGS += -rdynamic -shared -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
-  SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
+  SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB) -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
   ALL_LIBS += -lc -lpd $(LIBS_cygwin)
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
@@ -222,7 +222,7 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   OPT_CFLAGS = -O3 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -mms-bitfields
   ALL_LDFLAGS += -s -shared -Wl,--enable-auto-import -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin" -L"$(PD_PATH)/obj"
-  SHARED_LDFLAGS += -shared
+  SHARED_LDFLAGS += -shared -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin" -L"$(PD_PATH)/obj"
   ALL_LIBS += -lpd -lwsock32 -lkernel32 -luser32 -lgdi32 $(LIBS_windows)
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
@@ -257,7 +257,7 @@ $(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
 	chmod a-x $(LIBRARY_NAME).$(EXTENSION)
 
 $(SHARED_LIB): $(SHARED_SOURCES:.c=.o)
-	$(CC) $(SHARED_LDFLAGS) -o $(SHARED_LIB) $(SHARED_SOURCES:.c=.o) $(LIBS)
+	$(CC) $(SHARED_LDFLAGS) -o $(SHARED_LIB) $(SHARED_SOURCES:.c=.o) $(ALL_LIBS)
 
 install: libdir_install
 
