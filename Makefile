@@ -28,6 +28,9 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 EXTRA_DIST = 
 
 
+LIBS_windows=-lpthread
+
+
 
 #------------------------------------------------------------------------------#
 #
