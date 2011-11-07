@@ -145,7 +145,7 @@ static int udpserver_fixindex(t_udpserver*x, int client)
   
   if (!((client > 0) && (client <= x->x_nconnections)))
     {
-      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, x->x_nconnections);
+      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, (int)(x->x_nconnections));
       return -1;
     }
   return (client-1);
@@ -444,7 +444,7 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
   int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
-    error("[%s] target %d out of range [0..%d]", objName, client,  x->x_nconnections);
+    error("[%s] target %d out of range [0..%d]", objName, client, (int)(x->x_nconnections));
     return;
   }
 
@@ -585,7 +585,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
 static void udpserver_connectpoll(t_udpserver *x)
 {
   struct sockaddr_in  incomer_address;
-  unsigned int        sockaddrl = sizeof( struct sockaddr );
+  socklen_t           sockaddrl = sizeof( struct sockaddr );
   int                 fd = -1;
   int                 i;
 

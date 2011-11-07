@@ -146,7 +146,7 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
   
   if (!((client > 0) && (client <= x->x_nconnections)))
     {
-      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, x->x_nconnections);
+      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, (int)(x->x_nconnections));
       return -1;
     }
   return (client-1);
@@ -354,7 +354,7 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
   int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
-    error("[%s] target %d out of range [0..%d]", objName, client,  x->x_nconnections);
+    error("[%s] target %d out of range [0..%d]", objName, client, (int)(x->x_nconnections));
     return;
   }
 
@@ -485,7 +485,7 @@ static void tcpserver_receive_callback(void *y0,
 static void tcpserver_connectpoll(t_tcpserver *x)
 {
   struct sockaddr_in  incomer_address;
-  unsigned int        sockaddrl = sizeof( struct sockaddr );
+  socklen_t           sockaddrl = sizeof( struct sockaddr );
   int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
   int                 i;
 
