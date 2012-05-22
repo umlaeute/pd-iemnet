@@ -1,0 +1,22 @@
+AUTOMAKE_OPTIONS = foreign
+AM_LDFLAGS= -module -avoid-version -shared -shrext .pd_linux
+
+#TESTS_ENVIRONMENT = RUNTESTS_NOLOG=yes TESTDIR=$(srcdir)
+#TESTS_ENVIRONMENT = TESTDIR=$(srcdir)
+TESTS_ENVIRONMENT=./runtest.sh
+
+AM_CPPFLAGS=-I$(top_srcdir)/
+AM_LDFLAGS+=$(top_builddir)/libiemnet.la -rpath /tmp
+
+TESTS = \
+        pass.la skip.la fail.la
+
+XFAIL_TESTS = fail.la
+
+check_LTLIBRARIES= \
+        pass.la skip.la fail.la
+
+pass_la_SOURCES=pass.c
+skip_la_SOURCES=skip.c
+fail_la_SOURCES=fail.c
+
