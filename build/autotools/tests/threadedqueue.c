@@ -1,5 +1,7 @@
 #include <common.h>
 
+#include <pthread.h>
+
 #define NUMCHUNKS 1000
 
 static int producer(t_iemnet_queue*q, unsigned int count) {
@@ -22,9 +24,10 @@ static int producer(t_iemnet_queue*q, unsigned int count) {
 static int consumer(t_iemnet_queue*q) {
   return 0;
 }
-static int consumer_thread(void*qq) {
-  t_iemnet_queue*q=(t_iemnet_queue)qq;
-  return consumer(q);
+static void* consumer_thread(void*qq) {
+  t_iemnet_queue*q=(t_iemnet_queue*)qq;
+  consumer(q);
+  return NULL;
 }
 
 void threadedqueue_setup(void) {
