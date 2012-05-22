@@ -47,8 +47,8 @@
 
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {pthread_mutex_lock(x);debug_lockcount++;  if(debuglevel&DEBUGLEVEL)post("  LOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;if(debuglevel&DEBUGLEVEL)post("UNLOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__);pthread_mutex_unlock(x);}while(0)
+# define LOCK(x) do {if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKing %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKed  %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x); } while(0)
+# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debuglevel_&DEBUGLEVEL)post("UNLOCK %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x);pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
 # define UNLOCK(x) pthread_mutex_unlock(x)
@@ -78,6 +78,7 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
   socklen_t           tolen = sizeof(to);
 
   t_iemnet_chunk*c=queue_pop_block(q);
+  DEBUG("queue %p got chunk %p", q, c);
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
@@ -98,6 +99,7 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
     }
     if(result<0) {
       // broken pipe
+      DEBUG("broken pipe: %d", result);
       return 0;
     }
 
@@ -105,6 +107,7 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
     DEBUG("sent %d bytes", result);
     iemnet__chunk_destroy(c);
   } else {
+    DEBUG("no chunk");
     return 0;
   }
   return 1;
@@ -113,13 +116,24 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
 static void*iemnet__sender_sendthread(void*arg) {
   t_iemnet_sender*sender=(t_iemnet_sender*)arg;
 
-  int sockfd=sender->sockfd;
-  t_iemnet_queue*q=sender->queue;
+  int sockfd=-1;
+  t_iemnet_queue*q=NULL;
 
+  DEBUG("init");
+  LOCK(&sender->mtx);
+  sockfd=sender->sockfd;
+  q=sender->queue;
+  DEBUG("startloop");
   while(sender->keepsending) {
-    if(!iemnet__sender_dosend(sockfd, q))break;
+    DEBUG("loop");
+    UNLOCK(&sender->mtx);
+    if(!iemnet__sender_dosend(sockfd, q)){
+      LOCK(&sender->mtx);
+      DEBUG("dosend failed");
+      break;
+    }
+    LOCK(&sender->mtx);
   }
-  LOCK (&sender->mtx);
   sender->isrunning=0;
   UNLOCK (&sender->mtx);
   DEBUG("send thread terminated");
