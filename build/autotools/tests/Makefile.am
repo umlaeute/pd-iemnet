@@ -5,7 +5,7 @@ AM_LDFLAGS= -module -avoid-version -shared -shrext .pd_linux
 #TESTS_ENVIRONMENT = TESTDIR=$(srcdir)
 TESTS_ENVIRONMENT=$(srcdir)/runtest.sh
 
-AM_CPPFLAGS=-I$(top_srcdir)/
+AM_CPPFLAGS=-I$(top_srcdir)/../..
 AM_LDFLAGS+=$(top_builddir)/libiemnet.la -rpath /tmp
 
 SOURCES=common.h
