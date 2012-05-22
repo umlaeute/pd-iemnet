@@ -3,10 +3,14 @@ AM_LDFLAGS= -module -avoid-version -shared -shrext .pd_linux
 
 #TESTS_ENVIRONMENT = RUNTESTS_NOLOG=yes TESTDIR=$(srcdir)
 #TESTS_ENVIRONMENT = TESTDIR=$(srcdir)
-TESTS_ENVIRONMENT=./runtest.sh
+TESTS_ENVIRONMENT=$(srcdir)/runtest.sh
 
 AM_CPPFLAGS=-I$(top_srcdir)/
 AM_LDFLAGS+=$(top_builddir)/libiemnet.la -rpath /tmp
+
+SOURCES=common.h
+noinst_HEADERS=common.h 
+EXTRA_DIST=runtest.sh
 
 TESTS = \
         pass.la skip.la fail.la
