@@ -3,7 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)
 
 lib_LTLIBRARIES = libiemnet.la
 
-libiemnet_la_LDFLAGS = -version-info @SHARED_VERSION_INFO@ -no-undefined
+libiemnet_la_LDFLAGS = -version-info 1 -no-undefined
 libiemnet_la_CFLAGS  = 
 #libiemnet_la_CFLAGS += -fvisibility=hidden
 libiemnet_la_LIBADD  = $(LIBM)
