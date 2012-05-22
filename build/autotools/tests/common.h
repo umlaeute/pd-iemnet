@@ -1,7 +1,7 @@
 #ifndef TESTS_COMMON_H
 #define TESTS_COMMON_H
 
-//#include <ambix/ambix.h>
+#include "iemnet.h"
 
 #include <stdlib.h>
 static inline void pass(void) {exit(0); }
