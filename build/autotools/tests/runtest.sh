@@ -4,4 +4,4 @@ EXTERNAL=$1
 EXTERNAL=${EXTERNAL%.la}
 EXTERNAL=${EXTERNAL#./}
 
-pd -path .libs -lib ${EXTERNAL}
+pd -nrt -nogui -path .libs -lib ${EXTERNAL}
