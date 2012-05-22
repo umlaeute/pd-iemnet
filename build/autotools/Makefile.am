@@ -1,4 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
+
+SUBDIRS=tests
+
 AM_CPPFLAGS = -I$(top_srcdir)
 
 lib_LTLIBRARIES = libiemnet.la
