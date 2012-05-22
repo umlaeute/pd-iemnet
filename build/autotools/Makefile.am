@@ -12,10 +12,10 @@ libiemnet_la_CFLAGS  =
 libiemnet_la_LIBADD  = $(LIBM)
 
 libiemnet_la_SOURCES = \
-	../../iemnet.c \
-	../../iemnet_data.c \
-	../../iemnet_receiver.c \
-	../../iemnet_sender.c \
-	../../iemnet_data.h \
-	../../iemnet.h
+	$(top_srcdir)/../../iemnet.c \
+	$(top_srcdir)/../../iemnet_data.c \
+	$(top_srcdir)/../../iemnet_receiver.c \
+	$(top_srcdir)/../../iemnet_sender.c \
+	$(top_srcdir)/../../iemnet_data.h \
+	$(top_srcdir)/../../iemnet.h
 
