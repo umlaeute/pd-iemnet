@@ -133,9 +133,16 @@ void udpsend_setup(void);
 void udpserver_setup(void);
 #endif
 
-int debuglevel=0;
+int iemnet_debuglevel_=0;
 void iemnet_debuglevel(void*x, t_float f) {
-  debuglevel=(int)f;
+#ifdef IEMNET_HAVE_DEBUG
+  iemnet_debuglevel_=(int)f;
+  post("iemnet: setting debuglevel to %d",iemnet_debuglevel_);
+#else
+  static int firsttime=1;
+  if(firsttime)post("iemnet compiled without debug!");
+  firsttime=0;
+#endif
 }
 
 
