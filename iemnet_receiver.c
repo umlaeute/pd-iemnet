@@ -55,6 +55,8 @@ static int debug_lockcount=0;
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
+static void iemnet__receiver_pollfn(void*zz, int fd);
+
 
 struct _iemnet_receiver {
   pthread_t thread;
@@ -112,6 +114,7 @@ static void*iemnet__receiver_readthread(void*arg) {
      }
     UNLOCK(&receiver->keeprec_mtx);
 
+#if 0
     fromlen = sizeof(from);
     fd_set rs=readset;
     timout.tv_sec=0;
@@ -125,7 +128,7 @@ static void*iemnet__receiver_readthread(void*arg) {
     if (!FD_ISSET(sockfd, &rs))continue;
 
     DEBUG("select can read on %d", sockfd);
-
+#endif
     //fprintf(stderr, "reading %d bytes...\n", size);
     //result = recv(sockfd, data, size, 0);
 
@@ -202,6 +205,17 @@ int iemnet__receiver_getsize(t_iemnet_receiver*x) {
   return size;
 }
 
+int iemnet__receiver_setpollfn(t_iemnet_receiver*x) {
+  if(x->sockfd) {
+    DEBUG("adding pollfn for %d", x->sockfd);
+    sys_addpollfn(x->sockfd, iemnet__receiver_pollfn, x);
+    return 1;
+  }
+  return 0;
+}
+
+
+
 
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
@@ -234,11 +248,6 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->queue = queue_create();
     //rec->clock = clock_new(rec, (t_method)iemnet__receiver_tick);
     rec->clock=NULL;
-
-    DEBUG("adding pollfn for %d", sock);
-    sys_lock();
-    sys_addpollfn(sock, iemnet__receiver_pollfn, rec);
-    sys_unlock();
 
     res=pthread_create(&rec->thread, 0, iemnet__receiver_readthread, rec);
   }

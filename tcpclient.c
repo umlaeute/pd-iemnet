@@ -155,9 +155,11 @@ static void *tcpclient_child_connect(void *w)
   sys_unlock();
   return (x);
 }
+int iemnet__receiver_setpollfn(t_iemnet_receiver*x);
 static void tcpclient_tick(t_tcpclient *x)
 {
-    outlet_float(x->x_connectout, 1);
+  iemnet__receiver_setpollfn(x->x_receiver);
+  outlet_float(x->x_connectout, 1);
 }
 
 
