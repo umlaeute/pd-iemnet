@@ -45,10 +45,11 @@
 
 #include <pthread.h>
 
-#if xxx_IEMNET_HAVE_DEBUG
+
+#if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKing %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKed  %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debuglevel_&DEBUGLEVEL)post("UNLOCK %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x);pthread_mutex_unlock(x);}while(0)
+# define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
+# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  UNLOCK %p [%d]", x, debug_lockcount); pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
 # define UNLOCK(x) pthread_mutex_unlock(x)
