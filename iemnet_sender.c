@@ -45,10 +45,10 @@
 
 #include <pthread.h>
 
-#if IEMNET_HAVE_DEBUG
+#if xxx_IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKing %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKed  %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debuglevel_&DEBUGLEVEL)post("UNLOCK %d (@%s:%d) %p", debug_lockcount, __FILE__, __LINE__, x);pthread_mutex_unlock(x);}while(0)
+# define LOCK(x) do {if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKing %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debuglevel_&DEBUGLEVEL)post("  LOCKed  %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x); } while(0)
+# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debuglevel_&DEBUGLEVEL)post("UNLOCK %d (@%s:%d[%s]) %p", debug_lockcount, __FILE__, __LINE__, __FUNCTION__, x);pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
 # define UNLOCK(x) pthread_mutex_unlock(x)
@@ -77,7 +77,9 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
   struct sockaddr_in  to;
   socklen_t           tolen = sizeof(to);
 
-  t_iemnet_chunk*c=queue_pop_block(q);
+  t_iemnet_chunk*c=NULL;
+  DEBUG("init socket %d", sockfd);
+  c=queue_pop_block(q);
   DEBUG("queue %p got chunk %p", q, c);
   if(c) {
     unsigned char*data=c->data;
@@ -119,7 +121,7 @@ static void*iemnet__sender_sendthread(void*arg) {
   int sockfd=-1;
   t_iemnet_queue*q=NULL;
 
-  DEBUG("init");
+  DEBUG("send thread init");
   LOCK(&sender->mtx);
   sockfd=sender->sockfd;
   q=sender->queue;
@@ -178,7 +180,9 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   queue_finish(s->queue);
   DEBUG("queue finished");
 
+  DEBUG("closing socket %d", sockfd);
   if(sockfd>=0) {
+
     int err=shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     sys_closesocket(sockfd); 
   }
@@ -187,7 +191,9 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   DEBUG("thread joined");
   queue_destroy(s->queue);
 
+  DEBUG("destroying mutex %p", &s->mtx);
   pthread_mutex_destroy (&s->mtx);
+  DEBUG("done");
 
   memset(s, 0, sizeof(t_iemnet_sender));
   free(s);
