@@ -73,45 +73,6 @@ struct _iemnet_receiver {
   pthread_mutex_t newdata_mtx, running_mtx, keeprec_mtx;
 };
 
-/* notifies Pd that there is new data to fetch */
-static void iemnet_signalNewData(t_iemnet_receiver*x) {
-  int already=0;
-  int trylock=0;
-
-  /* JMZ: check whether we can do that with sys_addpollfn */
-  return;
-
-  LOCK(&x->newdata_mtx);
-   already=x->newdataflag;
-   x->newdataflag=1;
-
-   /* don't schedule ticks at the end of life */
-   if(x->sockfd<0)already=1;
-  UNLOCK(&x->newdata_mtx);
-
-  if(already) {
-    return;
-  }
-
-  /*
-   * try to lock Pd's main mutex
-   *  this is bound to deadlock if this function is called from within Pd's mainthread
-   *  (which happens when we destroy the receiver and signalNewData is called on cleanup)
-   *
-   * - shan't we check whether sys_trylock() returns EBUSY ?
-   */
-  trylock=sys_trylock();
-  switch(trylock) {
-  case 0:
-  case EBUSY:
-    if(x->clock)clock_delay(x->clock, 0);
-    if(0==trylock)sys_unlock();
-  default:
-    break;
-  }
-}
-
-
 /* the workhorse of the family */
 static void*iemnet__receiver_readthread(void*arg) {
   unsigned int i=0;
@@ -180,16 +141,12 @@ static void*iemnet__receiver_readthread(void*arg) {
       DEBUG("pushing");
       queue_push(q, c);
     }
-    DEBUG("signalling");
-    iemnet_signalNewData(receiver);
-    DEBUG("signalled");
     if(result<=0) break;
 
     DEBUG("rereceive");
   }
   // oha
   DEBUG("readthread loop termination: %d", result);
-  //if(result>=0)iemnet_signalNewData(receiver);
   LOCK(&receiver->running_mtx);
    receiver->running=0;
   UNLOCK(&receiver->running_mtx);
