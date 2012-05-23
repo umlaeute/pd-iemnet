@@ -284,8 +284,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   sockfd=rec->sockfd;
 
-  DEBUG("joining thread");
-  pthread_join(rec->thread, NULL);
 
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
@@ -301,6 +299,12 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   DEBUG("[%d] closed socket %d", inst, sockfd);
 
   rec->sockfd=-1;
+
+
+
+  DEBUG("joining thread");
+  pthread_join(rec->thread, NULL);
+
 
   // empty the queue
   DEBUG("[%d] tick %d", inst, rec->running);
