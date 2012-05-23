@@ -293,14 +293,14 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
      * - try sending a signal with pthread_kill() ?
      */
 
+    /* confirm e.g. http://stackoverflow.com/questions/6389970/ */
+
     shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     sys_closesocket(sockfd);
   }
   DEBUG("[%d] closed socket %d", inst, sockfd);
 
   rec->sockfd=-1;
-
-
 
   DEBUG("joining thread");
   pthread_join(rec->thread, NULL);
