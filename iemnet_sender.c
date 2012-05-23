@@ -175,6 +175,14 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
     return;
   }
   s->keepsending=0;
+
+  while(s->isrunning) {
+    s->keepsending=0;
+    queue_finish(s->queue);
+    UNLOCK (&s->mtx);
+    LOCK (&s->mtx);
+  }
+
   UNLOCK (&s->mtx);
 
   queue_finish(s->queue);
