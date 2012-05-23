@@ -16,8 +16,8 @@
 #X obj 57 397 b;
 #X obj 57 277 mrpeach/slipdec;
 #X obj 57 181 mrpeach/slipenc;
-#X obj 57 235 iemnet/tcpclient;
-#X obj 335 44 iemnet/tcpserver 44100;
+#X obj 57 235 tcpclient;
+#X obj 335 44 tcpserver 44100;
 #X obj 57 111 random 100;
 #X msg 57 135 /metro/interval \$1;
 #X floatatom 57 370 5 0 0 0 - - -;
