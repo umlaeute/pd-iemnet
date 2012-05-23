@@ -24,6 +24,7 @@
 /*                                                                              */
 
 #define DEBUGLEVEL 4
+#define DEBUGLOCK if(iemnet_debug(16, __FILE__, __LINE__, __FUNCTION__))post
 
 #include "iemnet.h"
 #include "iemnet_data.h"
