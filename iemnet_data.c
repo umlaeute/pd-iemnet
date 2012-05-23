@@ -406,8 +406,10 @@ void queue_finish(t_iemnet_queue* q) {
   pthread_mutex_unlock(&q->mtx);
 
   pthread_mutex_lock(&q->usedmtx);
-  if(q->used) {
+  while(q->used) {
+    DEBUG("waiting for for queue to become unused %d", q->used);
     pthread_cond_wait(&q->usedcond, &q->usedmtx);
+    DEBUG("queue is more unused %d", q->used);
   }
   pthread_mutex_unlock(&q->usedmtx);
 
