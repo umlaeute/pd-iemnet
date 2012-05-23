@@ -218,6 +218,11 @@ struct _iemnet_queue {
 
   int done; // in cleanup state
   int size;
+
+
+  pthread_mutex_t usedmtx;
+  pthread_cond_t usedcond;
+  int used; // use counter, so queue_finish can wait for blocking accesses to finish
 };
 
 
@@ -276,6 +281,10 @@ t_iemnet_chunk* queue_pop_block(
   t_iemnet_chunk*data=0;
   if(NULL == _this)return NULL;
 
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used++;
+  pthread_mutex_unlock(&_this->usedmtx);
+
   pthread_mutex_lock(&_this->mtx);
 
   /* if the queue is empty, wait */
@@ -286,6 +295,11 @@ t_iemnet_chunk* queue_pop_block(
      */
     if(_this->done) {
       pthread_mutex_unlock(&_this->mtx);
+
+      pthread_mutex_lock(&_this->usedmtx);
+      _this->used--;
+      pthread_cond_signal(&_this->usedcond);
+      pthread_mutex_unlock(&_this->usedmtx);
       return NULL;
     }
   }
@@ -307,6 +321,11 @@ t_iemnet_chunk* queue_pop_block(
     free(head);
     head=NULL;
   }
+
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used--;
+  pthread_cond_signal(&_this->usedcond);
+  pthread_mutex_unlock(&_this->usedmtx);
   return data;
 }
 /* pop a chunk from the queue
@@ -320,10 +339,21 @@ t_iemnet_chunk* queue_pop_noblock(
   t_iemnet_chunk*data=0;
   if(NULL == _this)return NULL;
 
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used++;
+  pthread_mutex_unlock(&_this->usedmtx);
+
   pthread_mutex_lock(&_this->mtx);
+
   if (! (head = _this->head)) {
-    // empty head
+    // empty head      
     pthread_mutex_unlock(&_this->mtx);
+
+    pthread_mutex_lock(&_this->usedmtx);
+    _this->used--;
+    pthread_cond_signal(&_this->usedcond);
+    pthread_mutex_unlock(&_this->usedmtx);
+
     return NULL;
   }
 
@@ -341,6 +371,12 @@ t_iemnet_chunk* queue_pop_noblock(
     free(head);
     head=NULL;
   }
+
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used--;
+  pthread_cond_signal(&_this->usedcond);
+  pthread_mutex_unlock(&_this->usedmtx);
+
   return data;
 }
 
@@ -366,7 +402,15 @@ void queue_finish(t_iemnet_queue* q) {
   DEBUG("queue signaling: %x", q);
   pthread_cond_signal(&q->cond);
   DEBUG("queue signaled: %x", q);
+
   pthread_mutex_unlock(&q->mtx);
+
+  pthread_mutex_lock(&q->usedmtx);
+  if(q->used) {
+    pthread_cond_wait(&q->usedcond, &q->usedmtx);
+  }
+  pthread_mutex_unlock(&q->usedmtx);
+
   DEBUG("queue_finished: %x", q);
 }
 
@@ -389,6 +433,9 @@ void queue_destroy(t_iemnet_queue* q) {
   pthread_mutex_destroy(&q->mtx);
   pthread_cond_destroy(&q->cond);
 
+  pthread_mutex_destroy(&q->usedmtx);
+  pthread_cond_destroy(&q->usedcond);
+
   free(q);
   q=NULL;
   DEBUG("queue destroyed %x", q);
@@ -408,8 +455,12 @@ t_iemnet_queue* queue_create(void) {
   memcpy(&q->cond, &cond, sizeof(pthread_cond_t));
   memcpy(&q->mtx , &mtx, sizeof(pthread_mutex_t));
 
+  memcpy(&q->usedcond, &cond, sizeof(pthread_cond_t));
+  memcpy(&q->usedmtx , &mtx, sizeof(pthread_mutex_t));
+
   q->done = 0;
   q->size = 0;
+  q->used = 0;
   DEBUG("queue created %x", q);
   return q;
 }
