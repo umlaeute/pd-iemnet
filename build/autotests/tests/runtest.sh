@@ -35,6 +35,6 @@ esac
 #do_runtest MEM
 #do_runtest DRD
 #do_runtest HEL
-do_runtest && do_runtest MEM && do_runtest DRD 
+#do_runtest && do_runtest MEM && do_runtest DRD
 
-#do_runtest $TESTTYPE
+do_runtest $TESTTYPE
