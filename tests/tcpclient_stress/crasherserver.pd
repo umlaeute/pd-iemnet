@@ -1,7 +1,7 @@
 #N canvas 642 62 538 461 10;
 #X obj 335 71 list prepend broadcast;
 #X obj 335 93 list trim;
-#X obj 335 44 iemnet/tcpserver 44101;
+#X obj 335 44 tcpserver 44101;
 #X msg 175 45 debug \$1;
 #X floatatom 164 20 5 0 0 0 - - -;
 #X obj 286 91 t a a;
