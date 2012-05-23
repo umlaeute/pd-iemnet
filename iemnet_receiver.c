@@ -77,6 +77,10 @@ struct _iemnet_receiver {
 static void iemnet_signalNewData(t_iemnet_receiver*x) {
   int already=0;
   int trylock=0;
+
+  /* JMZ: check whether we can do that with sys_addpollfn */
+  return;
+
   LOCK(&x->newdata_mtx);
    already=x->newdataflag;
    x->newdataflag=1;
@@ -228,6 +232,10 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
   }
 	DEBUG("tick DONE");
 }
+static void iemnet__receiver_pollfn(void*zz, int fd) {
+  t_iemnet_receiver *x=(t_iemnet_receiver*)zz;
+  iemnet__receiver_tick(x);
+}
 
 int iemnet__receiver_getsize(t_iemnet_receiver*x) {
   int size=-1;
@@ -267,7 +275,13 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->running=1;
 
     rec->queue = queue_create();
-    rec->clock = clock_new(rec, (t_method)iemnet__receiver_tick);
+    //rec->clock = clock_new(rec, (t_method)iemnet__receiver_tick);
+    rec->clock=NULL;
+
+    DEBUG("adding pollfn for %d", sock);
+    sys_lock();
+    sys_addpollfn(sock, iemnet__receiver_pollfn, rec);
+    sys_unlock();
 
     res=pthread_create(&rec->thread, 0, iemnet__receiver_readthread, rec);
   }
@@ -293,10 +307,10 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   sockfd=rec->sockfd;
 
-
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
   if(sockfd>=0) {
+    sys_rmpollfn(sockfd);
     /* this doesn't alway make recvfrom() return!
      * - try polling
      * - try sending a signal with pthread_kill() ?
@@ -327,7 +341,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   pthread_mutex_destroy(&rec->running_mtx);
   pthread_mutex_destroy(&rec->keeprec_mtx);
 
-  clock_free(rec->clock);
+  if(rec->clock)clock_free(rec->clock);
   rec->clock=NULL;
 
   rec->userdata=NULL;
