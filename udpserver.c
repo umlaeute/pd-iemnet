@@ -561,8 +561,9 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
 
   if(c) {
     int conns = x->x_nconnections;
+	t_udpserver_sender*sdr=NULL;
     DEBUG("add new sender from %d", c->port);
-    t_udpserver_sender*sdr=udpserver_sender_add(x, c->addr, c->port);
+    sdr=udpserver_sender_add(x, c->addr, c->port);
     DEBUG("added new sender from %d", c->port);
     if(sdr) {
       udpserver_info_connection(x, sdr);

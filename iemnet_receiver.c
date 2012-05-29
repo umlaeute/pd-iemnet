@@ -120,6 +120,7 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   while(1) {
     t_iemnet_chunk*c=NULL;
+	fd_set rs;
 
     pthread_mutex_lock(&receiver->keeprec_mtx);
      if(!receiver->keepreceiving) {
@@ -129,7 +130,7 @@ static void*iemnet__receiver_readthread(void*arg) {
     pthread_mutex_unlock(&receiver->keeprec_mtx);
 
     fromlen = sizeof(from);
-    fd_set rs=readset;
+    rs=readset;
     timout.tv_sec=0;
     timout.tv_usec=1000;
 
