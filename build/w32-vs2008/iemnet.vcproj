@@ -72,12 +72,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="wsock32.lib libc.lib oldnames.lib pd.lib pthreadVC.lib"
+				AdditionalDependencies="wsock32.lib pd.lib pthreadVC.lib"
 				OutputFile="$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\..\..\pd\bin;&quot;$(ProgramFiles)\pd\bin&quot;"
-				IgnoreAllDefaultLibraries="true"
 				ProgramDatabaseFile="./$(ProjectName).pdb"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
