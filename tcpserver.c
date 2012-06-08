@@ -76,7 +76,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   if(NULL==x) {
-    error("%s_socketreceiver: unable to allocate %d bytes", objName, sizeof(*x));
+    error("%s_socketreceiver: unable to allocate %d bytes", objName, (int)sizeof(*x));
     return NULL;
   } else {
     x->sr_owner=owner;

@@ -76,7 +76,7 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,  unsigned lo
 {
   t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(t_udpserver_sender));
   if(NULL==x) {
-    error("%s_sender: unable to allocate %d bytes", objName, sizeof(*x));
+    error("%s_sender: unable to allocate %d bytes", objName, (int)sizeof(*x));
     return NULL;
   } else {
     int sockfd = owner->x_connectsocket;
