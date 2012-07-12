@@ -51,7 +51,7 @@ _heavy_ load. most do both.
 iemnet wants to provide objects whih allow you to saturate the network
 connection and still keep Pd reactive.
 (sidenote: saturating even a 100MBit network with Pd might lead to audio
-dropouts; this is not necessarily related to the network but rather to the 
+dropouts; this is not necessarily related to the network but rather to the
 amount of data processed by Pd...)
 
 easy to use:
