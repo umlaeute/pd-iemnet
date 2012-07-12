@@ -53,6 +53,7 @@ struct _iemnet_receiver {
   int keepreceiving;
 
   pthread_mutex_t newdata_mtx, running_mtx, keeprec_mtx;
+  pthread_cond_t running_cond;
 };
 
 /* notifies Pd that there is new data to fetch */
@@ -114,9 +115,8 @@ static void*iemnet__receiver_readthread(void*arg) {
   FD_SET(sockfd, &readset);
 
   for(i=0; i<size; i++)data[i]=0;
-  pthread_mutex_lock(&receiver->running_mtx);
-   receiver->running=1;
-  pthread_mutex_unlock(&receiver->running_mtx);
+  receiver->running=1;
+  pthread_cond_signal(&receiver->running_cond);
 
   while(1) {
     t_iemnet_chunk*c=NULL;
@@ -241,13 +241,17 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     memcpy(&rec->newdata_mtx , &mtx, sizeof(pthread_mutex_t));
     memcpy(&rec->running_mtx , &mtx, sizeof(pthread_mutex_t));
     memcpy(&rec->keeprec_mtx , &mtx, sizeof(pthread_mutex_t));
+    pthread_cond_init(&rec->running_cond, 0);
     rec->newdataflag=0;
     rec->running=1;
 
     rec->queue = queue_create();
     rec->clock = clock_new(rec, (t_method)iemnet__receiver_tick);
 
+    pthread_mutex_lock(&rec->running_mtx);
     res=pthread_create(&rec->thread, 0, iemnet__receiver_readthread, rec);
+    pthread_cond_wait(&rec->running_cond, &rec->running_mtx);
+    pthread_mutex_unlock(&rec->running_mtx);
   }
   //fprintf(stderr, "new receiver created\n");
 
@@ -300,6 +304,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   pthread_mutex_destroy(&rec->newdata_mtx);
   pthread_mutex_destroy(&rec->running_mtx);
   pthread_mutex_destroy(&rec->keeprec_mtx);
+  pthread_cond_destroy(&rec->running_cond);
 
   clock_free(rec->clock);
   rec->clock=NULL;
