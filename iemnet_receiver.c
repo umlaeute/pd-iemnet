@@ -39,7 +39,7 @@
 
 
 struct _iemnet_receiver {
-  pthread_t thread;
+  pthread_t sigthread, recthread;
   int sockfd; /* owned outside; you must call iemnet__receiver_destroy() before freeing socket yourself */
   void*userdata;
   t_iemnet_chunk*data;
@@ -288,14 +288,14 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
 
     /* start the newdata-signalling thread */
     pthread_mutex_lock(&rec->newdata_mtx);
-    res=pthread_create(&rec->thread, 0, iemnet__receiver_newdatathread, rec);
+    res=pthread_create(&rec->sigthread, 0, iemnet__receiver_newdatathread, rec);
     if(res)
       pthread_cond_wait(&rec->newdata_cond, &rec->newdata_mtx);
     pthread_mutex_unlock(&rec->newdata_mtx);
 
     /* start the recv thread */
     pthread_mutex_lock(&rec->running_mtx);
-    res=pthread_create(&rec->thread, 0, iemnet__receiver_readthread, rec);
+    res=pthread_create(&rec->recthread, 0, iemnet__receiver_readthread, rec);
     if(res)
       pthread_cond_wait(&rec->running_cond, &rec->running_mtx);
     pthread_mutex_unlock(&rec->running_mtx);
@@ -323,7 +323,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   sockfd=rec->sockfd;
 
   DEBUG("joining thread");
-  pthread_join(rec->thread, NULL);
+  pthread_join(rec->recthread, NULL);
 
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
