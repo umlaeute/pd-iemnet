@@ -74,11 +74,15 @@ static void*iemnet__receiver_newdatathread(void*z) {
 
      already=rec->newdataflag;
      rec->newdataflag=1;
+
+     if(!rec->running) {
+       break;
+     }
+
      if(already)
        continue;
 
     pthread_mutex_unlock(&rec->newdata_mtx);
-
 
     /* signal Pd that we have new data */
     sys_lock();
@@ -324,6 +328,9 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   DEBUG("joining thread");
   pthread_join(rec->recthread, NULL);
+
+  pthread_cond_signal(&rec->newdata_cond);
+  pthread_join(rec->sigthread, NULL);
 
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
