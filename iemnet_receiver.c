@@ -37,7 +37,6 @@
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
-
 struct _iemnet_receiver {
   pthread_t sigthread, recthread;
   int sockfd; /* owned outside; you must call iemnet__receiver_destroy() before freeing socket yourself */
@@ -46,7 +45,6 @@ struct _iemnet_receiver {
   t_iemnet_receivecallback callback;
   t_iemnet_queue*queue;
   t_clock *clock;
-
 
   int newdataflag;
   int running;
@@ -94,41 +92,6 @@ static void*iemnet__receiver_newdatathread(void*z) {
 
   pthread_mutex_unlock(&rec->newdata_mtx);
   return 0;
-
-
-#if 0
-  int already=0;
-  int trylock=0;
-  pthread_mutex_lock(&x->newdata_mtx);
-   already=x->newdataflag;
-   x->newdataflag=1;
-
-   /* don't schedule ticks at the end of life */
-   if(x->sockfd<0)already=1;
-
-  pthread_mutex_unlock(&x->newdata_mtx);
-
-  if(already) {
-    return;
-  }
-
-  /*
-   * try to lock Pd's main mutex
-   *  this is bound to deadlock if this function is called from within Pd's mainthread
-   *  (which happens when we destroy the receiver and signalNewData is called on cleanup)
-   *
-   * - shan't we check whether sys_trylock() returns EBUSY ?
-   */
-  trylock=sys_trylock();
-  switch(trylock) {
-  case 0:
-  case EBUSY:
-    if(x->clock)clock_delay(x->clock, 0);
-    if(0==trylock)sys_unlock();
-  default:
-    break;
-  }
-#endif
 }
 
 
