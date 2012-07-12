@@ -53,11 +53,46 @@ struct _iemnet_receiver {
   int keepreceiving;
 
   pthread_mutex_t newdata_mtx, running_mtx, keeprec_mtx;
-  pthread_cond_t running_cond;
+  pthread_cond_t running_cond, newdata_cond;
 };
 
 /* notifies Pd that there is new data to fetch */
 static void iemnet_signalNewData(t_iemnet_receiver*x) {
+  pthread_cond_signal(&x->newdata_cond);
+}
+
+static void*iemnet__receiver_newdatathread(void*z) {
+  int already=0;
+
+  t_iemnet_receiver*rec= (t_iemnet_receiver*)z;
+  pthread_cond_signal(&rec->newdata_cond);
+
+
+  pthread_mutex_lock(&rec->newdata_mtx);
+  while(1) {
+    pthread_cond_wait(&rec->newdata_cond, &rec->newdata_mtx);
+
+     already=rec->newdataflag;
+     rec->newdataflag=1;
+     if(already)
+       continue;
+
+    pthread_mutex_unlock(&rec->newdata_mtx);
+
+
+    /* signal Pd that we have new data */
+    sys_lock();
+     if(rec->clock)clock_delay(rec->clock, 0);
+    sys_unlock();
+
+    pthread_mutex_lock(&rec->newdata_mtx);
+  }
+
+  pthread_mutex_unlock(&rec->newdata_mtx);
+  return 0;
+
+
+#if 0
   int already=0;
   int trylock=0;
   pthread_mutex_lock(&x->newdata_mtx);
@@ -89,6 +124,7 @@ static void iemnet_signalNewData(t_iemnet_receiver*x) {
   default:
     break;
   }
+#endif
 }
 
 
@@ -242,15 +278,26 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     memcpy(&rec->running_mtx , &mtx, sizeof(pthread_mutex_t));
     memcpy(&rec->keeprec_mtx , &mtx, sizeof(pthread_mutex_t));
     pthread_cond_init(&rec->running_cond, 0);
+    pthread_cond_init(&rec->newdata_cond, 0);
+
     rec->newdataflag=0;
     rec->running=1;
 
     rec->queue = queue_create();
     rec->clock = clock_new(rec, (t_method)iemnet__receiver_tick);
 
+    /* start the newdata-signalling thread */
+    pthread_mutex_lock(&rec->newdata_mtx);
+    res=pthread_create(&rec->thread, 0, iemnet__receiver_newdatathread, rec);
+    if(res)
+      pthread_cond_wait(&rec->newdata_cond, &rec->newdata_mtx);
+    pthread_mutex_unlock(&rec->newdata_mtx);
+
+    /* start the recv thread */
     pthread_mutex_lock(&rec->running_mtx);
     res=pthread_create(&rec->thread, 0, iemnet__receiver_readthread, rec);
-    pthread_cond_wait(&rec->running_cond, &rec->running_mtx);
+    if(res)
+      pthread_cond_wait(&rec->running_cond, &rec->running_mtx);
     pthread_mutex_unlock(&rec->running_mtx);
   }
   //fprintf(stderr, "new receiver created\n");
@@ -304,6 +351,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   pthread_mutex_destroy(&rec->newdata_mtx);
   pthread_mutex_destroy(&rec->running_mtx);
   pthread_mutex_destroy(&rec->keeprec_mtx);
+  pthread_cond_destroy(&rec->newdata_cond);
   pthread_cond_destroy(&rec->running_cond);
 
   clock_free(rec->clock);
