@@ -24,10 +24,6 @@
 /*                                                                              */
 
 #define DEBUGLEVEL 4
-#define DEBUGLOCK if(iemnet_debug(16, __FILE__, __LINE__, __FUNCTION__))post
-
-
-
 
 #include "iemnet.h"
 #include "iemnet_data.h"
@@ -38,20 +34,6 @@
 #include <errno.h>
 
 #include <pthread.h>
-
-
-
-#if IEMNET_HAVE_DEBUG
-static int debug_lockcount=0;
-# define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  UNLOCK %p [%d]", x, debug_lockcount); pthread_mutex_unlock(x);}while(0)
-#else
-# define LOCK(x) pthread_mutex_lock(x)
-# define UNLOCK(x) pthread_mutex_unlock(x)
-#endif
-
-
-
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
@@ -77,13 +59,14 @@ struct _iemnet_receiver {
 static void iemnet_signalNewData(t_iemnet_receiver*x) {
   int already=0;
   int trylock=0;
-  LOCK(&x->newdata_mtx);
+  pthread_mutex_lock(&x->newdata_mtx);
    already=x->newdataflag;
    x->newdataflag=1;
 
    /* don't schedule ticks at the end of life */
    if(x->sockfd<0)already=1;
-  UNLOCK(&x->newdata_mtx);
+
+  pthread_mutex_unlock(&x->newdata_mtx);
 
   if(already) {
     return;
@@ -127,28 +110,27 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   struct timeval timout;
   fd_set readset;
-
-  DEBUG("read thread init");
-
   FD_ZERO(&readset);
   FD_SET(sockfd, &readset);
 
   for(i=0; i<size; i++)data[i]=0;
-  LOCK(&receiver->running_mtx);
+  pthread_mutex_lock(&receiver->running_mtx);
    receiver->running=1;
-  UNLOCK(&receiver->running_mtx);
+  pthread_mutex_unlock(&receiver->running_mtx);
 
   while(1) {
     t_iemnet_chunk*c=NULL;
-    LOCK(&receiver->keeprec_mtx);
+	fd_set rs;
+
+    pthread_mutex_lock(&receiver->keeprec_mtx);
      if(!receiver->keepreceiving) {
-       UNLOCK(&receiver->keeprec_mtx);
-       break;
+      pthread_mutex_unlock(&receiver->keeprec_mtx);
+      break;
      }
-    UNLOCK(&receiver->keeprec_mtx);
+    pthread_mutex_unlock(&receiver->keeprec_mtx);
 
     fromlen = sizeof(from);
-    fd_set rs=readset;
+    rs=readset;
     timout.tv_sec=0;
     timout.tv_usec=1000;
 
@@ -159,7 +141,7 @@ static void*iemnet__receiver_readthread(void*arg) {
            &timout);
     if (!FD_ISSET(sockfd, &rs))continue;
 
-    DEBUG("select can read on %d", sockfd);
+    DEBUG("select can read");
 
     //fprintf(stderr, "reading %d bytes...\n", size);
     //result = recv(sockfd, data, size, 0);
@@ -167,18 +149,12 @@ static void*iemnet__receiver_readthread(void*arg) {
     result = recvfrom(sockfd, data, size, recv_flags, (struct sockaddr *)&from, &fromlen);
     //fprintf(stderr, "read %d bytes...\n", result);
     DEBUG("recfrom %d bytes: %p", result, data);
-
-    if(result<=0)
-      break;
-
-    if(result>0) {
-      c= iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
-      DEBUG("pushing");
-      queue_push(q, c);
-    }
+    c= iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
+    DEBUG("pushing");
+    queue_push(q, c);
     DEBUG("signalling");
     iemnet_signalNewData(receiver);
-    DEBUG("signalled");
+
     if(result<=0) break;
 
     DEBUG("rereceive");
@@ -186,9 +162,10 @@ static void*iemnet__receiver_readthread(void*arg) {
   // oha
   DEBUG("readthread loop termination: %d", result);
   //if(result>=0)iemnet_signalNewData(receiver);
-  LOCK(&receiver->running_mtx);
+
+  pthread_mutex_lock(&receiver->running_mtx);
    receiver->running=0;
-  UNLOCK(&receiver->running_mtx);
+  pthread_mutex_unlock(&receiver->running_mtx);
 
   DEBUG("read thread terminated");
   return NULL;
@@ -208,19 +185,20 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
     c=queue_pop_noblock(x->queue);
   }
 	DEBUG("tick cleanup");
-  LOCK(&x->newdata_mtx);
+  pthread_mutex_lock(&x->newdata_mtx);
    x->newdataflag=0;
-  UNLOCK(&x->newdata_mtx);
-  LOCK(&x->running_mtx);
+  pthread_mutex_unlock(&x->newdata_mtx);
+
+  pthread_mutex_lock(&x->running_mtx);
    running = x->running;
-  UNLOCK(&x->running_mtx);
+  pthread_mutex_unlock(&x->running_mtx);
 
 	DEBUG("tick running %d", running);
   if(!running) {
     // read terminated
-    LOCK(&x->keeprec_mtx);
+    pthread_mutex_lock(&x->keeprec_mtx);
      keepreceiving=x->keepreceiving;
-    UNLOCK(&x->keeprec_mtx);
+    pthread_mutex_unlock(&x->keeprec_mtx);
 
     /* keepreceiving is set, if receiver is not yet in shutdown mode */
     if(keepreceiving)
@@ -283,16 +261,18 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   int sockfd;
   DEBUG("[%d] destroy receiver %x", inst, rec);
   if(NULL==rec)return;
-  LOCK(&rec->keeprec_mtx);
+  pthread_mutex_lock(&rec->keeprec_mtx);
    if(!rec->keepreceiving) {
-     UNLOCK(&rec->keeprec_mtx);
+    pthread_mutex_unlock(&rec->keeprec_mtx);
     return;
    }
    rec->keepreceiving=0;
-  UNLOCK(&rec->keeprec_mtx);
+  pthread_mutex_unlock(&rec->keeprec_mtx);
 
   sockfd=rec->sockfd;
 
+  DEBUG("joining thread");
+  pthread_join(rec->thread, NULL);
 
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
@@ -302,18 +282,12 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
      * - try sending a signal with pthread_kill() ?
      */
 
-    /* confirm e.g. http://stackoverflow.com/questions/6389970/ */
-
     shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     sys_closesocket(sockfd);
   }
   DEBUG("[%d] closed socket %d", inst, sockfd);
 
   rec->sockfd=-1;
-
-  DEBUG("joining thread");
-  pthread_join(rec->thread, NULL);
-
 
   // empty the queue
   DEBUG("[%d] tick %d", inst, rec->running);
