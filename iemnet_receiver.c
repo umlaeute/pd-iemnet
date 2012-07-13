@@ -125,7 +125,7 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   while(1) {
     t_iemnet_chunk*c=NULL;
-	fd_set rs;
+    fd_set rs;
 
     pthread_mutex_lock(&receiver->keeprec_mtx);
      if(!receiver->keepreceiving) {

@@ -76,7 +76,7 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,  unsigned lo
 {
   t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(t_udpserver_sender));
   if(NULL==x) {
-    error("%s_sender: unable to allocate %d bytes", objName, sizeof(*x));
+    error("%s_sender: unable to allocate %d bytes", objName, (int)sizeof(*x));
     return NULL;
   } else {
     int sockfd = owner->x_connectsocket;
@@ -561,7 +561,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c) {
 
   if(c) {
     int conns = x->x_nconnections;
-	t_udpserver_sender*sdr=NULL;
+    t_udpserver_sender*sdr=NULL;
     DEBUG("add new sender from %d", c->port);
     sdr=udpserver_sender_add(x, c->addr, c->port);
     DEBUG("added new sender from %d", c->port);
