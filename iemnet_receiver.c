@@ -244,9 +244,10 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->data=data;
     rec->callback=callback;
 
-    memcpy(&rec->newdata_mtx , &mtx, sizeof(pthread_mutex_t));
-    memcpy(&rec->running_mtx , &mtx, sizeof(pthread_mutex_t));
-    memcpy(&rec->keeprec_mtx , &mtx, sizeof(pthread_mutex_t));
+    pthread_mutex_init(&rec->newdata_mtx , 0);
+    pthread_mutex_init(&rec->running_mtx , 0);
+    pthread_mutex_init(&rec->keeprec_mtx , 0);
+
     pthread_cond_init(&rec->running_cond, 0);
     pthread_cond_init(&rec->newdata_cond, 0);
 
