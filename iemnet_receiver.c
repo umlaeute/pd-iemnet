@@ -66,10 +66,8 @@ static void*iemnet__receiver_newdatathread(void*z) {
   pthread_mutex_lock (&rec->newdata_mtx);
   pthread_cond_signal(&rec->newdata_cond);
 
-
   while(1) {
     pthread_cond_wait(&rec->newdata_cond, &rec->newdata_mtx);
-
      already=rec->newdataflag;
      rec->newdataflag=1;
     pthread_mutex_unlock(&rec->newdata_mtx);
@@ -126,7 +124,7 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   while(1) {
     t_iemnet_chunk*c=NULL;
-	fd_set rs;
+    fd_set rs;
 
     pthread_mutex_lock(&receiver->keeprec_mtx);
      if(!receiver->keepreceiving) {
@@ -291,12 +289,10 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   sockfd=rec->sockfd;
 
-  DEBUG("joining thread");
   pthread_join(rec->recthread, NULL);
 
   pthread_cond_signal(&rec->newdata_cond);
   pthread_join(rec->sigthread, NULL);
-
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
   if(sockfd>=0) {
