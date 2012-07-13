@@ -63,34 +63,34 @@ static void*iemnet__receiver_newdatathread(void*z) {
   int already=0;
 
   t_iemnet_receiver*rec= (t_iemnet_receiver*)z;
+  pthread_mutex_lock (&rec->newdata_mtx);
   pthread_cond_signal(&rec->newdata_cond);
 
 
-  pthread_mutex_lock(&rec->newdata_mtx);
   while(1) {
     pthread_cond_wait(&rec->newdata_cond, &rec->newdata_mtx);
 
      already=rec->newdataflag;
      rec->newdataflag=1;
-
-     if(!rec->running) {
-       break;
-     }
-
-     if(already)
-       continue;
-
     pthread_mutex_unlock(&rec->newdata_mtx);
 
-    /* signal Pd that we have new data */
-    sys_lock();
-     if(rec->clock)clock_delay(rec->clock, 0);
-    sys_unlock();
+    pthread_mutex_lock(&rec->running_mtx);
+     if(!rec->running) {
+       pthread_mutex_unlock(&rec->running_mtx);
+       break;
+     }
+    pthread_mutex_unlock(&rec->running_mtx);
+
+    if(!already) {
+      /* signal Pd that we have new data */
+      sys_lock();
+       if(rec->clock)clock_delay(rec->clock, 0);
+      sys_unlock();
+    }
 
     pthread_mutex_lock(&rec->newdata_mtx);
   }
 
-  pthread_mutex_unlock(&rec->newdata_mtx);
   return 0;
 }
 
@@ -119,7 +119,10 @@ static void*iemnet__receiver_readthread(void*arg) {
 
   for(i=0; i<size; i++)data[i]=0;
   receiver->running=1;
-  pthread_cond_signal(&receiver->running_cond);
+
+  pthread_mutex_lock  (&receiver->running_mtx);
+  pthread_cond_signal (&receiver->running_cond);
+  pthread_mutex_unlock(&receiver->running_mtx);
 
   while(1) {
     t_iemnet_chunk*c=NULL;
