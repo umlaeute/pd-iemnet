@@ -47,7 +47,6 @@ struct _iemnet_receiver {
   t_iemnet_queue*queue;
   t_clock *clock;
 
-
   int newdataflag;
   int running;
   int keepreceiving;
@@ -156,14 +155,14 @@ static void*iemnet__receiver_readthread(void*arg) {
     //fprintf(stderr, "read %d bytes...\n", result);
     DEBUG("recfrom %d bytes: %p", result, data);
     c= iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
-    DEBUG("pushing");  
+    DEBUG("pushing");
     queue_push(q, c);
-    DEBUG("signalling");  
+    DEBUG("signalling");
     iemnet_signalNewData(receiver);
 
     if(result<=0) break;
 
-    DEBUG("rereceive");  
+    DEBUG("rereceive");
   }
   // oha
   DEBUG("readthread loop termination: %d", result);
@@ -207,7 +206,7 @@ static void iemnet__receiver_tick(t_iemnet_receiver *x)
     pthread_mutex_unlock(&x->keeprec_mtx);
 
     /* keepreceiving is set, if receiver is not yet in shutdown mode */
-    if(keepreceiving) 
+    if(keepreceiving)
       x->callback(x->userdata, NULL);
   }
 	DEBUG("tick DONE");
@@ -291,7 +290,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
 
   sockfd=rec->sockfd;
 
-  DEBUG("joining thread");
   pthread_join(rec->recthread, NULL);
 
   pthread_cond_signal(&rec->newdata_cond);
@@ -305,7 +303,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
      */
 
     shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-    sys_closesocket(sockfd); 
+    sys_closesocket(sockfd);
   }
   DEBUG("[%d] closed socket %d", inst, sockfd);
 
@@ -314,7 +312,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   // empty the queue
   DEBUG("[%d] tick %d", inst, rec->running);
   iemnet__receiver_tick(rec);
-  queue_destroy(rec->queue);  
+  queue_destroy(rec->queue);
   DEBUG("[%d] tack", inst);
 
   if(rec->data)iemnet__chunk_destroy(rec->data);

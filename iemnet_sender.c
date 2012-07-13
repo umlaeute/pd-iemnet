@@ -47,8 +47,8 @@
 
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {pthread_mutex_lock(x);debug_lockcount++;  if(debuglevel&DEBUGLEVEL)post("  LOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__); } while(0)
-# define UNLOCK(x) do {debug_lockcount--;if(debuglevel&DEBUGLEVEL)post("UNLOCK %d (@%s:%d)", debug_lockcount, __FILE__, __LINE__);pthread_mutex_unlock(x);}while(0)
+# define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
+# define UNLOCK(x) do {debug_lockcount--;if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  UNLOCK %p [%d]", x, debug_lockcount); pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
 # define UNLOCK(x) pthread_mutex_unlock(x)
