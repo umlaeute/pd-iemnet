@@ -45,7 +45,6 @@
 
 #include <pthread.h>
 
-
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
 # define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
@@ -78,10 +77,7 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
   struct sockaddr_in  to;
   socklen_t           tolen = sizeof(to);
 
-  t_iemnet_chunk*c=NULL;
-  DEBUG("init socket %d", sockfd);
-  c=queue_pop_block(q);
-  DEBUG("queue %p got chunk %p", q, c);
+  t_iemnet_chunk*c=queue_pop_block(q);
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
@@ -102,7 +98,6 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
     }
     if(result<0) {
       // broken pipe
-      DEBUG("broken pipe: %d", result);
       return 0;
     }
 
@@ -110,7 +105,6 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
     DEBUG("sent %d bytes", result);
     iemnet__chunk_destroy(c);
   } else {
-    DEBUG("no chunk");
     return 0;
   }
   return 1;
@@ -122,17 +116,13 @@ static void*iemnet__sender_sendthread(void*arg) {
   int sockfd=-1;
   t_iemnet_queue*q=NULL;
 
-  DEBUG("send thread init");
   LOCK(&sender->mtx);
   sockfd=sender->sockfd;
   q=sender->queue;
-  DEBUG("startloop");
   while(sender->keepsending) {
-    DEBUG("loop");
     UNLOCK(&sender->mtx);
     if(!iemnet__sender_dosend(sockfd, q)){
       LOCK(&sender->mtx);
-      DEBUG("dosend failed");
       break;
     }
     LOCK(&sender->mtx);
@@ -189,9 +179,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   queue_finish(s->queue);
   DEBUG("queue finished");
 
-  DEBUG("closing socket %d", sockfd);
   if(sockfd>=0) {
-
     int err=shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     sys_closesocket(sockfd); 
   }
@@ -200,9 +188,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   DEBUG("thread joined");
   queue_destroy(s->queue);
 
-  DEBUG("destroying mutex %p", &s->mtx);
   pthread_mutex_destroy (&s->mtx);
-  DEBUG("done");
 
   memset(s, 0, sizeof(t_iemnet_sender));
   free(s);

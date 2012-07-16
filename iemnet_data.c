@@ -219,7 +219,6 @@ struct _iemnet_queue {
   int done; // in cleanup state
   int size;
 
-
   pthread_mutex_t usedmtx;
   pthread_cond_t usedcond;
   int used; // use counter, so queue_finish can wait for blocking accesses to finish
