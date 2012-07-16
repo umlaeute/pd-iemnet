@@ -224,6 +224,17 @@ struct _iemnet_queue {
   int used; // use counter, so queue_finish can wait for blocking accesses to finish
 };
 
+static void queue_use_increment(t_iemnet_queue* _this) {
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used++;
+  pthread_mutex_unlock(&_this->usedmtx);
+}
+static void queue_use_decrement(t_iemnet_queue* _this) {
+  pthread_mutex_lock(&_this->usedmtx);
+  _this->used--;
+  pthread_cond_signal(&_this->usedcond);
+  pthread_mutex_unlock(&_this->usedmtx);
+}
 
 /* push a  chunk into the queue
  * this will return the current queue size
@@ -280,10 +291,7 @@ t_iemnet_chunk* queue_pop_block(
   t_iemnet_chunk*data=0;
   if(NULL == _this)return NULL;
 
-  pthread_mutex_lock(&_this->usedmtx);
-  _this->used++;
-  pthread_mutex_unlock(&_this->usedmtx);
-
+  queue_use_increment(_this);
   pthread_mutex_lock(&_this->mtx);
 
   /* if the queue is empty, wait */
@@ -294,11 +302,7 @@ t_iemnet_chunk* queue_pop_block(
      */
     if(_this->done) {
       pthread_mutex_unlock(&_this->mtx);
-
-      pthread_mutex_lock(&_this->usedmtx);
-      _this->used--;
-      pthread_cond_signal(&_this->usedcond);
-      pthread_mutex_unlock(&_this->usedmtx);
+      queue_use_decrement(_this);
       return NULL;
     }
   }
@@ -320,11 +324,7 @@ t_iemnet_chunk* queue_pop_block(
     free(head);
     head=NULL;
   }
-
-  pthread_mutex_lock(&_this->usedmtx);
-  _this->used--;
-  pthread_cond_signal(&_this->usedcond);
-  pthread_mutex_unlock(&_this->usedmtx);
+  queue_use_decrement(_this);
   return data;
 }
 /* pop a chunk from the queue
@@ -338,21 +338,12 @@ t_iemnet_chunk* queue_pop_noblock(
   t_iemnet_chunk*data=0;
   if(NULL == _this)return NULL;
 
-  pthread_mutex_lock(&_this->usedmtx);
-  _this->used++;
-  pthread_mutex_unlock(&_this->usedmtx);
-
+  queue_use_increment(_this);
   pthread_mutex_lock(&_this->mtx);
-
   if (! (head = _this->head)) {
-    // empty head      
+    // empty head
     pthread_mutex_unlock(&_this->mtx);
-
-    pthread_mutex_lock(&_this->usedmtx);
-    _this->used--;
-    pthread_cond_signal(&_this->usedcond);
-    pthread_mutex_unlock(&_this->usedmtx);
-
+    queue_use_decrement(_this);
     return NULL;
   }
 
@@ -370,12 +361,7 @@ t_iemnet_chunk* queue_pop_noblock(
     free(head);
     head=NULL;
   }
-
-  pthread_mutex_lock(&_this->usedmtx);
-  _this->used--;
-  pthread_cond_signal(&_this->usedcond);
-  pthread_mutex_unlock(&_this->usedmtx);
-
+  queue_use_decrement(_this);
   return data;
 }
 
@@ -401,15 +387,11 @@ void queue_finish(t_iemnet_queue* q) {
   DEBUG("queue signaling: %x", q);
   pthread_cond_signal(&q->cond);
   DEBUG("queue signaled: %x", q);
-
   pthread_mutex_unlock(&q->mtx);
 
+  /* wait until queue is no longer used */
   pthread_mutex_lock(&q->usedmtx);
-  while(q->used) {
-    DEBUG("waiting for for queue to become unused %d", q->used);
-    pthread_cond_wait(&q->usedcond, &q->usedmtx);
-    DEBUG("queue is more unused %d", q->used);
-  }
+  while(q->used) pthread_cond_wait(&q->usedcond, &q->usedmtx);
   pthread_mutex_unlock(&q->usedmtx);
 
   DEBUG("queue_finished: %x", q);
