@@ -1,0 +1,26 @@
+#N canvas 242 49 499 405 10;
+#X msg 22 255 disconnect;
+#X msg 112 177 connect localhost 44100;
+#X obj 21 344 iemnet/tcpserver 44100;
+#X obj 22 322 iemnet/tcpclient;
+#X obj 22 149 t b b b;
+#X obj 22 70 tgl 15 0 empty empty empty 17 7 0 10 -261234 -1 -1 0 1
+;
+#X msg 106 248 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+22 23 24 25 26 27 28 29 30 255;
+#X obj 106 219 del 20;
+#X obj 22 231 del 40;
+#X obj 22 110 metro 60;
+#X text 78 68 This patch appears to crash Pd after a few cycles of
+disconnect|send|reconnect.;
+#X text 44 71 <-;
+#X connect 0 0 3 0;
+#X connect 1 0 3 0;
+#X connect 4 0 8 0;
+#X connect 4 1 7 0;
+#X connect 4 2 1 0;
+#X connect 5 0 9 0;
+#X connect 6 0 3 0;
+#X connect 7 0 6 0;
+#X connect 8 0 0 0;
+#X connect 9 0 4 0;
