@@ -199,7 +199,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
 
 t_iemnet_sender*iemnet__sender_create(int sock) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-  t_iemnet_sender*result=(t_iemnet_sender*)malloc(sizeof(t_iemnet_sender));
+  t_iemnet_sender*result=(t_iemnet_sender*)calloc(1, sizeof(t_iemnet_sender));
   int res=0;
   DEBUG("create sender %x", result);
   if(NULL==result){
@@ -217,9 +217,11 @@ t_iemnet_sender*iemnet__sender_create(int sock) {
   res=pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
 
   if(0==res) {
-
   } else {
     // something went wrong
+    queue_destroy(result->queue);
+    free(result);
+    return NULL;
   }
 
   DEBUG("created sender");
