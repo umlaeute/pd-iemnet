@@ -172,7 +172,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fpo
   x->x_port = fportno;
   x->x_connectstate = 0;
   /* start child thread */
-  if(pthread_create(&x->x_threadid, &x->x_threadattr, tcpclient_child_connect, x) < 0)
+  if(pthread_create(&x->x_threadid, &x->x_threadattr, tcpclient_child_connect, x))
     error("%s: could not create new thread", objName);
 }
 
@@ -259,11 +259,10 @@ static void *tcpclient_new(void)
   x->x_floatlist=iemnet__floatlist_create(1024);
 
   /* prepare child thread */
-  if(pthread_attr_init(&x->x_threadattr) < 0)
+  if(pthread_attr_init(&x->x_threadattr))
     error("%s: warning: could not prepare child thread", objName);
-  if(pthread_attr_setdetachstate(&x->x_threadattr, PTHREAD_CREATE_DETACHED) < 0)
+  else if(pthread_attr_setdetachstate(&x->x_threadattr, PTHREAD_CREATE_DETACHED))
     error("%s: warning: could not prepare child thread", objName);
-    
 
   return (x);
 }
