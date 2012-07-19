@@ -116,6 +116,17 @@ void iemnet__chunk_destroy(t_iemnet_chunk*c) {
   free(c);
 }
 
+
+void iemnet__chunk_print(t_iemnet_chunk*c) {
+  unsigned int i=0;
+  post("chunk[%p:%d]", c, c?c->size:0);
+  if(!c)return;
+  startpost("data:");
+  for(i=0; i<c->size; i++)
+    startpost(" %d", c->data[i]);
+  endpost();
+}
+
 t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
   t_iemnet_chunk*result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
   if(result) {
