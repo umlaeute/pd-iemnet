@@ -30,6 +30,7 @@
 #include "iemnet.h"
 #include "iemnet_data.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
@@ -224,25 +225,17 @@ static void tcpserver_info_connection(t_tcpserver *x, t_tcpserver_socketreceiver
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
-
-t_tcpserver_socketreceiver*tcpserver_getclient(t_tcpserver*x, int client) {
-  if(x&&x->x_sr)return x->x_sr[client];
-  return NULL;
-}
-
 /* ---------------- main tcpserver (send) stuff --------------------- */
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
-static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
+
+static void tcpserver_send_bytes_client(t_tcpserver*x, t_tcpserver_socketreceiver*sr, int client, t_iemnet_chunk*chunk)
 {
-  DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
-  if(x && x->x_sr && x->x_sr[client]) {
+  if(sr) {
     t_atom                  output_atom[3];
     int size=-1;
 
-    t_iemnet_sender*sender=sender=x->x_sr[client]->sr_sender;
-    int sockfd = x->x_sr[client]->sr_fd;
-
+    t_iemnet_sender*sender=sr->sr_sender;
+    int sockfd = sr->sr_fd;
     if(sender) {
       size=iemnet__sender_send(sender, chunk);
     }
@@ -259,31 +252,44 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   }
 }
 
-static int tcpserver_send_bytes_retryclient(t_tcpserver*x, int client, t_iemnet_chunk*chunk) {
-  t_tcpserver_socketreceiver*sr=tcpserver_getclient(x, client), *sr0=NULL;
-  do {
-    tcpserver_send_bytes(x, client, chunk);
-    sr0=sr;
-    sr=tcpserver_getclient(x, client);
-  } while(sr && sr!=sr0);
-  return (sr!=NULL);
+static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
+{
+  t_tcpserver_socketreceiver*sr=NULL;
+  if(x&&x->x_sr)sr=x->x_sr[client];
+  DEBUG("send_bytes to %p[%d] -> %p", x, client, sr);
+  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
+  tcpserver_send_bytes_client(x, sr, client, chunk);
 }
 
-
+/* send the chunk to all non-null clients */
+static void tcpserver_send_bytes_clients(t_tcpserver*x, t_tcpserver_socketreceiver**sr, unsigned int nsr, t_iemnet_chunk*chunk) {
+  unsigned int i=0;
+  for(i=0; i<nsr; i++) {
+    tcpserver_send_bytes_client(x, sr[i], i, chunk);
+  }
+}
 
 /* broadcasts a message to all connected clients but the given one */
 static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *argv)
 {
   int client=0;
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
-  int nconnections=x->x_nconnections;
+  t_iemnet_chunk*chunk=NULL;
+  t_tcpserver_socketreceiver**sr=NULL;
+  if(!x || !x->x_nconnections || !x->x_sr)return;
 
-  /* enumerate through the clients and send each the message */
-  for(client = 0; client < nconnections; client++)	/* check if connection exists */
-    {
-      /* socket exists for this client */
-      if(client!=but)tcpserver_send_bytes_retryclient(x, client, chunk);
-    }
+  chunk=iemnet__chunk_create_list(argc, argv);
+  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
+
+  for(client=0; client<x->x_nconnections; client++) {
+    sr[client]=x->x_sr[client];
+  }
+
+  if(but>=0 && but<x->x_nconnections)
+    sr[but]=NULL;
+
+  tcpserver_send_bytes_clients(x, sr, x->x_nconnections, chunk);
+
+  free(sr);
   iemnet__chunk_destroy(chunk);
 }
 /* sends a message to a given client */
@@ -324,14 +330,21 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 /* broadcasts a message to all connected clients */
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int     client;
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
-  int nconnections=x->x_nconnections;
-  /* enumerate through the clients and send each the message */
-  for(client = 0; client < nconnections; client++)	/* check if connection exists */
-    {
-      tcpserver_send_bytes_retryclient(x, client, chunk);
-    }
+  int client=0;
+  t_iemnet_chunk*chunk=NULL;
+  t_tcpserver_socketreceiver**sr=NULL;
+  if(!x || !x->x_nconnections || !x->x_sr)return;
+
+  chunk=iemnet__chunk_create_list(argc, argv);
+  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
+
+  for(client=0; client<x->x_nconnections; client++) {
+    sr[client]=x->x_sr[client];
+  }
+
+  tcpserver_send_bytes_clients(x, sr, x->x_nconnections, chunk);
+
+  free(sr);
   iemnet__chunk_destroy(chunk);
 }
 
