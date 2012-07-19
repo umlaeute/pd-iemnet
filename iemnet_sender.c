@@ -180,8 +180,16 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
   DEBUG("queue finished");
 
   if(sockfd>=0) {
-    int err=shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-    sys_closesocket(sockfd); 
+#ifndef SHUT_RDWR
+# define SHUT_RDWR 2
+#endif
+    int how=SHUT_RDWR;
+    int err=shutdown(sockfd, how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+
+    if(err) {
+      perror("iemnet:sender-shutdown");
+    }
+    sys_closesocket(sockfd);
   }
 
   pthread_join(s->thread, NULL);
