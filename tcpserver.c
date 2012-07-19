@@ -492,7 +492,14 @@ static void tcpserver_connectpoll(t_tcpserver *x)
   if (fd < 0) post("%s: accept failed", objName);
   else
     {
-      t_tcpserver_socketreceiver *y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
+      t_tcpserver_socketreceiver *y = NULL;
+      if(x->x_nconnections>=MAX_CONNECT) {
+        pd_error(x, "%s: cannot handle more than %d connections, dropping", objName, x->x_nconnections);
+        sys_closesocket(fd);
+      }
+
+
+      y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
       if (!y)
         {
           sys_closesocket(fd);
