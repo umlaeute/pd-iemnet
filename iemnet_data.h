@@ -75,6 +75,11 @@ typedef struct _iemnet_chunk {
 void iemnet__chunk_destroy(t_iemnet_chunk*);
 
 /**
+ * print a "chunk" to the pd-console
+ */
+void iemnet__chunk_print(t_iemnet_chunk*c);
+
+/**
  * initialize a "chunk" (allocate memory,...) of fixed size
  * receiver address will be set to 0
  *
