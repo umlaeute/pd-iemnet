@@ -81,7 +81,7 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
-    
+
     int result=-1;
 
     //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
@@ -153,7 +153,7 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
 void iemnet__sender_destroy(t_iemnet_sender*s) {
   int sockfd=-1;
   /* simple protection against recursive calls:
-   * s->keepsending is only set to "0" in here, 
+   * s->keepsending is only set to "0" in here,
    * so if it is false, we know that we are already being called
    */
   DEBUG("destroy sender %x with queue %x (%d)", s, s->queue, s->keepsending);
