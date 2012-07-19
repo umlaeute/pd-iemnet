@@ -224,6 +224,12 @@ static void tcpserver_info_connection(t_tcpserver *x, t_tcpserver_socketreceiver
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
+
+t_tcpserver_socketreceiver*tcpserver_getclient(t_tcpserver*x, int client) {
+  if(x&&x->x_sr)return x->x_sr[client];
+  return NULL;
+}
+
 /* ---------------- main tcpserver (send) stuff --------------------- */
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
 static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
@@ -253,6 +259,16 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   }
 }
 
+static int tcpserver_send_bytes_retryclient(t_tcpserver*x, int client, t_iemnet_chunk*chunk) {
+  t_tcpserver_socketreceiver*sr=tcpserver_getclient(x, client), *sr0=NULL;
+  do {
+    tcpserver_send_bytes(x, client, chunk);
+    sr0=sr;
+    sr=tcpserver_getclient(x, client);
+  } while(sr && sr!=sr0);
+  return (sr!=NULL);
+}
+
 
 
 /* broadcasts a message to all connected clients but the given one */
@@ -260,12 +276,13 @@ static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *
 {
   int client=0;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  int nconnections=x->x_nconnections;
 
   /* enumerate through the clients and send each the message */
-  for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
+  for(client = 0; client < nconnections; client++)	/* check if connection exists */
     {
       /* socket exists for this client */
-      if(client!=but)tcpserver_send_bytes(x, client, chunk);
+      if(client!=but)tcpserver_send_bytes_retryclient(x, client, chunk);
     }
   iemnet__chunk_destroy(chunk);
 }
@@ -309,12 +326,11 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
 {
   int     client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
-
+  int nconnections=x->x_nconnections;
   /* enumerate through the clients and send each the message */
-  for(client = 0; client < x->x_nconnections; client++)	/* check if connection exists */
+  for(client = 0; client < nconnections; client++)	/* check if connection exists */
     {
-      /* socket exists for this client */
-      tcpserver_send_bytes(x, client, chunk);
+      tcpserver_send_bytes_retryclient(x, client, chunk);
     }
   iemnet__chunk_destroy(chunk);
 }
