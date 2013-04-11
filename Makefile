@@ -247,7 +247,7 @@ SHARED_LIB ?= lib$(LIBRARY_NAME:=.$(SHARED_EXTENSION))
 
 all: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB)
 
-%.o: %.c
+%.o: %.c $(SHARED_HEADERS)
 	$(CC) $(ALL_CFLAGS) -o "$*.o" -c "$*.c"
 
 %.$(EXTENSION): %.o $(SHARED_LIB)
