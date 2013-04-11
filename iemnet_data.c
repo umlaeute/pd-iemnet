@@ -116,11 +116,21 @@ void iemnet__chunk_destroy(t_iemnet_chunk*c) {
   free(c);
 }
 
+
+void iemnet__chunk_print(t_iemnet_chunk*c) {
+  unsigned int i=0;
+  startpost("chunk[%p:%d]", c, c?c->size:0);
+  if(!c)return;
+  for(i=0; i<c->size; i++)
+    startpost(" %d", c->data[i]);
+  endpost();
+}
+
 t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
   t_iemnet_chunk*result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
   if(result) {
     result->size=size;
-    result->data=(unsigned char*)malloc(sizeof(unsigned char)*size); 
+    result->data=(unsigned char*)malloc(sizeof(unsigned char)*size);
 
     if(NULL == result->data) {
       result->size=0;
@@ -145,7 +155,7 @@ t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data) {
   return result;
 }
 
-t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size, 
+t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
 					      unsigned char*data,
 					      struct sockaddr_in*addr) {
   t_iemnet_chunk*result=iemnet__chunk_create_data(size, data);
@@ -279,7 +289,7 @@ int queue_push(
 
 
 /* pop a chunk from the queue
- * if the queue is empty, this will block until 
+ * if the queue is empty, this will block until
  *    something has been pushed
  *   OR the queue is "done" (in which case NULL is returned)
  */
@@ -329,7 +339,7 @@ t_iemnet_chunk* queue_pop_block(
 }
 /* pop a chunk from the queue
  * if the queue is empty, this will immediately return NULL
- * (note that despite of the name this does block for synchronization) 
+ * (note that despite of the name this does block for synchronization)
  */
 t_iemnet_chunk* queue_pop_noblock(
 				  t_iemnet_queue* const _this
@@ -399,7 +409,7 @@ void queue_finish(t_iemnet_queue* q) {
 
 void queue_destroy(t_iemnet_queue* q) {
   t_iemnet_chunk*c=NULL;
-  if(NULL==q) 
+  if(NULL==q)
     return;
   DEBUG("queue destroy %x", q);
 

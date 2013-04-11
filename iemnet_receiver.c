@@ -37,7 +37,6 @@
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
-
 struct _iemnet_receiver {
   pthread_t sigthread, recthread;
   int sockfd; /* owned outside; you must call iemnet__receiver_destroy() before freeing socket yourself */
@@ -117,7 +116,7 @@ static void*iemnet__receiver_readthread(void*arg) {
   FD_SET(sockfd, &readset);
 
   for(i=0; i<size; i++)data[i]=0;
-   receiver->running=1;
+  receiver->running=1;
 
   pthread_mutex_lock  (&receiver->running_mtx);
   pthread_cond_signal (&receiver->running_cond);

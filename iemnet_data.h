@@ -75,6 +75,11 @@ typedef struct _iemnet_chunk {
 void iemnet__chunk_destroy(t_iemnet_chunk*);
 
 /**
+ * print a "chunk" to the pd-console
+ */
+void iemnet__chunk_print(t_iemnet_chunk*c);
+
+/**
  * initialize a "chunk" (allocate memory,...) of fixed size
  * receiver address will be set to 0
  *
@@ -121,7 +126,7 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
  * convert a data chunk to a Pd-list of A_FLOATs
  * the destination list will eventually be resized if it is too small to hold the chunk
  *
- * \param c the chunk to convert 
+ * \param c the chunk to convert
  * \param dest the destination list
  * \return the destination list if all went well, else NULL
  */
@@ -147,7 +152,7 @@ int queue_push(t_iemnet_queue* const q, t_iemnet_chunk* const d);
 /**
  * \brief pop data from the FIFO (queue), blocking
  *
- *  pops data from the stack; 
+ *  pops data from the stack;
  *  if the stack is empty, this function will block until data is pushed to the stack
  *  if the queue is finalized, this function will return immediately with NULL
  *
