@@ -74,9 +74,7 @@ t_iemnet_notifier*iemnet__notify_create(void) {
   if(masternotifier!=NULL)
     return masternotifier;
   masternotifier=(t_iemnet_notifier*)getbytes(sizeof(t_iemnet_notifier));
-  post("adding new poller");
   if(!pipe(masternotifier->fd)) {
-    post("POLL %d/%d", masternotifier->fd[0], masternotifier->fd[1]);
     sys_addpollfn(masternotifier->fd[0], pollfun, masternotifier);
     return masternotifier;
   }
@@ -96,13 +94,13 @@ t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun 
   q->parent=notifier;
   q->next=pollqueue;
   pollqueue=q;
-  iemnet__notifier_print(notifier);
+  //iemnet__notifier_print(notifier);
   return q;
 }
 void iemnet__notify_remove(t_iemnet_notify*x) {
   t_iemnet_notify*q=pollqueue;
   t_iemnet_notify*last=NULL;
-  iemnet__notifier_print(q->parent);
+  //iemnet__notifier_print(q->parent);
 
   for(q=pollqueue; q; q=q->next) {
     if(q == x) {
