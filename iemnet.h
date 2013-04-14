@@ -149,6 +149,36 @@ void iemnet__receiver_destroy(t_iemnet_receiver*);
 int iemnet__receiver_getsize(t_iemnet_receiver*);
 
 
+/**
+ * opaque data type used for a notification server
+ */
+typedef struct _iemnet_notifier t_iemnet_notifier;
+EXTERN_STRUCT _iemnet_notifier;
+t_iemnet_notifier*iemnet__notify_create(void);
+void iemnet__notify_destroy(t_iemnet_notifier*x);
+
+/**
+ * opaque data type used for a notification client
+ */
+typedef struct _iemnet_notify t_iemnet_notify;
+EXTERN_STRUCT _iemnet_notify;
+void iemnet__notify_remove(t_iemnet_notify*notify);
+/**
+ * callback function from main thread on notification
+ */ 
+typedef void (*t_iemnet_notifun)(void *data);
+/**
+ * register a new notification callback with the 'notifier' server.
+ * on success, returns a notification client to be passed to iemnet__notify()
+ * on failure, returns NULL
+ */
+t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data);
+/**
+ * tell mainthread that something happened with 'notify' client
+ * (will call the callback associated to 'notify' asap)
+ */
+void iemnet__notify(t_iemnet_notify*notify);
+
 
 /* convenience functions */
 
