@@ -87,7 +87,7 @@ void iemnet__sender_destroy(t_iemnet_sender*);
 /**
  * send data over a socket
  *
- * \param pointer to a sender object 
+ * \param pointer to a sender object
  * \param pointer to a chunk of data to be sent
  * \return the current fill state of the send buffer
  *
@@ -98,7 +98,7 @@ int iemnet__sender_send(t_iemnet_sender*, t_iemnet_chunk*);
 /**
  * query the fill state of the send buffer
  *
- * \param pointer to a sender object 
+ * \param pointer to a sender object
  * \return the current fill state of the send buffer
  */
 int iemnet__sender_getsize(t_iemnet_sender*);
@@ -115,7 +115,7 @@ EXTERN_STRUCT _iemnet_receiver;
  * callback function for receiving
  * whenever data arrives at the socket, a callback will be called synchronously
  */
-typedef void (*t_iemnet_receivecallback)(void*userdata, 
+typedef void (*t_iemnet_receivecallback)(void*userdata,
 					 t_iemnet_chunk*rawdata);
 
 /**
@@ -143,7 +143,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*);
 /**
  * query the fill state of the receive buffer
  *
- * \param pointer to a receiver object 
+ * \param pointer to a receiver object
  * \return the current fill state of the receive buffer
  */
 int iemnet__receiver_getsize(t_iemnet_receiver*);
