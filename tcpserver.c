@@ -200,7 +200,7 @@ static void tcpserver_info(t_tcpserver *x) {
 
   if(sockfd<0) {
     // no open port
-    pd_error(x, "no valid socket");
+    post("no valid sock");
   }
 
   if(x->x_port<=0) {
@@ -210,7 +210,7 @@ static void tcpserver_info(t_tcpserver *x) {
       x->x_port=ntohs(server.sin_port);
       port=x->x_port;
     } else {
-      pd_error(x, "getsockname failed for %d", sockfd);
+      post("gesockname failed for %d", sockfd);
     }
   }
 
@@ -422,13 +422,13 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
       client = tcpserver_socket2index(x, sockfd);
       if(client < 0)
         {
-          pd_error(x, "%s_send: no connection on socket %d", objName, sockfd);
+          post("%s_send: no connection on socket %d", objName, sockfd);
           return;
         }
     }
   else
     {
-      pd_error(x, "%s_send: no socket specified", objName);
+      post("%s_send: no socket specified", objName);
       return;
     }
 
@@ -440,6 +440,7 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 static void tcpserver_disconnect(t_tcpserver *x, int client)
 {
   int k;
+  DEBUG("disconnect %x %d", x, client);
   tcpserver_info_connection(x, x->x_sr[client]);
 
   tcpserver_socketreceiver_free(x->x_sr[client]);
