@@ -253,8 +253,11 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
      * - try polling
      * - try sending a signal with pthread_kill() ?
      */
-
-    shutdown(sockfd, 2); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+#ifndef SHUT_RDWR
+# define SHUT_RDWR 2
+#endif
+    int how=SHUT_RDWR;
+    shutdown(sockfd, how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     sys_closesocket(sockfd);
   }
   DEBUG("[%d] closed socket %d", inst, sockfd);
