@@ -287,6 +287,7 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*
 static void debug_dummy(const char *format, ...)  {;}
 # define DEBUG debug_dummy
 #endif
+#define MARK() post("%s:%d [%s]",  __FILE__, __LINE__, __FUNCTION__)
 
 
 #endif /* INCLUDE_IEMNET_H_ */
