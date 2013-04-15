@@ -216,7 +216,7 @@ static void *tcpclient_connectthread(void *w)
 }
 static void tcpclient_tick(t_tcpclient *x)
 {
-  outlet_float(x->x_connectout, 1);
+    outlet_float(x->x_connectout, 1);
 }
 
 
