@@ -1,5 +1,4 @@
-.svn
 *.o
-*~
 *.pd_linux
-.*.swp
+*.so
+*~
