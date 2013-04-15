@@ -119,9 +119,8 @@ void iemnet__chunk_destroy(t_iemnet_chunk*c) {
 
 void iemnet__chunk_print(t_iemnet_chunk*c) {
   unsigned int i=0;
-  post("chunk[%p:%d]", c, c?c->size:0);
+  startpost("chunk[%p:%d]", c, c?c->size:0);
   if(!c)return;
-  startpost("data:");
   for(i=0; i<c->size; i++)
     startpost(" %d", c->data[i]);
   endpost();
