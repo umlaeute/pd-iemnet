@@ -23,6 +23,7 @@ trap control_c SIGINT
 
 echo "make pipe"
 mknod ${PIPEFILE} p
+echo "UDP" > ${PIPEFILE} &
 echo "start client"
 cat ${PIPEFILE} | nc -w 10 -u localhost ${PORT} > ${PIPEFILE}
 echo "client quit"
