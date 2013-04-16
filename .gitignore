@@ -2,3 +2,4 @@
 *.pd_linux
 *.so
 *~
+.svn/
