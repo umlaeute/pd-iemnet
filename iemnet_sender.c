@@ -85,15 +85,20 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
 
     //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
     if(c->port) {
-      DEBUG("sending %d bytes to %x:%d", size, c->addr, c->port);
+      DEBUG("sending %d bytes to %x:%d @%d", size, c->addr, c->port, c->family);
 
       to.sin_addr.s_addr=htonl(c->addr);
       to.sin_port       =htons(c->port);
-
-      result = sendto(sockfd, data, size, 0, (struct sockaddr *)&to, tolen);
+      to.sin_family     =c->family;
+      result = sendto(sockfd,
+                      data, size, /* DATA */
+                      0,          /* FLAGS */
+                      (struct sockaddr *)&to, tolen); /* DESTADDR */
     } else {
       DEBUG("sending %d bytes", size);
-      result = send(sockfd, data, size, 0);
+      result = send(sockfd,
+                    data, size, /* DATA */
+                    0);         /* FLAGS */
     }
     if(result<0) {
       // broken pipe
