@@ -67,7 +67,7 @@ static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 /* connection handling */
 
-static void *udpclient_doconnect(t_udpclient*x) {
+static void *udpclient_doconnect(t_udpclient*x, int subthread) {
   struct sockaddr_in  server;
   struct hostent      *hp;
   int                 sockfd;
@@ -121,8 +121,8 @@ static void *udpclient_doconnect(t_udpclient*x) {
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
-  x->x_sender=iemnet__sender_create(sockfd);
-  x->x_receiver=iemnet__receiver_create(sockfd, x,  udpclient_receive_callback);
+  x->x_sender=iemnet__sender_create(sockfd, subthread);
+  x->x_receiver=iemnet__receiver_create(sockfd, x,  udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
 
@@ -132,7 +132,7 @@ static void *udpclient_doconnect(t_udpclient*x) {
 static void *udpclient_child_connect(void *w)
 {
   t_udpclient         *x = (t_udpclient*) w;
-  udpclient_doconnect(x);
+  udpclient_doconnect(x, 1);
   return x;
 }
 static void udpclient_tick(t_udpclient *x)
@@ -147,8 +147,8 @@ static void udpclient_disconnect(t_udpclient *x)
     {
 
       DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
-      if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver); x->x_receiver=NULL;
-      if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
+      if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver, 0); x->x_receiver=NULL;
+      if(x->x_sender)iemnet__sender_destroy(x->x_sender, 0); x->x_sender=NULL;
 
       sys_closesocket(x->x_fd);
       x->x_fd = -1;
@@ -172,7 +172,7 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fpo
   if(pthread_create(&x->x_threadid, &x->x_threadattr, udpclient_child_connect, x) < 0)
     error("%s: could not create new thread", objName);
 #else
-  udpclient_doconnect(x);
+  udpclient_doconnect(x, 0);
 #endif
 }
 

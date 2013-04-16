@@ -154,7 +154,7 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c) {
   return size;
 }
 
-void iemnet__sender_destroy(t_iemnet_sender*s) {
+void iemnet__sender_destroy(t_iemnet_sender*s, int subthread) {
   int sockfd=-1;
   /* simple protection against recursive calls:
    * s->keepsending is only set to "0" in here,
@@ -209,7 +209,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s) {
 }
 
 
-t_iemnet_sender*iemnet__sender_create(int sock) {
+t_iemnet_sender*iemnet__sender_create(int sock, int subthread) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_sender*result=(t_iemnet_sender*)calloc(1, sizeof(t_iemnet_sender));
   int res=0;

@@ -69,19 +69,21 @@ EXTERN_STRUCT _iemnet_sender;
  * create a sender to a given socket
  *
  * \param sock a previously opened socket
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  * \return pointer to a sender object
  * \note the socket must be writeable
  */
-t_iemnet_sender*iemnet__sender_create(int sock);
+t_iemnet_sender*iemnet__sender_create(int sock, int);
 /**
  * destroy a sender to a given socket
  * destroying a sender will free all resources of the sender
  *
  * \param pointer to a sender object to be destroyed
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note  it will also close() the socket
  */
-void iemnet__sender_destroy(t_iemnet_sender*);
+void iemnet__sender_destroy(t_iemnet_sender*, int);
 
 /**
  * send data over a socket
@@ -125,19 +127,21 @@ typedef void (*t_iemnet_receivecallback)(void*userdata,
  * \param sock the (readable) socket to receive from
  * \param data user data to be passed to callback
  * \param callback a callback function that is called on the caller's side
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note the callback will be scheduled in the caller's thread with clock_delay()
  */
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback);
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback, int subthread);
 /**
  * destroy a receiver at a given socket
  * destroying a receiver will free all resources of the receiver
  *
  * \param pointer to a receiver object to be destroyed
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note  it will also close() the socket
  */
-void iemnet__receiver_destroy(t_iemnet_receiver*);
+void iemnet__receiver_destroy(t_iemnet_receiver*, int subthread);
 
 /**
  * query the fill state of the receive buffer
@@ -153,15 +157,15 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 typedef struct _iemnet_notifier t_iemnet_notifier;
 EXTERN_STRUCT _iemnet_notifier;
-t_iemnet_notifier*iemnet__notify_create(void);
-void iemnet__notify_destroy(t_iemnet_notifier*x);
+t_iemnet_notifier*iemnet__notify_create(int subthread);
+void iemnet__notify_destroy(t_iemnet_notifier*x, int subthread);
 
 /**
  * opaque data type used for a notification client
  */
 typedef struct _iemnet_notify t_iemnet_notify;
 EXTERN_STRUCT _iemnet_notify;
-void iemnet__notify_remove(t_iemnet_notify*notify);
+void iemnet__notify_remove(t_iemnet_notify*notify, int subthread);
 /**
  * callback function from main thread on notification
  */
@@ -171,7 +175,7 @@ typedef void (*t_iemnet_notifun)(void *data);
  * on success, returns a notification client to be passed to iemnet__notify()
  * on failure, returns NULL
  */
-t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data);
+t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data, int subthread);
 /**
  * tell mainthread that something happened with 'notify' client
  * (will call the callback associated to 'notify' asap)

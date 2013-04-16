@@ -69,21 +69,23 @@ static void iemnet__notifier_print(t_iemnet_notifier*x) {
     printf("queue[%p]={fun:%p, data:%p, next:%p}\n", q, q->fun, q->data, q->next);
   }
 }
-t_iemnet_notifier*iemnet__notify_create(void) {
+t_iemnet_notifier*iemnet__notify_create(int subthread) {
   if(masternotifier!=NULL)
     return masternotifier;
   masternotifier=(t_iemnet_notifier*)getbytes(sizeof(t_iemnet_notifier));
   if(!pipe(masternotifier->fd)) {
+    if(subthread)sys_lock();
     sys_addpollfn(masternotifier->fd[0], pollfun, masternotifier);
+    if(subthread)sys_unlock();
     return masternotifier;
   }
   return NULL;
 }
-void iemnet__notify_destroy(t_iemnet_notifier*x) {
+void iemnet__notify_destroy(t_iemnet_notifier*x, int subthread) {
   // nada
 }
 
-t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data) {
+t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data, int subthread) {
   /* add the given receiver to the poll-queue
    * LATER: check whether it's already in there...
    */
@@ -92,15 +94,20 @@ t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun 
   q->data=data;
   q->parent=notifier;
   q->next=pollqueue;
+
+  if(subthread)sys_lock();
   pollqueue=q;
+  if(subthread)sys_unlock();
+
   //iemnet__notifier_print(notifier);
   return q;
 }
-void iemnet__notify_remove(t_iemnet_notify*x) {
+void iemnet__notify_remove(t_iemnet_notify*x, int subthread) {
   t_iemnet_notify*q=pollqueue;
   t_iemnet_notify*last=NULL;
   //iemnet__notifier_print(q->parent);
 
+  if(subthread)sys_lock();
   for(q=pollqueue; q; q=q->next) {
     if(q == x) {
       if(last) {
@@ -108,6 +115,7 @@ void iemnet__notify_remove(t_iemnet_notify*x) {
       } else {
         pollqueue=q->next;
       }
+      if(subthread)sys_unlock();
       q->fun =NULL;
       q->data=NULL;
       q->next=NULL;
@@ -116,4 +124,5 @@ void iemnet__notify_remove(t_iemnet_notify*x) {
     }
     last=q;
   }
+  if(subthread)sys_unlock();
 }

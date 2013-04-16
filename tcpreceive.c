@@ -111,8 +111,9 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr, unsigned
 	  x->x_connection[i].owner = x;
 	  x->x_connection[i].receiver=
 	    iemnet__receiver_create(fd, 
-				    x->x_connection+i, 
-				    tcpreceive_read_callback);
+                              x->x_connection+i,
+                              tcpreceive_read_callback,
+                              0);
 	  
 	  return 1;
         }
@@ -160,7 +161,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
 static int tcpreceive_disconnect(t_tcpreceive *x, int id)
 {
   if(id>=0 && id < MAX_CONNECTIONS && x->x_connection[id].port>0) {
-    iemnet__receiver_destroy(x->x_connection[id].receiver);
+    iemnet__receiver_destroy(x->x_connection[id].receiver, 0);
     x->x_connection[id].receiver=NULL;
 
     sys_closesocket(x->x_connection[id].socket);
