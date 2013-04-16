@@ -231,6 +231,8 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   DISTBINDIR=$(DISTDIR)-$(OS)
 endif
 
+-include Makefile.local
+
 # in case somebody manually set the HELPPATCHES above
 HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
