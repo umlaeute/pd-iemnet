@@ -149,7 +149,6 @@ static void *tcpclient_connectthread(void *w)
   t_tcpclient         *x = (t_tcpclient*) w;
 
   int state=0;
-
   pthread_mutex_lock  (&x->x_connlock);
   pthread_cond_signal (&x->x_conncond);
 
@@ -180,10 +179,10 @@ static void *tcpclient_connectthread(void *w)
       else
         if(!port)pd_error(x, "[%s]: not connected", objName);
       sys_unlock();
+
+      pthread_mutex_lock(&x->x_connlock);
     }
 
-
-    pthread_mutex_lock(&x->x_connlock);
     if(x->x_keeprunning && x->x_port) {
       unsigned short port=x->x_port;
       const char*host=x->x_hostname;
@@ -193,7 +192,6 @@ static void *tcpclient_connectthread(void *w)
 
       pthread_mutex_unlock(&x->x_connlock);
       state=tcpclient_child_connect(host, port, x, &sender, &receiver, &addr);
-
       pthread_mutex_lock  (&x->x_connlock);
       x->x_connectstate=(state>0);
       x->x_fd=state;
@@ -206,6 +204,7 @@ static void *tcpclient_connectthread(void *w)
       if(state>0)
         outlet_float(x->x_connectout, 1);
       sys_unlock();
+      pthread_mutex_lock(&x->x_connlock);
     }
 
   }
