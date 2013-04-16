@@ -86,7 +86,7 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,  unsigned lo
     x->sr_host=host; //ntohl(addr->sin_addr.s_addr);
     x->sr_port=port; //ntohs(addr->sin_port);
 
-    x->sr_sender=iemnet__sender_create(sockfd);
+    x->sr_sender=iemnet__sender_create(sockfd, 0);
   }
   return (x);
 }
@@ -106,7 +106,7 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
       free(x);
 
-      if(sender)  iemnet__sender_destroy(sender);
+      if(sender)  iemnet__sender_destroy(sender, 0);
 
       sys_closesocket(sockfd);
     }
@@ -658,8 +658,9 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
     }
 
   x->x_receiver=iemnet__receiver_create(sockfd,
-					x,
-					udpserver_receive_callback);
+                                        x,
+                                        udpserver_receive_callback,
+                                        0);
 
   x->x_connectsocket = sockfd;
   x->x_port = portno;

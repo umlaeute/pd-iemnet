@@ -110,14 +110,14 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
       sys_closesocket(sockfd);
       return;
     }
-  x->x_sender=iemnet__sender_create(sockfd);
+  x->x_sender=iemnet__sender_create(sockfd, 0);
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
 static void udpsend_disconnect(t_udpsend *x)
 {
   if(x->x_sender) {
-    iemnet__sender_destroy(x->x_sender);
+    iemnet__sender_destroy(x->x_sender, 0);
     x->x_sender=NULL;
     outlet_float(x->x_obj.ob_outlet, 0);
   }

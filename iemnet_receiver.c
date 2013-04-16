@@ -178,12 +178,9 @@ int iemnet__receiver_getsize(t_iemnet_receiver*x) {
 }
 
 
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback) {
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback, int subthread) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_receiver*rec=(t_iemnet_receiver*)malloc(sizeof(t_iemnet_receiver));
-
-  if(NULL==receivenotifier)
-    receivenotifier=iemnet__notify_create();
 
   DEBUG("create new receiver for 0x%X:%d", userdata, sock);
   //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
@@ -193,7 +190,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
 
     data=iemnet__chunk_create_empty(INBUFSIZE);
     if(NULL==data) {
-      iemnet__receiver_destroy(rec);
+      iemnet__receiver_destroy(rec, subthread);
       DEBUG("create receiver failed");
       return NULL;
     }
@@ -212,7 +209,10 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->running=1;
 
     rec->queue = queue_create();
-    rec->notifier = iemnet__notify_add(receivenotifier, (t_iemnet_notifun)iemnet__receiver_tick, rec);
+
+    if(NULL==receivenotifier)
+      receivenotifier=iemnet__notify_create(subthread);
+    rec->notifier = iemnet__notify_add(receivenotifier, (t_iemnet_notifun)iemnet__receiver_tick, rec, subthread);
 
     /* start the recv thread */
     pthread_mutex_lock(&rec->running_mtx);
@@ -225,7 +225,7 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
   return rec;
 }
 
-void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
+void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread) {
   static int instance=0;
   int inst=instance++;
 
@@ -243,7 +243,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec) {
   sockfd=rec->sockfd;
 
   pthread_join(rec->recthread, NULL);
-  iemnet__notify_remove(rec->notifier);
+  iemnet__notify_remove(rec->notifier, subthread);
 
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 

@@ -86,8 +86,8 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
     x->sr_host=ntohl(addr->sin_addr.s_addr);
     x->sr_port=ntohs(addr->sin_port);
 
-    x->sr_sender=iemnet__sender_create(sockfd);
-    x->sr_receiver=iemnet__receiver_create(sockfd, x, tcpserver_receive_callback);
+    x->sr_sender=iemnet__sender_create(sockfd, 0);
+    x->sr_receiver=iemnet__receiver_create(sockfd, x, tcpserver_receive_callback, 0);
   }
   return (x);
 }
@@ -108,8 +108,8 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       x->sr_fd=-1;
 		
 		
-	  if(sender)  iemnet__sender_destroy(sender);
-	  if(receiver)iemnet__receiver_destroy(receiver);
+      if(sender)  iemnet__sender_destroy(sender, 0);
+	  if(receiver)iemnet__receiver_destroy(receiver, 0);
 		
     sys_closesocket(sockfd);
 		

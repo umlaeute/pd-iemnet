@@ -47,7 +47,7 @@ static void tcpsend_disconnect(t_tcpsend *x)
 {
   if (x->x_fd >= 0)
     {
-      if(x->x_sender)iemnet__sender_destroy(x->x_sender); x->x_sender=NULL;
+      if(x->x_sender)iemnet__sender_destroy(x->x_sender, 0); x->x_sender=NULL;
       sys_closesocket(x->x_fd);
       x->x_fd = -1;
       outlet_float(x->x_obj.ob_outlet, 0);
@@ -109,7 +109,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
     }
   x->x_fd = sockfd;
 
-  x->x_sender=iemnet__sender_create(sockfd);
+  x->x_sender=iemnet__sender_create(sockfd, 0);
 
   outlet_float(x->x_obj.ob_outlet, 1);
 }

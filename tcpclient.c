@@ -95,8 +95,8 @@ static void tcpclient_info(t_tcpclient *x)
 /* connection handling */
 static int tcpclient_child_disconnect(int fd, t_iemnet_sender*sender, t_iemnet_receiver*receiver) {
   if (fd >= 0) {
-    if(sender)iemnet__sender_destroy(sender); sender=NULL;
-    if(receiver)iemnet__receiver_destroy(receiver); receiver=NULL;
+    if(sender)iemnet__sender_destroy(sender, 1); sender=NULL;
+    if(receiver)iemnet__receiver_destroy(receiver, 1); receiver=NULL;
     sys_closesocket(fd);
     return 1;
   }
@@ -135,8 +135,8 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
     return (-1);
   }
 
-  sender=iemnet__sender_create(sockfd);
-  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback);
+  sender=iemnet__sender_create(sockfd, 1);
+  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback, 1);
 
   if(addrOUT)*addrOUT= ntohl(*(long *)hp->h_addr);
   if(senderOUT)*senderOUT=sender;
@@ -316,6 +316,7 @@ static void *tcpclient_new(void)
   /* prepare child thread */
   pthread_mutex_init(&x->x_connlock, 0);
   pthread_cond_init (&x->x_conncond, 0);
+
   x->x_keeprunning=1;
 
   pthread_mutex_lock(&x->x_connlock);
