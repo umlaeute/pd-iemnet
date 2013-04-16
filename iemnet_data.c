@@ -126,7 +126,9 @@ void iemnet__chunk_print(t_iemnet_chunk*c) {
 }
 
 t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
-  t_iemnet_chunk*result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
+  t_iemnet_chunk*result=NULL;
+  if(size<1) return NULL;
+  result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
   if(result) {
     result->size=size;
     result->data=(unsigned char*)malloc(sizeof(unsigned char)*size);
@@ -183,9 +185,10 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c) {
   t_iemnet_chunk*result=NULL;
   if(NULL==c)return NULL;
   result=iemnet__chunk_create_data(c->size, c->data);
-  result->addr=c->addr;
-  result->port=c->port;
-
+  if(result) {
+    result->addr=c->addr;
+    result->port=c->port;
+  }
   return result;
 }
 
