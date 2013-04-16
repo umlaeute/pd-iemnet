@@ -66,6 +66,7 @@ typedef struct _iemnet_chunk {
 
   long addr;
   unsigned short port;
+  short family; // AF_INET, AF_INET6
 } t_iemnet_chunk;
 
 /**

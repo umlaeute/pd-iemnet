@@ -143,6 +143,7 @@ t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
 
     result->addr=0L;
     result->port=0;
+    result->family=AF_INET;
 
   }
   return result;
@@ -163,6 +164,7 @@ t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
   if(result && addr) {
     result->addr = ntohl(addr->sin_addr.s_addr);
     result->port = ntohs(addr->sin_port);
+    result->family = addr->sin_family;
   }
   return result;
 }
