@@ -67,10 +67,7 @@ static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 /* connection handling */
 
-static void *udpclient_child_connect(void *w)
-{
-  t_udpclient         *x = (t_udpclient*) w;
-
+static void *udpclient_doconnect(t_udpclient*x) {
   struct sockaddr_in  server;
   struct hostent      *hp;
   int                 sockfd;
@@ -132,6 +129,12 @@ static void *udpclient_child_connect(void *w)
   clock_delay(x->x_clock, 0);
   return (x);
 }
+static void *udpclient_child_connect(void *w)
+{
+  t_udpclient         *x = (t_udpclient*) w;
+  udpclient_doconnect(x);
+  return x;
+}
 static void udpclient_tick(t_udpclient *x)
 {
   outlet_float(x->x_connectout, 1);
@@ -164,9 +167,13 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fpo
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
   x->x_connectstate = 0;
+#if 0
   /* start child thread */
   if(pthread_create(&x->x_threadid, &x->x_threadattr, udpclient_child_connect, x) < 0)
     error("%s: could not create new thread", objName);
+#else
+  udpclient_doconnect(x);
+#endif
 }
 
 /* sending/receiving */
