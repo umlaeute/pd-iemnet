@@ -284,6 +284,8 @@ static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit) {
 
 /* constructor/destructor */
 static void tcpclient_free_simple(t_tcpclient *x) {
+  tcpclient_disconnect(x);
+
   if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
 	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 

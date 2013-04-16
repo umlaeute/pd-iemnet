@@ -107,13 +107,11 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       x->sr_receiver=NULL;
 
       x->sr_fd=-1;
-		
-		
-	  if(sender)  iemnet__sender_destroy(sender);
-	  if(receiver)iemnet__receiver_destroy(receiver);
-		
-    sys_closesocket(sockfd);
-		
+      MARK();post("sender/receiver=%p/%p", sender, receiver);
+      if(sender)  iemnet__sender_destroy(sender);
+      if(receiver)iemnet__receiver_destroy(receiver);
+
+      sys_closesocket(sockfd);
 
       freebytes(x, sizeof(*x));
     }
@@ -666,6 +664,11 @@ static void tcpserver_free(t_tcpserver *x)
       sys_closesocket(x->x_connectsocket);
     }
 	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+  outlet_free(x->x_msgout)    ; x->x_msgout=NULL;
+  outlet_free(x->x_connectout); x->x_connectout=NULL;
+  outlet_free(x->x_sockout)   ; x->x_sockout=NULL;
+  outlet_free(x->x_addrout)   ; x->x_addrout=NULL;
+  outlet_free(x->x_statout)   ; x->x_statout=NULL;
 }
 
 IEMNET_EXTERN void tcpserver_setup(void)
