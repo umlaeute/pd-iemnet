@@ -155,7 +155,7 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
 /**
  * opaque data type used for a notification server
  */
-typedef struct _iemnet_notifier t_iemnet_notifier;
+#define t_iemnet_notifier struct _iemnet_notifier
 EXTERN_STRUCT _iemnet_notifier;
 t_iemnet_notifier*iemnet__notify_create(int subthread);
 void iemnet__notify_destroy(t_iemnet_notifier*x, int subthread);
@@ -163,7 +163,7 @@ void iemnet__notify_destroy(t_iemnet_notifier*x, int subthread);
 /**
  * opaque data type used for a notification client
  */
-typedef struct _iemnet_notify t_iemnet_notify;
+#define t_iemnet_notify struct _iemnet_notify
 EXTERN_STRUCT _iemnet_notify;
 void iemnet__notify_remove(t_iemnet_notify*notify, int subthread);
 /**

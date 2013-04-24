@@ -32,19 +32,19 @@
 /* for printf() debugging */
 #include <stdio.h>
 
-typedef struct _iemnet_notify{
+struct _iemnet_notify {
   void*data;
   t_iemnet_notifun fun;
   struct _iemnet_notifier*parent;
   struct _iemnet_notify*next;
-} t_iemnet_notify;
+};
 
 static t_iemnet_notify*pollqueue=NULL;
 
-typedef struct _iemnet_notifier {
+struct _iemnet_notifier {
   int fd[2];
   struct _iemnet_notify*nodes;
-} t_iemnet_notifier;
+};
 
 static t_iemnet_notifier *masternotifier = NULL;
 
