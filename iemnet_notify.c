@@ -39,31 +39,94 @@ struct _iemnet_notify {
   struct _iemnet_notify*next;
 };
 
-static t_iemnet_notify*pollqueue=NULL;
-
 struct _iemnet_notifier {
   int fd[2];
   struct _iemnet_notify*nodes;
 };
 
+typedef struct _iemnet_notifynodes {
+  t_iemnet_notify*node;
+  struct _iemnet_notifynodes*next;
+} t_iemnet_notifynodes;
+
+static t_iemnet_notify*pollqueue=NULL;
 static t_iemnet_notifier *masternotifier = NULL;
+
+static t_iemnet_notifynodes*addnodes=NULL;
+static t_iemnet_notifynodes*delnodes=NULL;
 
 /* notifies Pd that there is new data to fetch */
 void iemnet__notify(t_iemnet_notify*x) {
   write(masternotifier->fd[1], x, sizeof(x));
 }
 
-static void pollfun(void*x, int fd) {
+static void iemnet_notifynodes_free(t_iemnet_notifynodes*x) {
+  while(x) {
+    t_iemnet_notifynodes*next=x->next;
+    x->node=NULL; x->next=NULL; freebytes(x, sizeof(*x));
+    x=next;
+  }
+}
+
+/* add pending notify-nodes to the queue, remove pending notify-nodes from the queue; return pointer to updated queue
+ * after this operation addqueue/delqueue are consumed (elements have moved to queue, or have been freed
+ */
+static t_iemnet_notify*iemnet_notifier_update(t_iemnet_notify*queue, t_iemnet_notifynodes*addqueue, t_iemnet_notifynodes*delqueue) {
+  t_iemnet_notifynodes*x=NULL;
+  //  printf("updating queue %p (%p, %p)\n", queue, addqueue, delqueue);
+  /* add elements from addqueue to queue (LATER check for uniqueness) */
+  for(x=addqueue; x; x=x->next) {
+    t_iemnet_notify*node=x->node;
+
+    node->next=queue;
+    queue=node;
+  }
+
+  /* del elements found in delqueue from queue, and free both */
+  for(x=delqueue; x; x=x->next) {
+    t_iemnet_notify*q;
+    t_iemnet_notify*last=NULL;
+    for(q=queue; q; q=q->next) {
+      if(q == x->node) { // found to-be deleted element in queue, now remove it
+        if(last) {
+          last->next=q->next;
+        } else {
+          queue=q->next;
+        }
+        q->fun=NULL;
+        q->data=NULL;
+        q->next=NULL;
+        freebytes(q, sizeof(*q));
+        break;
+      }
+    }
+  }
+
+  /* delete add/delqueue */
+  iemnet_notifynodes_free(addqueue);
+  iemnet_notifynodes_free(delqueue);
+  //  printf("updated queue %p (%p, %p)\n", queue, addqueue, delqueue);
+
+  return queue;
+}
+
+static void pollfun(void*z, int fd) {
   char buf[4096];
   int result=-1;
   t_iemnet_notify*q;
   result=read(fd, buf, sizeof(buf));
+  pollqueue=iemnet_notifier_update(pollqueue, addnodes, delnodes); addnodes=NULL; delnodes=NULL;
   q=pollqueue;
+  //  printf("pollering %p\n", q);
   while(q) {
     t_iemnet_notify*current=q;
     q=q->next;
+    //    printf("polling %p: %p(%p) -> %p\n", current, current->fun, current->data, current->next);
     (current->fun)(current->data);
+    //    printf("polled  %p: %p(%p) -> %p\n", current, current->fun, current->data, current->next);
   }
+  pollqueue=iemnet_notifier_update(pollqueue, addnodes, delnodes); addnodes=NULL; delnodes=NULL;
+  //  printf("polldered: %p\n", pollqueue);
 }
 
 static void iemnet__notifier_print(t_iemnet_notifier*x) {
@@ -93,41 +156,34 @@ t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun 
    * LATER: check whether it's already in there...
    */
   t_iemnet_notify*q=(t_iemnet_notify*)getbytes(sizeof(t_iemnet_notify));
+  t_iemnet_notifynodes*node=(t_iemnet_notifynodes*)getbytes(sizeof(t_iemnet_notifynodes));
   q->fun =fun;
   q->data=data;
   q->parent=notifier;
-  q->next=pollqueue;
+  q->next=NULL;
+  node->node=q;
+  //  printf("polladd %p\n", q);
 
   if(subthread)sys_lock();
-
-  pollqueue=q;
+  node->next=addnodes;
+  addnodes=node;
   if(subthread)sys_unlock();
 
   //iemnet__notifier_print(notifier);
+  //  printf("polladded: %p\n", q);
   return q;
 }
 void iemnet__notify_remove(t_iemnet_notify*x, int subthread) {
   t_iemnet_notify*q=pollqueue;
   t_iemnet_notify*last=NULL;
+  t_iemnet_notifynodes*node=(t_iemnet_notifynodes*)getbytes(sizeof(t_iemnet_notifynodes));
   //iemnet__notifier_print(q->parent);
 
-  if(subthread)sys_lock();
-  for(q=pollqueue; q; q=q->next) {
-    if(q == x) {
-      if(last) {
-        last->next=q->next;
-      } else {
-        pollqueue=q->next;
-      }
-      if(subthread)sys_unlock();
+  node->node=x;
 
-      q->fun =NULL;
-      q->data=NULL;
-      q->next=NULL;
-      freebytes(q, sizeof(*q));
-      return;
-    }
-    last=q;
-  }
+  if(subthread)sys_lock();
+  node->next=delnodes;
+  delnodes=node;
   if(subthread)sys_unlock();
+  //  printf("polldeled: %p\n", x);
 }
