@@ -58,8 +58,11 @@ static void pollfun(void*x, int fd) {
   int result=-1;
   t_iemnet_notify*q;
   result=read(fd, buf, sizeof(buf));
-  for(q=pollqueue; q; q=q->next) {
-    (q->fun)(q->data);
+  q=pollqueue;
+  while(q) {
+    t_iemnet_notify*current=q;
+    q=q->next;
+    (current->fun)(current->data);
   }
 }
 
@@ -96,6 +99,7 @@ t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun 
   q->next=pollqueue;
 
   if(subthread)sys_lock();
+
   pollqueue=q;
   if(subthread)sys_unlock();
 
@@ -116,6 +120,7 @@ void iemnet__notify_remove(t_iemnet_notify*x, int subthread) {
         pollqueue=q->next;
       }
       if(subthread)sys_unlock();
+
       q->fun =NULL;
       q->data=NULL;
       q->next=NULL;
