@@ -10,22 +10,25 @@ TESTTYPE=$2
 ##################################
 
 PD=pd
+PDARGS="-nrt -nogui -path .libs"
+#PDARGS="-noprefs -nostdpath -nosound -nrt -nogui -path .libs"
+PDARGS="-nostdpath -nosound -nrt -nogui -path .libs"
 #VALGRIND=valgrind
 VALGRIND="valgrind --error-exitcode=1"
 
 do_runtest() {
 case "$1" in
  mem*|MEM*)
-    ${VALGRIND} ${PD} -nrt -nogui -path .libs -lib ${EXTERNAL}
+    ${VALGRIND} ${PD} ${PDARGS} -lib ${EXTERNAL}
  ;;
  DRD|drd)
-    ${VALGRIND} --tool=drd ${PD} -nrt -nogui -path .libs -lib ${EXTERNAL}
+    ${VALGRIND} --tool=drd ${PD} ${PDARGS} -lib ${EXTERNAL}
  ;;
  HEL*|hel*)
-    ${VALGRIND} --tool=helgrind ${PD} -nrt -nogui -path .libs -lib ${EXTERNAL}
+    ${VALGRIND} --tool=helgrind ${PD} ${PDARGS} -lib ${EXTERNAL}
  ;;
  *)
-    ${PD} -nrt -nogui -path .libs -lib ${EXTERNAL}
+    ${PD} ${PDARGS} -lib ${EXTERNAL}
  ;;
 esac
 }
