@@ -76,7 +76,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd<0) {
-    error("[%s]: unable to create socket", objName);
+    pd_error(x, "[%s]: unable to create socket", objName);
     return 0;
   }
 
@@ -86,7 +86,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
                  (char *)&intarg, sizeof(intarg)) 
       < 0) {
-    error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+    pd_error(x, "[%s]: setsockopt (SO_REUSEADDR) failed", objName);
   }
 #endif /* SO_REUSEADDR */
 #ifdef SO_REUSEPORT
@@ -94,7 +94,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
                  (char *)&intarg, sizeof(intarg)) 
       < 0) {
-    error("[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+    pd_error(x, "[%s]: setsockopt (SO_REUSEPORT) failed", objName);
   }
 #endif /* SO_REUSEPORT */
 
@@ -132,7 +132,7 @@ static void udpreceive_port(t_udpreceive*x, t_symbol*s, int argc, t_atom*argv)
   t_atom ap[1];
   if(argc) {
     if(argc>1 || A_FLOAT != argv->a_type) {
-      pd_error(x, "usage: port [<portnum>]");
+      pd_error(x, "[%s] usage: port [<portnum>]", objName);
       return;
     }
     SETFLOAT(ap, -1);
