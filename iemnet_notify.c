@@ -98,7 +98,8 @@ static t_iemnet_notify*iemnet_notifier_update(t_iemnet_notify*queue, t_iemnet_no
         q->next=NULL;
         freebytes(q, sizeof(*q));
         break;
-      }
+      } else
+        last=q;
     }
   }
 
