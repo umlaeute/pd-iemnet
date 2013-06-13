@@ -56,18 +56,15 @@ static void udpreceive_read_callback(void*y, t_iemnet_chunk*c) {
   }
 }
 
-static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
+static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 {
-  static t_atom ap[1];
-  int                 portno = fportno;
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   int intarg;
 
-  SETFLOAT(ap, -1);
   if(x->x_port == portno) {
-    return;
+    return 1;
   }
 
   /* cleanup any open ports */
@@ -80,7 +77,7 @@ static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd<0) {
     error("[%s]: unable to create socket", objName);
-    return;
+    return 0;
   }
 
   /* ask OS to allow another Pd to reopen this port after we close it. */
@@ -112,8 +109,7 @@ static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
       sys_sockerror("[udpreceive] bind failed");
       sys_closesocket(sockfd);
       sockfd = -1;
-      outlet_anything(x->x_statout, gensym("port"), 1, ap);
-      return;
+      return 0;
     }
 
   x->x_connectsocket = sockfd;
@@ -128,6 +124,21 @@ static void udpreceive_port(t_udpreceive*x, t_floatarg fportno)
                                         x,
                                         udpreceive_read_callback,
                                         0);
+  return 1;
+}
+
+static void udpreceive_port(t_udpreceive*x, t_symbol*s, int argc, t_atom*argv)
+{
+  t_atom ap[1];
+  if(argc) {
+    if(argc>1 || A_FLOAT != argv->a_type) {
+      pd_error(x, "usage: port [<portnum>]");
+      return;
+    }
+    SETFLOAT(ap, -1);
+    if(!udpreceive_setport(x, atom_getint(argv)))
+      outlet_anything(x->x_statout, gensym("port"), 1, ap);
+  }
 
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
@@ -148,7 +159,7 @@ static void *udpreceive_new(t_floatarg fportno)
 
     x->x_floatlist=iemnet__floatlist_create(1024);
 
-    udpreceive_port(x, fportno);
+    udpreceive_setport(x, fportno);
 
     return (x);
 }
@@ -173,7 +184,7 @@ IEMNET_EXTERN void udpreceive_setup(void)
         sizeof(t_udpreceive), 0, A_DEFFLOAT, 0);
 
     class_addmethod(udpreceive_class, (t_method)udpreceive_port, 
-		    gensym("port"), A_DEFFLOAT, 0);
+		    gensym("port"), A_GIMME, 0);
 
   DEBUGMETHOD(udpreceive_class);
 }
