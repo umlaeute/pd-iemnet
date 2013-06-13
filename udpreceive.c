@@ -42,6 +42,8 @@ typedef struct _udpreceive
   int       x_port;
   t_iemnet_receiver*x_receiver;
 	t_iemnet_floatlist         *x_floatlist;
+
+  int x_reuseport, x_reuseaddr;
 } t_udpreceive;
 
 
@@ -82,22 +84,25 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 
   /* ask OS to allow another Pd to reopen this port after we close it. */
 #ifdef SO_REUSEADDR
-  intarg = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-                 (char *)&intarg, sizeof(intarg)) 
-      < 0) {
-    pd_error(x, "[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+  if(x->x_reuseaddr) {
+    intarg = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+                   (void *)&intarg, sizeof(intarg))
+        < 0) {
+      pd_error(x, "[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+    }
   }
 #endif /* SO_REUSEADDR */
 #ifdef SO_REUSEPORT
-  intarg = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
-                 (char *)&intarg, sizeof(intarg)) 
-      < 0) {
-    pd_error(x, "[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+  if(x->x_reuseport) {
+    intarg = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+                   (void *)&intarg, sizeof(intarg))
+        < 0) {
+      pd_error(x, "[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+    }
   }
 #endif /* SO_REUSEPORT */
-
 
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
@@ -144,6 +149,29 @@ static void udpreceive_port(t_udpreceive*x, t_symbol*s, int argc, t_atom*argv)
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
 
+static void udpreceive_optionI(t_udpreceive*x, t_symbol*s, int argc, t_atom*argv) {
+  int*reuse=NULL;
+  if(gensym("reuseport")==s)reuse=&x->x_reuseport;
+  if(gensym("reuseaddr")==s)reuse=&x->x_reuseaddr;
+
+  if(!reuse) {
+    pd_error(x, "[%s]: unknown option '%s'", objName, s->s_name);
+    return;
+  }
+  if(argc) {
+    if(1==argc && A_FLOAT == argv->a_type) {
+      *reuse=atom_getint(argv);
+      return;
+    } else {
+      pd_error(x, "[%s] usage: %s [<val>]", objName, s->s_name);
+      return;
+    }
+  } else {
+    t_atom ap[1];
+    SETFLOAT(ap, *reuse);
+    outlet_anything(x->x_statout, s, 1, ap);
+  }
+}
 
 static void *udpreceive_new(t_floatarg fportno)
 {
@@ -156,6 +184,9 @@ static void *udpreceive_new(t_floatarg fportno)
     x->x_connectsocket = -1;
     x->x_port = -1;
     x->x_receiver = NULL;
+
+    x->x_reuseaddr = 1;
+    x->x_reuseport = 0;
 
     x->x_floatlist=iemnet__floatlist_create(1024);
 
@@ -183,8 +214,11 @@ IEMNET_EXTERN void udpreceive_setup(void)
         (t_newmethod)udpreceive_new, (t_method)udpreceive_free,
         sizeof(t_udpreceive), 0, A_DEFFLOAT, 0);
 
-    class_addmethod(udpreceive_class, (t_method)udpreceive_port, 
-		    gensym("port"), A_GIMME, 0);
+    class_addmethod(udpreceive_class, (t_method)udpreceive_port, gensym("port"), A_GIMME, 0);
+
+    /* options for opening new sockets */
+    class_addmethod(udpreceive_class, (t_method)udpreceive_optionI, gensym("reuseaddr"), A_GIMME, 0);
+    class_addmethod(udpreceive_class, (t_method)udpreceive_optionI, gensym("reuseport"), A_GIMME, 0);
 
   DEBUGMETHOD(udpreceive_class);
 }
