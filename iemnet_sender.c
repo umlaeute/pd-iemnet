@@ -77,6 +77,12 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
   socklen_t           tolen = sizeof(to);
 
   t_iemnet_chunk*c=queue_pop_block(q);
+
+  int flags = 0;
+#ifdef __linux__
+  flags |= MSG_NOSIGNAL;
+#endif
+
   if(c) {
     unsigned char*data=c->data;
     unsigned int size=c->size;
@@ -92,13 +98,13 @@ static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
       to.sin_family     =c->family;
       result = sendto(sockfd,
                       data, size, /* DATA */
-                      0,          /* FLAGS */
+                      flags,      /* FLAGS */
                       (struct sockaddr *)&to, tolen); /* DESTADDR */
     } else {
       DEBUG("sending %d bytes", size);
       result = send(sockfd,
                     data, size, /* DATA */
-                    0);         /* FLAGS */
+                    flags);     /* FLAGS */
     }
     if(result<0) {
       // broken pipe
