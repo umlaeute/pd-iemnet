@@ -66,6 +66,12 @@ typedef struct _iemnet_sender t_iemnet_sender;
 EXTERN_STRUCT _iemnet_sender;
 
 /**
+ * user provided send function
+ * (defaults to just using send)
+ */
+typedef int (*t_iemnet_sendfunction)(void*userdata, int sockfd, t_iemnet_chunk*c);
+
+/**
  * create a sender to a given socket
  *
  * \param sock a previously opened socket
