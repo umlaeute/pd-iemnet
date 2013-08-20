@@ -67,7 +67,7 @@ struct _iemnet_sender {
   int keepsending; // indicates whether we want to thread to continue or to terminate
   int isrunning;
 
-  void*userdata; /* user provided data */
+  const void*userdata; /* user provided data */
   t_iemnet_sendfunction sendfun; /* user provided send function */
 
   pthread_mutex_t mtx; /* mutex to protect isrunning,.. */
@@ -125,7 +125,7 @@ static void*iemnet__sender_sendthread(void*arg) {
   t_iemnet_queue*q=NULL;
   t_iemnet_chunk*c=NULL;
   t_iemnet_sendfunction dosend=iemnet__sender_defaultsend;
-  void*userdata=NULL;
+  const void*userdata=NULL;
 
   LOCK(&sender->mtx);
   q=sender->queue;
@@ -230,7 +230,9 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread) {
 }
 
 
-t_iemnet_sender*iemnet__sender_create(int sock, int subthread) {
+t_iemnet_sender*iemnet__sender_create(int sock,
+                                      t_iemnet_sendfunction*sendfun, const void*userdata,
+                                      int subthread) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_sender*result=(t_iemnet_sender*)calloc(1, sizeof(t_iemnet_sender));
   int res=0;
@@ -244,6 +246,8 @@ t_iemnet_sender*iemnet__sender_create(int sock, int subthread) {
   result->sockfd = sock;
   result->keepsending =1;
   result->isrunning=1;
+  result->sendfun=sendfun;
+  result->userdata=userdata;
   DEBUG("create_sender queue=%x", result->queue);
 
   memcpy(&result->mtx , &mtx, sizeof(pthread_mutex_t));

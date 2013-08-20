@@ -68,18 +68,24 @@ EXTERN_STRUCT _iemnet_sender;
 /**
  * user provided send function
  * (defaults to just using send)
+ * this function is guaranteed to be called with a valid 'chunk',
+ * and the 'userdata' and 'sockfd' provided at sender-creation
  */
-typedef int (*t_iemnet_sendfunction)(void*userdata, int sockfd, t_iemnet_chunk*c);
+typedef int (*t_iemnet_sendfunction)(void*userdata, int sockfd, t_iemnet_chunk*chunk);
 
 /**
  * create a sender to a given socket
  *
  * \param sock a previously opened socket
+ * \param sendfun a send()-implementation (or NULL, to use the default send/sendto based implementation)
+ * \param userdata pointer to optional userdata to be passsed to `sendfun`
  * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  * \return pointer to a sender object
  * \note the socket must be writeable
  */
-t_iemnet_sender*iemnet__sender_create(int sock, int);
+t_iemnet_sender*iemnet__sender_create(int sock,
+                                      t_iemnet_sendfunction*sendfun, const void*userdata,
+                                      int);
 /**
  * destroy a sender to a given socket
  * destroying a sender will free all resources of the sender
