@@ -67,56 +67,54 @@ struct _iemnet_sender {
   int keepsending; // indicates whether we want to thread to continue or to terminate
   int isrunning;
 
+  void*userdata; /* user provided data */
+  t_iemnet_sendfunction sendfun; /* user provided send function */
+
   pthread_mutex_t mtx; /* mutex to protect isrunning,.. */
 };
 
 /* the workhorse of the family */
 
-static int iemnet__sender_dosend(int sockfd, t_iemnet_queue*q) {
+
+static int iemnet__sender_defaultsend(void*x, int sockfd, t_iemnet_chunk*c) {
+  int result=-1;
+
   struct sockaddr_in  to;
   socklen_t           tolen = sizeof(to);
 
-  t_iemnet_chunk*c=queue_pop_block(q);
+  unsigned char*data=c->data;
+  unsigned int size=c->size;
 
   int flags = 0;
 #ifdef __linux__
   flags |= MSG_NOSIGNAL;
 #endif
 
-  if(c) {
-    unsigned char*data=c->data;
-    unsigned int size=c->size;
 
-    int result=-1;
+  //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
+  if(c->port) {
+    DEBUG("sending %d bytes to %x:%d @%d", size, c->addr, c->port, c->family);
 
-    //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
-    if(c->port) {
-      DEBUG("sending %d bytes to %x:%d @%d", size, c->addr, c->port, c->family);
-
-      to.sin_addr.s_addr=htonl(c->addr);
-      to.sin_port       =htons(c->port);
-      to.sin_family     =c->family;
-      result = sendto(sockfd,
-                      data, size, /* DATA */
-                      flags,      /* FLAGS */
-                      (struct sockaddr *)&to, tolen); /* DESTADDR */
-    } else {
-      DEBUG("sending %d bytes", size);
-      result = send(sockfd,
+    to.sin_addr.s_addr=htonl(c->addr);
+    to.sin_port       =htons(c->port);
+    to.sin_family     =c->family;
+    result = sendto(sockfd,
                     data, size, /* DATA */
-                    flags);     /* FLAGS */
-    }
-    if(result<0) {
-      // broken pipe
-      return 0;
-    }
-
-    // shouldn't we do something with the result here?
-    DEBUG("sent %d bytes", result);
-    iemnet__chunk_destroy(c);
+                    flags,      /* FLAGS */
+                    (struct sockaddr *)&to, tolen); /* DESTADDR */
   } else {
+    DEBUG("sending %d bytes", size);
+    result = send(sockfd,
+                  data, size, /* DATA */
+                  flags);     /* FLAGS */
+  }
+  if(result<0) {
+    // broken pipe
     return 0;
   }
+
+  // shouldn't we do something with the result here?
+  DEBUG("sent %d bytes", result);
   return 1;
 }
 
@@ -125,15 +123,32 @@ static void*iemnet__sender_sendthread(void*arg) {
 
   int sockfd=-1;
   t_iemnet_queue*q=NULL;
+  t_iemnet_chunk*c=NULL;
+  t_iemnet_sendfunction dosend=iemnet__sender_defaultsend;
+  void*userdata=NULL;
 
   LOCK(&sender->mtx);
-  sockfd=sender->sockfd;
   q=sender->queue;
+  userdata=sender->userdata;
+  if(NULL!=sender->sendfun)
+    dosend=sender->sendfun;
+
+  sockfd=sender->sockfd;
+
+
   while(sender->keepsending) {
     UNLOCK(&sender->mtx);
-    if(!iemnet__sender_dosend(sockfd, q)){
-      LOCK(&sender->mtx);
-      break;
+
+    c=queue_pop_block(q);
+    if(c){
+      if(!dosend(userdata, sockfd, c)) {
+        iemnet__chunk_destroy(c);
+
+        LOCK(&sender->mtx);
+        break;
+      }
+      iemnet__chunk_destroy(c);
+      c=NULL;
     }
     LOCK(&sender->mtx);
   }
