@@ -109,7 +109,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
     }
   x->x_fd = sockfd;
 
-  x->x_sender=iemnet__sender_create(sockfd, 0);
+  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
 
   outlet_float(x->x_obj.ob_outlet, 1);
 }

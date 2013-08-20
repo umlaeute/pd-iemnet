@@ -121,7 +121,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread) {
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
-  x->x_sender=iemnet__sender_create(sockfd, subthread);
+  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, subthread);
   x->x_receiver=iemnet__receiver_create(sockfd, x,  udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
