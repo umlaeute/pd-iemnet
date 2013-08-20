@@ -110,7 +110,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
       sys_closesocket(sockfd);
       return;
     }
-  x->x_sender=iemnet__sender_create(sockfd, 0);
+  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
