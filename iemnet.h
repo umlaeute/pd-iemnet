@@ -84,7 +84,7 @@ typedef int (*t_iemnet_sendfunction)(void*userdata, int sockfd, t_iemnet_chunk*c
  * \note the socket must be writeable
  */
 t_iemnet_sender*iemnet__sender_create(int sock,
-                                      t_iemnet_sendfunction*sendfun, const void*userdata,
+                                      t_iemnet_sendfunction sendfun, const void*userdata,
                                       int);
 /**
  * destroy a sender to a given socket

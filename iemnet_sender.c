@@ -231,7 +231,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread) {
 
 
 t_iemnet_sender*iemnet__sender_create(int sock,
-                                      t_iemnet_sendfunction*sendfun, const void*userdata,
+                                      t_iemnet_sendfunction sendfun, const void*userdata,
                                       int subthread) {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_sender*result=(t_iemnet_sender*)calloc(1, sizeof(t_iemnet_sender));
