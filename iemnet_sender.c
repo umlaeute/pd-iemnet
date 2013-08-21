@@ -76,7 +76,7 @@ struct _iemnet_sender {
 /* the workhorse of the family */
 
 
-static int iemnet__sender_defaultsend(void*x, int sockfd, t_iemnet_chunk*c) {
+static int iemnet__sender_defaultsend(const void*x, int sockfd, t_iemnet_chunk*c) {
   int result=-1;
 
   struct sockaddr_in  to;
