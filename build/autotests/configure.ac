@@ -1,6 +1,6 @@
 AC_INIT([iemnet],[0.0.1],[zmoelnig@iem.at],
                 [iemnet],[http://ambisonics.iem.at/xchange/format])
-AM_INIT_AUTOMAKE($PACKAGE_NAME,$PACKAGE_VERSION)
+AM_INIT_AUTOMAKE
 
 AM_PROG_LIBTOOL
 
