@@ -71,7 +71,7 @@ EXTERN_STRUCT _iemnet_sender;
  * this function is guaranteed to be called with a valid 'chunk',
  * and the 'userdata' and 'sockfd' provided at sender-creation
  */
-typedef int (*t_iemnet_sendfunction)(void*userdata, int sockfd, t_iemnet_chunk*chunk);
+typedef int (*t_iemnet_sendfunction)(const void*userdata, int sockfd, t_iemnet_chunk*chunk);
 
 /**
  * create a sender to a given socket
