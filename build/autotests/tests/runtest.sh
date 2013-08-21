@@ -11,8 +11,8 @@ TESTTYPE=$2
 
 PD=pd
 PDARGS="-nrt -nogui -path .libs"
-#PDARGS="-noprefs -nostdpath -nosound -nrt -nogui -path .libs"
-PDARGS="-nostdpath -nosound -nrt -nogui -path .libs"
+PDARGS="-noprefs -nostdpath -nosound -nrt -nogui -path .libs"
+#PDARGS="-nostdpath -nosound -nrt -nogui -path .libs"
 #VALGRIND=valgrind
 VALGRIND="valgrind --error-exitcode=1"
 
