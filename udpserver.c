@@ -657,7 +657,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
 
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd<0) {
-    sys_sockerror("udpserver: cannot create UDP socket");
+    sys_sockerror("[udpserver]: cannot create UDP socket");
     return;
   }
 
