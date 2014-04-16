@@ -32,6 +32,9 @@
 /* for printf() debugging */
 #include <stdio.h>
 
+/* for calloc() */
+#include <stdlib.h>
+
 struct _iemnet_notify {
   void*data;
   t_iemnet_notifun fun;
@@ -139,7 +142,7 @@ static void iemnet__notifier_print(t_iemnet_notifier*x) {
 t_iemnet_notifier*iemnet__notify_create(int subthread) {
   if(masternotifier!=NULL)
     return masternotifier;
-  masternotifier=(t_iemnet_notifier*)getbytes(sizeof(t_iemnet_notifier));
+  masternotifier=(t_iemnet_notifier*)calloc(1, sizeof(t_iemnet_notifier));
   if(!pipe(masternotifier->fd)) {
     if(subthread)sys_lock();
     sys_addpollfn(masternotifier->fd[0], pollfun, masternotifier);
