@@ -68,7 +68,7 @@ typedef struct _tcpserver
   int                       x_port;
 
   int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
-	t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist         *x_floatlist;
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
@@ -303,22 +303,20 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 {
   int client=0;
 
-  if (argc > 0)
-    {
-      client=tcpserver_fixindex(x, atom_getint(argv));
-      if(client<0)return;
-      if(argc==1) {
-        tcpserver_info_client(x, client);
-      } else {
-        tcpserver_send_toclient(x, client, argc-1, argv+1);
-      }
-      return;
+  if (argc > 0) {
+    client=tcpserver_fixindex(x, atom_getint(argv));
+    if(client<0)return;
+    if(argc==1) {
+      tcpserver_info_client(x, client);
+    } else {
+      tcpserver_send_toclient(x, client, argc-1, argv+1);
     }
-  else
-    {
-      for(client=0; client<x->x_nconnections; client++)
-        tcpserver_info_client(x, client);
-    }
+    return;
+  } else {
+    unsigned int client;
+    for(client=0; client<x->x_nconnections; client++)
+      tcpserver_info_client(x, client);
+  }
 }
 
 /* broadcasts a message to all connected clients */
@@ -412,21 +410,17 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
   }
 
   /* get socket number of connection (first element in list) */
-  if(argc && argv->a_type == A_FLOAT)
-    {
-      int sockfd=atom_getint(argv);
-      client = tcpserver_socket2index(x, sockfd);
-      if(client < 0)
-        {
-          post("%s_send: no connection on socket %d", objName, sockfd);
-          return;
-        }
-    }
-  else
-    {
-      post("%s_send: no socket specified", objName);
+  if(argc && argv->a_type == A_FLOAT) {
+    int sockfd=atom_getint(argv);
+    client = tcpserver_socket2index(x, sockfd);
+    if(client < 0) {
+      post("%s_send: no connection on socket %d", objName, sockfd);
       return;
     }
+  } else {
+    post("%s_send: no socket specified", objName);
+    return;
+  }
 
   chunk=iemnet__chunk_create_list(argc-1, argv+1);
   tcpserver_send_bytes(x, client, chunk);
