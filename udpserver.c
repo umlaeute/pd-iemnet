@@ -428,15 +428,27 @@ static void udpserver_defaultsend(t_udpserver *x, t_symbol *s, int argc, t_atom 
   int client=-1;
   int sockfd=x->x_defaulttarget;
   DEBUG("sending to sockfd: %d", sockfd);
-  if(0==sockfd)
-    udpserver_broadcast(x, s, argc, argv);
-  else if(sockfd>0) {
+  if(sockfd>0) {
     client=udpserver_socket2index(x, sockfd);
-    udpserver_send_toclient(x, client, argc, argv);
+    if(client<0) {
+      pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName, sockfd);
+      x->x_defaulttarget=0;
+    } else {
+      udpserver_send_toclient(x, client, argc, argv);
+      return;
+    }
   } else if(sockfd<0) {
     client=udpserver_socket2index(x, -sockfd);
-    udpserver_send_butclient(x, client, argc, argv);
+    if(client<0) {
+      pd_error(x, "[%s] illegal !socket %d, switching to broadcast mode", objName, sockfd);
+      x->x_defaulttarget=0;
+    } else {
+      udpserver_send_butclient(x, client, argc, argv);
+      return;
+    }
   }
+
+  udpserver_broadcast(x, s, argc, argv);
 }
 static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 {
