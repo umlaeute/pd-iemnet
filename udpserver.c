@@ -322,7 +322,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client, t_iemnet_ch
     t_atom                  output_atom[3];
     int size=0;
 
-    t_iemnet_sender*sender=sender=x->x_sr[client]->sr_sender;
+    t_iemnet_sender*sender=x->x_sr[client]->sr_sender;
     int sockfd = x->x_sr[client]->sr_fd;
 
     chunk->addr=x->x_sr[client]->sr_host;
