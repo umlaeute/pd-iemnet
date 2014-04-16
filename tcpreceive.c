@@ -32,6 +32,8 @@ static const char*objName="tcpreceive";
 # include <netinet/tcp.h>
 #endif
 
+#include <string.h>
+
 /* ----------------------------- tcpreceive ------------------------- */
 
 static t_class *tcpreceive_class;
