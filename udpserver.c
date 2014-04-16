@@ -218,9 +218,9 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
   return NULL;
 }
 
-static void udpserver_sender_remove(t_udpserver*x, int id) {
-  if(id>=0 && id<x->x_nconnections && x->x_sr[id]) {
-    int i;
+static void udpserver_sender_remove(t_udpserver*x, unsigned int id) {
+  if(id<x->x_nconnections && x->x_sr[id]) {
+    unsigned int i;
 
     t_udpserver_sender* sdr=x->x_sr[id];
     udpserver_sender_free(sdr);
@@ -234,8 +234,6 @@ static void udpserver_sender_remove(t_udpserver*x, int id) {
     x->x_nconnections--;
   }
 }
-
-
 
 
 /* ---------------- udpserver info ---------------------------- */
@@ -514,19 +512,18 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc, t_atom 
   iemnet__chunk_destroy(chunk);
 }
 
-static void udpserver_disconnect(t_udpserver *x, int client)
+static void udpserver_disconnect(t_udpserver *x, unsigned int client)
 {
   t_udpserver_sender*sdr;
   int conns;
   DEBUG("disconnect %x %d", x, client);
 
-  if(client<0 || client >= x->x_nconnections)return;
+  if(client >= x->x_nconnections)return;
 
   sdr=udpserver_sender_copy(x->x_sr[client]);
 
   udpserver_sender_remove(x, client);
   conns=x->x_nconnections;
-
 
   udpserver_info_connection(x, sdr);
   outlet_float(x->x_connectout, conns);
@@ -556,8 +553,8 @@ static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
 /* disconnect a client by socket */
 static void udpserver_disconnect_all(t_udpserver *x)
 {
-  int id=x->x_nconnections;
-  while(--id>=0) {
+  unsigned int id;
+  for(id=0; id<x->x_nconnections; id++) {
     udpserver_disconnect(x, id);
   }
 }
