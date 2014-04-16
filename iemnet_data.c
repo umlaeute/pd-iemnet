@@ -324,11 +324,13 @@ t_iemnet_chunk* queue_pop_block(
   head = _this->head;
 
   /* update _this */
-  if (! (_this->head = head->next)) {
-    _this->tail = 0;
-  }
-  if(head && head->data) {
-    _this->size-=head->data->size;
+  if(head) {
+    if (! (_this->head = head->next)) {
+      _this->tail = 0;
+    }
+    if(head->data) {
+      _this->size-=head->data->size;
+    }
   }
 
   pthread_mutex_unlock(&_this->mtx);
