@@ -548,6 +548,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
+  memset(&server, 0, sizeof(server));
+
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
     return;

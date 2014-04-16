@@ -286,10 +286,11 @@ static void udpserver_info(t_udpserver *x) {
     error("[%s] no valid sock", objName);
   }
 
-
   if(x->x_port<=0) {
     struct sockaddr_in  server;
     socklen_t           serversize=sizeof(server);
+    memset(&server, 0, sizeof(server));
+
     if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
       x->x_port=ntohs(server.sin_port);
       port=x->x_port;
@@ -624,6 +625,8 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
+  memset(&server, 0, sizeof(server));
+
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
     return;

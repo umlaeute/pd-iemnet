@@ -72,6 +72,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread) {
   struct hostent      *hp;
   int                 sockfd;
   int                 broadcast = 1;/* nonzero is true */
+  memset(&server, 0, sizeof(server));
 
   if (x->x_sender)
     {

@@ -64,6 +64,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   int intarg;
+  memset(&server, 0, sizeof(server));
 
   if(x->x_port == portno) {
     return 1;
