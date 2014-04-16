@@ -564,9 +564,11 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
     x->x_port=-1;
   }
 
-
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
+  if(sockfd<0) {
+    sys_sockerror("[%s]: cannot create TCP/IP socket", objName);
+    return;
+  }
 
   server.sin_family = AF_INET;
 
