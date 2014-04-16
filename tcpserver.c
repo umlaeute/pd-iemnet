@@ -62,7 +62,7 @@ typedef struct _tcpserver
   int                          x_serialize;
 
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
-  int                       x_nconnections;
+  unsigned int              x_nconnections;
 
   int                       x_connectsocket;    /* socket waiting for new connections */
   int                       x_port;
@@ -122,14 +122,12 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 
 static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
 {
-  int i=0;
-  for(i = 0; i < x->x_nconnections; i++) /* check if connection exists */
-    {
-      if(x->x_sr[i]->sr_fd == sockfd)
-        {
-          return i;
-        }
+  unsigned int i=0;
+  for(i = 0; i < x->x_nconnections; i++) { /* check if connection exists */
+    if(x->x_sr[i]->sr_fd == sockfd) {
+      return i;
     }
+  }
   return -1;
 }
 
@@ -139,23 +137,21 @@ static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
  */
 static int tcpserver_fixindex(t_tcpserver*x, int client)
 {
-  if(x->x_nconnections <= 0)
-    {
-      pd_error(x, "[%s]: no clients connected", objName);
-      return -1;
-    }
+  if(x->x_nconnections <= 0) {
+    pd_error(x, "[%s]: no clients connected", objName);
+    return -1;
+  }
 
-  if (!((client > 0) && (client <= x->x_nconnections)))
-    {
-      pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, (int)(x->x_nconnections));
-      return -1;
-    }
+  if (!((client > 0) && (client <= x->x_nconnections))) {
+    pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, (int)(x->x_nconnections));
+    return -1;
+  }
   return (client-1);
 }
 
 
 /* ---------------- tcpserver info ---------------------------- */
-static void tcpserver_info_client(t_tcpserver *x, int client)
+static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
 {
   // "client <id> <socket> <IP> <port>"
   // "bufsize <id> <insize> <outsize>"
@@ -270,9 +266,9 @@ static void tcpserver_send_bytes_clients(t_tcpserver*x, t_tcpserver_socketreceiv
 }
 
 /* broadcasts a message to all connected clients but the given one */
-static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *argv)
+static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but, int argc, t_atom *argv)
 {
-  int client=0;
+  unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
   if(!x || !x->x_nconnections || !x->x_sr)return;
@@ -284,7 +280,7 @@ static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *
     sr[client]=x->x_sr[client];
   }
 
-  if(but>=0 && but<x->x_nconnections)
+  if(but<x->x_nconnections)
     sr[but]=NULL;
 
   tcpserver_send_bytes_clients(x, sr, x->x_nconnections, chunk);
@@ -293,7 +289,7 @@ static void tcpserver_send_butclient(t_tcpserver *x, int but, int argc, t_atom *
   iemnet__chunk_destroy(chunk);
 }
 /* sends a message to a given client */
-static void tcpserver_send_toclient(t_tcpserver *x, int client, int argc, t_atom *argv)
+static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client, int argc, t_atom *argv)
 {
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   tcpserver_send_bytes(x, client, chunk);
@@ -328,7 +324,7 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 /* broadcasts a message to all connected clients */
 static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int client=0;
+  unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
   if(!x || !x->x_nconnections || !x->x_sr)return;
@@ -378,7 +374,7 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
 {
   int sockfd=0;
   int rawclient=f;
-  int client=(rawclient<0)?(-rawclient):rawclient;
+  unsigned int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
     error("[%s] target %d out of range [0..%d]", objName, client, (int)(x->x_nconnections));
@@ -437,9 +433,9 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom 
   iemnet__chunk_destroy(chunk);
 }
 
-static void tcpserver_disconnect(t_tcpserver *x, int client)
+static void tcpserver_disconnect(t_tcpserver *x, unsigned int client)
 {
-  int k;
+  unsigned int k;
   DEBUG("disconnect %x %d", x, client);
   tcpserver_info_connection(x, x->x_sr[client]);
 
@@ -482,8 +478,8 @@ static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
 /* disconnect a client by socket */
 static void tcpserver_disconnect_all(t_tcpserver *x)
 {
-  int id=x->x_nconnections;
-  while(--id>=0) {
+  unsigned int id;
+  for(id=0; id<x->x_nconnections; id++) {
     tcpserver_disconnect(x, id);
   }
 }
