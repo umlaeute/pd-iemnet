@@ -110,6 +110,7 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
       sys_closesocket(sockfd);
     }
+  /* coverity[pass_freed_arg]: this is merely for debugging printout */
   DEBUG("freeed %x", x);
 }
 
