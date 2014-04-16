@@ -110,12 +110,6 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
   t_iemnet_sender*  sender;
   t_iemnet_receiver*receiver;
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    sys_sockerror("tcpclient: socket");
-    return (sockfd);
-  }
-
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
   hp = gethostbyname(host);
@@ -124,6 +118,12 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
     return (-1);
   }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    sys_sockerror("tcpclient: socket");
+    return (sockfd);
+  }
 
   /* assign client port number */
   server.sin_port = htons((u_short)port);
