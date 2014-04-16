@@ -111,6 +111,7 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
   t_iemnet_receiver*receiver;
 
   /* connect socket using hostname provided in command line */
+  memset(&server, 0, sizeof(server));
   server.sin_family = AF_INET;
   hp = gethostbyname(host);
   if (hp == 0) {
