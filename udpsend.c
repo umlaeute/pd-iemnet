@@ -44,6 +44,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   int                 sockfd;
   int                 portno = fportno;
   int                 broadcast = 1;/* nonzero is true */
+  memset(&server, 0, sizeof(server));
 
   if (x->x_sender)
     {

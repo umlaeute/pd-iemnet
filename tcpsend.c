@@ -65,6 +65,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   int                 sockfd;
   int                 portno = fportno;
   int                 intarg;
+  memset(&server, 0, sizeof(server));
 
   if (x->x_fd >= 0)
     {
