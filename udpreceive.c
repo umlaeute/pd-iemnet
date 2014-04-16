@@ -26,6 +26,7 @@
 static const char objName[] = "udpreceive";
 
 #include "iemnet.h"
+#include <string.h>
 
 /* ----------------------------- udpreceive ------------------------- */
 

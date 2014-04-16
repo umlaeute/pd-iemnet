@@ -31,6 +31,7 @@
 #include "iemnet.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
