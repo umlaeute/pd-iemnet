@@ -253,7 +253,6 @@ static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk
   t_tcpserver_socketreceiver*sr=NULL;
   if(x&&client<MAX_CONNECT)sr=x->x_sr[client];
   DEBUG("send_bytes to %p[%d] -> %p", x, client, sr);
-  if(client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
   tcpserver_send_bytes_client(x, sr, client, chunk);
 }
 
