@@ -358,15 +358,25 @@ static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom 
 {
   int client=-1;
   int sockfd=x->x_defaulttarget;
-  if(0==sockfd)
-    tcpserver_broadcast(x, s, argc, argv);
-  else if(sockfd>0) {
+  if(sockfd>0) {
     client=tcpserver_socket2index(x, sockfd);
-    tcpserver_send_toclient(x, client, argc, argv);
+    if(client>=0) {
+      tcpserver_send_toclient(x, client, argc, argv);
+      return;
+    }
+    pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName, sockfd);
+    x->x_defaulttarget=0;
   } else if(sockfd<0) {
     client=tcpserver_socket2index(x, -sockfd);
-    tcpserver_send_butclient(x, client, argc, argv);
+    if(client>=0) {
+      tcpserver_send_butclient(x, client, argc, argv);
+      return;
+    }
+    pd_error(x, "[%s] illegal !ocket %d, switching to broadcast mode", objName, sockfd);
+    x->x_defaulttarget=0;
   }
+
+  tcpserver_broadcast(x, s, argc, argv);
 }
 static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
 {
