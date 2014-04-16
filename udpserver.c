@@ -415,7 +415,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *a
 /* broadcasts a message to all connected clients */
 static void udpserver_broadcastbut(t_udpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int but=-1;
+  int but;
 
   if(argc<2) {
     return;
