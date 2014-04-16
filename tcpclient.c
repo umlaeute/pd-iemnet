@@ -299,6 +299,13 @@ static void *tcpclient_new(void)
   x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
   x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
 
+  /* prepare child thread */
+  pthread_mutex_init(&x->x_connlock, 0);
+  pthread_cond_init (&x->x_conncond, 0);
+
+  pthread_mutex_lock(&x->x_connlock);
+
+
   x->x_serialize=1;
 
   x->x_fd = -1;
@@ -309,16 +316,11 @@ static void *tcpclient_new(void)
   x->x_sender=NULL;
   x->x_receiver=NULL;
 
+  x->x_keeprunning=1;
+
   x->x_clock = clock_new(x, (t_method)tcpclient_tick);
   x->x_floatlist=iemnet__floatlist_create(1024);
 
-  /* prepare child thread */
-  pthread_mutex_init(&x->x_connlock, 0);
-  pthread_cond_init (&x->x_conncond, 0);
-
-  x->x_keeprunning=1;
-
-  pthread_mutex_lock(&x->x_connlock);
   if(pthread_create(&x->x_threadid, 0, tcpclient_connectthread, x)) {
     error("%s: failed to create connection thread", objName);
     tcpclient_free_simple(x);
