@@ -156,7 +156,7 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
   // "client <id> <socket> <IP> <port>"
   // "bufsize <id> <insize> <outsize>"
   static t_atom output_atom[4];
-  if(x&&x->x_sr&&x->x_sr[client]) {
+  if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port   = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
@@ -251,9 +251,9 @@ static void tcpserver_send_bytes_client(t_tcpserver*x, t_tcpserver_socketreceive
 static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
 {
   t_tcpserver_socketreceiver*sr=NULL;
-  if(x&&x->x_sr)sr=x->x_sr[client];
+  if(x&&client<MAX_CONNECT)sr=x->x_sr[client];
   DEBUG("send_bytes to %p[%d] -> %p", x, client, sr);
-  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
+  if(client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
   tcpserver_send_bytes_client(x, sr, client, chunk);
 }
 
@@ -271,7 +271,7 @@ static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but, int argc,
   unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
-  if(!x || !x->x_nconnections || !x->x_sr)return;
+  if(!x || !x->x_nconnections)return;
 
   chunk=iemnet__chunk_create_list(argc, argv);
   sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
@@ -325,7 +325,7 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
   unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
-  if(!x || !x->x_nconnections || !x->x_sr)return;
+  if(!x || !x->x_nconnections)return;
 
   chunk=iemnet__chunk_create_list(argc, argv);
   sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
