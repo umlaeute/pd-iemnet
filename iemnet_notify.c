@@ -60,7 +60,8 @@ static t_iemnet_notifynodes*delnodes=NULL;
 
 /* notifies Pd that there is new data to fetch */
 void iemnet__notify(t_iemnet_notify*x) {
-  write(masternotifier->fd[1], x, sizeof(x));
+  static const unsigned char data=0xFF;
+  write(masternotifier->fd[1], &data, sizeof(data));
 }
 
 static void iemnet_notifynodes_free(t_iemnet_notifynodes*x) {
