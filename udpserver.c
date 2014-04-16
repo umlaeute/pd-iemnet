@@ -314,10 +314,10 @@ static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 
 /* ---------------- main udpserver (send) stuff --------------------- */
 static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket);
-static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk)
+static void udpserver_send_bytes(t_udpserver*x, unsigned int client, t_iemnet_chunk*chunk)
 {
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(client>0 && client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
+  if(client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
   if(x && x->x_sr && x->x_sr[client]) {
     t_atom                  output_atom[3];
     int size=0;
@@ -347,9 +347,9 @@ static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk
 
 
 /* broadcasts a message to all connected clients but the given one */
-static void udpserver_send_butclient(t_udpserver *x, int but, int argc, t_atom *argv)
+static void udpserver_send_butclient(t_udpserver *x, unsigned int but, int argc, t_atom *argv)
 {
-  int client=0;
+  unsigned int client=0;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
 
   /* enumerate through the clients and send each the message */
@@ -361,7 +361,7 @@ static void udpserver_send_butclient(t_udpserver *x, int but, int argc, t_atom *
   iemnet__chunk_destroy(chunk);
 }
 /* sends a message to a given client */
-static void udpserver_send_toclient(t_udpserver *x, int client, int argc, t_atom *argv)
+static void udpserver_send_toclient(t_udpserver *x, unsigned int client, int argc, t_atom *argv)
 {
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   udpserver_send_bytes(x, client, chunk);
@@ -398,7 +398,7 @@ static void udpserver_send_client(t_udpserver *x, t_symbol *s, int argc, t_atom 
 /* broadcasts a message to all connected clients */
 static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int     client;
+  unsigned int   client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
 
   DEBUG("broadcasting to %d clients", x->x_nconnections);
