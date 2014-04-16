@@ -300,14 +300,14 @@ static void *tcpclient_new(void)
   x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
   x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
 
+  x->x_serialize=1;
+
   /* prepare child thread */
   pthread_mutex_init(&x->x_connlock, 0);
   pthread_cond_init (&x->x_conncond, 0);
 
   pthread_mutex_lock(&x->x_connlock);
 
-
-  x->x_serialize=1;
 
   x->x_fd = -1;
 
