@@ -514,18 +514,25 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc, t_atom 
 
 static void udpserver_disconnect(t_udpserver *x, unsigned int client)
 {
-  t_udpserver_sender*sdr;
+  t_udpserver_sender*sdr=NULL;
   int conns;
   DEBUG("disconnect %x %d", x, client);
 
   if(client >= x->x_nconnections)return;
 
-  sdr=udpserver_sender_copy(x->x_sr[client]);
+  sdr = (t_udpserver_sender *)calloc(1, sizeof(t_udpserver_sender));
+  if(sdr) {
+    sdr->sr_host=x->x_sr[client]->sr_host;
+    sdr->sr_port=x->x_sr[client]->sr_port;
+  }
 
   udpserver_sender_remove(x, client);
   conns=x->x_nconnections;
 
-  udpserver_info_connection(x, sdr);
+  if(sdr) {
+    udpserver_info_connection(x, sdr);
+    free(sdr);
+  }
   outlet_float(x->x_connectout, conns);
 }
 
