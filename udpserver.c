@@ -243,7 +243,7 @@ static void udpserver_info_client(t_udpserver *x, int client)
   // "client <id> <socket> <IP> <port>"
   // "bufsize <id> <insize> <outsize>"
   static t_atom output_atom[4];
-  if(x&&x->x_sr&&x->x_sr[client]) {
+  if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port   = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
@@ -316,7 +316,7 @@ static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket);
 static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk)
 {
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
+  if(client>0 && client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
   if(x && x->x_sr && x->x_sr[client]) {
     t_atom                  output_atom[3];
     int size=0;
