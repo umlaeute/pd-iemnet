@@ -316,7 +316,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client, t_iemnet_ch
 {
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
   if(client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
-  if(x && x->x_sr && x->x_sr[client]) {
+  if(x && client<MAX_CONNECT && x->x_sr[client]) {
     t_atom                  output_atom[3];
     int size=0;
 
