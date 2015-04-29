@@ -248,7 +248,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread) {
   DEBUG("[%d] really destroying receiver %x -> %d", inst, rec, sockfd);
 
   if(sockfd>=0) {
-    /* this doesn't alway make recvfrom() return!
+    /* this doesn't always make recvfrom() return!
      * - try polling
      * - try sending a signal with pthread_kill() ?
      */
