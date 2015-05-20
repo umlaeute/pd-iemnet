@@ -191,7 +191,7 @@ static void udpclient_send(t_udpclient *x, t_symbol *s, int argc, t_atom *argv)
   iemnet__chunk_destroy(chunk);
 
   SETFLOAT(&output_atom, size);
-  outlet_anything( x->x_statusout, gensym("sent"), 1, &output_atom);
+  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 1, &output_atom);
 }
 
 static void udpclient_receive_callback(void*y, t_iemnet_chunk*c) {
