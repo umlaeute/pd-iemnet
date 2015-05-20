@@ -242,7 +242,7 @@ static void tcpserver_send_bytes_client(t_tcpserver*x, t_tcpserver_socketreceive
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_statout, gensym("sent"), 3, output_atom);
+    outlet_anything( x->x_statout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
       // disconnected!

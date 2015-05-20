@@ -332,7 +332,7 @@ static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_statout, gensym("sent"), 3, output_atom);
+    outlet_anything( x->x_statout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
       // disconnected!
