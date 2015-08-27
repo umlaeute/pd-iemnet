@@ -138,10 +138,6 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
   if (fd < 0) error("[%s]  accept failed", objName);
   else
     {
-      //       t_socketreceiver *y = socketreceiver_new((void *)x,
-      //         (t_socketnotifier)tcpreceive_notify,
-      //           0, 0);
-      
       /* get the sender's ip */
       addr = ntohl(from.sin_addr.s_addr);
       port = ntohs(from.sin_port);
