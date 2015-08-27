@@ -32,6 +32,8 @@ static const char*objName="tcpreceive";
 # include <netinet/tcp.h>
 #endif
 
+#include <string.h>
+
 /* ----------------------------- tcpreceive ------------------------- */
 
 static t_class *tcpreceive_class;
@@ -214,6 +216,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   int intarg;
+  memset(&server, 0, sizeof(server));
 
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
