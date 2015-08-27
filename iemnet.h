@@ -139,7 +139,7 @@ typedef void (*t_iemnet_receivecallback)(void*userdata,
  * \param sock the (readable) socket to receive from
  * \param data user data to be passed to callback
  * \param callback a callback function that is called on the caller's side
- * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
+ * \param subthread bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note the callback will be scheduled in the caller's thread with clock_delay()
  */
