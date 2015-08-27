@@ -110,13 +110,8 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
   t_iemnet_sender*  sender;
   t_iemnet_receiver*receiver;
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    sys_sockerror("tcpclient: socket");
-    return (sockfd);
-  }
-
   /* connect socket using hostname provided in command line */
+  memset(&server, 0, sizeof(server));
   server.sin_family = AF_INET;
   hp = gethostbyname(host);
   if (hp == 0) {
@@ -124,6 +119,12 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
     return (-1);
   }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    sys_sockerror("tcpclient: socket");
+    return (sockfd);
+  }
 
   /* assign client port number */
   server.sin_port = htons((u_short)port);
@@ -301,6 +302,13 @@ static void *tcpclient_new(void)
 
   x->x_serialize=1;
 
+  /* prepare child thread */
+  pthread_mutex_init(&x->x_connlock, 0);
+  pthread_cond_init (&x->x_conncond, 0);
+
+  pthread_mutex_lock(&x->x_connlock);
+
+
   x->x_fd = -1;
 
   x->x_addr = 0L;
@@ -309,16 +317,11 @@ static void *tcpclient_new(void)
   x->x_sender=NULL;
   x->x_receiver=NULL;
 
+  x->x_keeprunning=1;
+
   x->x_clock = clock_new(x, (t_method)tcpclient_tick);
   x->x_floatlist=iemnet__floatlist_create(1024);
 
-  /* prepare child thread */
-  pthread_mutex_init(&x->x_connlock, 0);
-  pthread_cond_init (&x->x_conncond, 0);
-
-  x->x_keeprunning=1;
-
-  pthread_mutex_lock(&x->x_connlock);
   if(pthread_create(&x->x_threadid, 0, tcpclient_connectthread, x)) {
     error("%s: failed to create connection thread", objName);
     tcpclient_free_simple(x);

@@ -31,6 +31,7 @@
 #include "iemnet.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
@@ -110,6 +111,7 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
       sys_closesocket(sockfd);
     }
+  /* coverity[pass_freed_arg]: this is merely for debugging printout */
   DEBUG("freeed %x", x);
 }
 
@@ -216,9 +218,9 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
   return NULL;
 }
 
-static void udpserver_sender_remove(t_udpserver*x, int id) {
-  if(id>=0 && id<x->x_nconnections && x->x_sr[id]) {
-    int i;
+static void udpserver_sender_remove(t_udpserver*x, unsigned int id) {
+  if(id<x->x_nconnections && x->x_sr[id]) {
+    unsigned int i;
 
     t_udpserver_sender* sdr=x->x_sr[id];
     udpserver_sender_free(sdr);
@@ -234,15 +236,13 @@ static void udpserver_sender_remove(t_udpserver*x, int id) {
 }
 
 
-
-
 /* ---------------- udpserver info ---------------------------- */
 static void udpserver_info_client(t_udpserver *x, int client)
 {
   // "client <id> <socket> <IP> <port>"
   // "bufsize <id> <insize> <outsize>"
   static t_atom output_atom[4];
-  if(x&&x->x_sr&&x->x_sr[client]) {
+  if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port   = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
@@ -286,10 +286,11 @@ static void udpserver_info(t_udpserver *x) {
     error("[%s] no valid sock", objName);
   }
 
-
   if(x->x_port<=0) {
     struct sockaddr_in  server;
     socklen_t           serversize=sizeof(server);
+    memset(&server, 0, sizeof(server));
+
     if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
       x->x_port=ntohs(server.sin_port);
       port=x->x_port;
@@ -311,15 +312,15 @@ static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 
 /* ---------------- main udpserver (send) stuff --------------------- */
 static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket);
-static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk)
+static void udpserver_send_bytes(t_udpserver*x, unsigned int client, t_iemnet_chunk*chunk)
 {
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(x->x_sr)DEBUG("client %X", x->x_sr[client]);
-  if(x && x->x_sr && x->x_sr[client]) {
+  if(client<MAX_CONNECT)DEBUG("client %X", x->x_sr[client]);
+  if(x && client<MAX_CONNECT && x->x_sr[client]) {
     t_atom                  output_atom[3];
     int size=0;
 
-    t_iemnet_sender*sender=sender=x->x_sr[client]->sr_sender;
+    t_iemnet_sender*sender=x->x_sr[client]->sr_sender;
     int sockfd = x->x_sr[client]->sr_fd;
 
     chunk->addr=x->x_sr[client]->sr_host;
@@ -344,9 +345,9 @@ static void udpserver_send_bytes(t_udpserver*x, int client, t_iemnet_chunk*chunk
 
 
 /* broadcasts a message to all connected clients but the given one */
-static void udpserver_send_butclient(t_udpserver *x, int but, int argc, t_atom *argv)
+static void udpserver_send_butclient(t_udpserver *x, unsigned int but, int argc, t_atom *argv)
 {
-  int client=0;
+  unsigned int client=0;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
 
   /* enumerate through the clients and send each the message */
@@ -358,7 +359,7 @@ static void udpserver_send_butclient(t_udpserver *x, int but, int argc, t_atom *
   iemnet__chunk_destroy(chunk);
 }
 /* sends a message to a given client */
-static void udpserver_send_toclient(t_udpserver *x, int client, int argc, t_atom *argv)
+static void udpserver_send_toclient(t_udpserver *x, unsigned int client, int argc, t_atom *argv)
 {
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   udpserver_send_bytes(x, client, chunk);
@@ -395,7 +396,7 @@ static void udpserver_send_client(t_udpserver *x, t_symbol *s, int argc, t_atom 
 /* broadcasts a message to all connected clients */
 static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int     client;
+  unsigned int   client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
 
   DEBUG("broadcasting to %d clients", x->x_nconnections);
@@ -412,7 +413,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc, t_atom *a
 /* broadcasts a message to all connected clients */
 static void udpserver_broadcastbut(t_udpserver *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int but=-1;
+  int but;
 
   if(argc<2) {
     return;
@@ -426,15 +427,27 @@ static void udpserver_defaultsend(t_udpserver *x, t_symbol *s, int argc, t_atom 
   int client=-1;
   int sockfd=x->x_defaulttarget;
   DEBUG("sending to sockfd: %d", sockfd);
-  if(0==sockfd)
-    udpserver_broadcast(x, s, argc, argv);
-  else if(sockfd>0) {
+  if(sockfd>0) {
     client=udpserver_socket2index(x, sockfd);
-    udpserver_send_toclient(x, client, argc, argv);
+    if(client<0) {
+      pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName, sockfd);
+      x->x_defaulttarget=0;
+    } else {
+      udpserver_send_toclient(x, client, argc, argv);
+      return;
+    }
   } else if(sockfd<0) {
     client=udpserver_socket2index(x, -sockfd);
-    udpserver_send_butclient(x, client, argc, argv);
+    if(client<0) {
+      pd_error(x, "[%s] illegal !socket %d, switching to broadcast mode", objName, sockfd);
+      x->x_defaulttarget=0;
+    } else {
+      udpserver_send_butclient(x, client, argc, argv);
+      return;
+    }
   }
+
+  udpserver_broadcast(x, s, argc, argv);
 }
 static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 {
@@ -499,21 +512,27 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc, t_atom 
   iemnet__chunk_destroy(chunk);
 }
 
-static void udpserver_disconnect(t_udpserver *x, int client)
+static void udpserver_disconnect(t_udpserver *x, unsigned int client)
 {
-  t_udpserver_sender*sdr;
+  t_udpserver_sender*sdr=NULL;
   int conns;
   DEBUG("disconnect %x %d", x, client);
 
-  if(client<0 || client >= x->x_nconnections)return;
+  if(client >= x->x_nconnections)return;
 
-  sdr=udpserver_sender_copy(x->x_sr[client]);
+  sdr = (t_udpserver_sender *)calloc(1, sizeof(t_udpserver_sender));
+  if(sdr) {
+    sdr->sr_host=x->x_sr[client]->sr_host;
+    sdr->sr_port=x->x_sr[client]->sr_port;
+  }
 
   udpserver_sender_remove(x, client);
   conns=x->x_nconnections;
 
-
-  udpserver_info_connection(x, sdr);
+  if(sdr) {
+    udpserver_info_connection(x, sdr);
+    free(sdr);
+  }
   outlet_float(x->x_connectout, conns);
 }
 
@@ -541,8 +560,8 @@ static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
 /* disconnect a client by socket */
 static void udpserver_disconnect_all(t_udpserver *x)
 {
-  int id=x->x_nconnections;
-  while(--id>=0) {
+  unsigned int id;
+  for(id=0; id<x->x_nconnections; id++) {
     udpserver_disconnect(x, id);
   }
 }
@@ -624,6 +643,8 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
+  memset(&server, 0, sizeof(server));
+
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
     return;
@@ -639,7 +660,10 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
 
 
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-
+  if(sockfd<0) {
+    sys_sockerror("[udpserver]: cannot create UDP socket");
+    return;
+  }
 
   server.sin_family = AF_INET;
 

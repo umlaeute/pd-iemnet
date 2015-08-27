@@ -309,7 +309,7 @@ t_iemnet_chunk* queue_pop_block(
   pthread_mutex_lock(&_this->mtx);
 
   /* if the queue is empty, wait */
-  if(NULL == _this->head) {
+  while(NULL == _this->head) {
     pthread_cond_wait(&_this->cond, &_this->mtx);
     /* somebody signaled us, that we should do some work
      * either the queue has been filled, or we are done...
@@ -324,11 +324,13 @@ t_iemnet_chunk* queue_pop_block(
   head = _this->head;
 
   /* update _this */
-  if (! (_this->head = head->next)) {
-    _this->tail = 0;
-  }
-  if(head && head->data) {
-    _this->size-=head->data->size;
+  if(head) {
+    if (! (_this->head = head->next)) {
+      _this->tail = 0;
+    }
+    if(head->data) {
+      _this->size-=head->data->size;
+    }
   }
 
   pthread_mutex_unlock(&_this->mtx);
