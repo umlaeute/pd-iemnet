@@ -1,5 +1,5 @@
 /* udpsend.c
- * copyright (c) 2010 IOhannes m zmölnig, IEM
+ * copyright (c) 2010 IOhannes m zmÃ¶lnig, IEM
  * copyright (c) 2006-2010 Martin Peach
  * copyright (c) Miller Puckette
  */
