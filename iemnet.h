@@ -2,7 +2,7 @@
  * iemnet
  *     networking for Pd
  *
- *  (c) 2010 IOhannes m zmölnig
+ *  (c) 2010 IOhannes m zmÃ¶lnig
  *           Institute of Electronic Music and Acoustics (IEM)
  *           University of Music and Dramatic Arts (KUG), Graz, Austria
  *

@@ -4,7 +4,7 @@
  *  - wrappers for data "chunks"
  *  - queues
  *
- *  copyright (c) 2010 IOhannes m zmölnig, IEM
+ *  copyright (c) 2010 IOhannes m zmÃ¶lnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */

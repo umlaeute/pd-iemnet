@@ -1,5 +1,5 @@
 /* udpclient.c
- * copyright (c) 2010 IOhannes m zmölnig, IEM
+ * copyright (c) 2010 IOhannes m zmÃ¶lnig, IEM
  */
 
 /*                                                                              */
