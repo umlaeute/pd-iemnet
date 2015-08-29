@@ -127,9 +127,11 @@ EXTERN_STRUCT _iemnet_receiver;
 /**
  * callback function for receiving
  * whenever data arrives at the socket, a callback will be called synchronously
+ * if rawdata is NULL, this signifies that the socket has been closed
  */
-typedef void (*t_iemnet_receivecallback)(void*userdata,
-					 t_iemnet_chunk*rawdata);
+typedef void (*t_iemnet_receivecallback)(void*userdata
+					 , t_iemnet_chunk*rawdata
+					 );
 
 /**
  * create a receiver object
