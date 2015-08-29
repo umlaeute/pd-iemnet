@@ -169,6 +169,13 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
 /* convenience functions */
 
 /**
+ * properly close a socket fd
+ *
+ * \param sock socket to close
+ */
+void iemnet__closesocket(int fd);
+
+/**
  * output the address  (IP, port)
  * the given address is first output through the status_outlet as a "host" message
  * and then as a list through the address_outlet
