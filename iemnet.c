@@ -26,7 +26,21 @@
 
 #include <pthread.h>
 
+/* close a socket properly */
+void iemnet__closesocket(int sockfd)
+{
+  if(sockfd >=0) {
+#ifndef SHUT_RDWR
+# define SHUT_RDWR 2
+#endif
+    int how=SHUT_RDWR;
+    shutdown(sockfd, how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    sys_closesocket(sockfd);
+  }
+}
 
+
+/* various functions to send data to output in a uniform way */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, 
 		     long address, unsigned short port) {
 
