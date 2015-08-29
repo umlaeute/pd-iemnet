@@ -34,7 +34,10 @@ void iemnet__closesocket(int sockfd)
 # define SHUT_RDWR 2
 #endif
     int how=SHUT_RDWR;
-    shutdown(sockfd, how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    int err = shutdown(sockfd, how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    if(err) {
+      perror("iemnet:socket-shutdown");
+    }
     sys_closesocket(sockfd);
   }
 }
