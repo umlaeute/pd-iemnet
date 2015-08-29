@@ -162,7 +162,7 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*
   debuglevel_=iemnet_debuglevel_;
  pthread_mutex_unlock(&debug_mtx);
   if(debuglevel_ & debuglevel) {
-    startpost("[%s:%d#%d] ", function, line, debuglevel);
+    startpost("[%s[%d]:%s#%d] ", file, line, function, debuglevel);
     return 1;
   }
 #endif
