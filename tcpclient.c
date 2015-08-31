@@ -28,8 +28,6 @@
 #include "iemnet.h"
 #include <string.h>
 
-#include <pthread.h>
-
 static t_class *tcpclient_class;
 static char objName[] = "tcpclient";
 
@@ -54,14 +52,8 @@ typedef struct _tcpclient
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int
 
-  /* multithread stuff */
-  pthread_t       x_threadid; /* id of child thread */
-  pthread_mutex_t x_connlock;
-  pthread_cond_t  x_conncond;
 
-  int             x_keeprunning;
-
-	t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist         *x_floatlist;
 } t_tcpclient;
 
 
@@ -93,16 +85,22 @@ static void tcpclient_info(t_tcpclient *x)
 }
 
 /* connection handling */
-static int tcpclient_child_disconnect(int fd, t_iemnet_sender*sender, t_iemnet_receiver*receiver) {
+static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender, t_iemnet_receiver*receiver) {
+  if(sender) {
+    iemnet__sender_destroy(sender, 0);
+    sender=NULL;
+  }
+  if(receiver) {
+    iemnet__receiver_destroy(receiver, 0);
+    receiver=NULL;
+  }
   if (fd >= 0) {
-    if(sender)iemnet__sender_destroy(sender, 1); sender=NULL;
-    if(receiver)iemnet__receiver_destroy(receiver, 1); receiver=NULL;
-    sys_closesocket(fd);
+    iemnet__closesocket(fd);
     return 1;
   }
   return 0;
 }
-static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpclient*x,
+static int tcpclient_do_connect(const char*host, unsigned short port, t_tcpclient*x,
                                    t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT) {
   struct sockaddr_in  server;
   struct hostent      *hp;
@@ -132,12 +130,12 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
   /* try to connect */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     sys_sockerror("tcpclient: connecting stream socket");
-    sys_closesocket(sockfd);
+    iemnet__closesocket(sockfd);
     return (-1);
   }
 
-  sender=iemnet__sender_create(sockfd, NULL, NULL, 1);
-  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback, 1);
+  sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback, 0);
 
   if(addrOUT)*addrOUT= ntohl(*(long *)hp->h_addr);
   if(senderOUT)*senderOUT=sender;
@@ -145,74 +143,6 @@ static int tcpclient_child_connect(const char*host, unsigned short port, t_tcpcl
   return sockfd;
 }
 
-static void *tcpclient_connectthread(void *w)
-{
-  t_tcpclient         *x = (t_tcpclient*) w;
-
-  int state=0;
-  pthread_mutex_lock  (&x->x_connlock);
-  pthread_cond_signal (&x->x_conncond);
-
-
-  while(x->x_keeprunning) {
-    pthread_cond_wait(&x->x_conncond, &x->x_connlock);
-    if(!x->x_keeprunning) {
-      break;
-    } else {
-      int fd=x->x_fd;
-      t_iemnet_sender  *sender  =x->x_sender;
-      t_iemnet_receiver*receiver=x->x_receiver;
-      unsigned short port=x->x_port;
-
-      pthread_mutex_unlock(&x->x_connlock);
-      state=tcpclient_child_disconnect(fd, sender, receiver);
-      pthread_mutex_lock(&x->x_connlock);
-
-      x->x_fd=-1;
-      x->x_sender=NULL;
-      x->x_receiver=NULL;
-      x->x_connectstate = 0;
-
-      pthread_mutex_unlock(&x->x_connlock);
-      sys_lock();
-      if(state)
-        outlet_float(x->x_connectout, 0);
-      else
-        if(!port)pd_error(x, "[%s]: not connected", objName);
-      sys_unlock();
-
-      pthread_mutex_lock(&x->x_connlock);
-    }
-
-    if(x->x_keeprunning && x->x_port) {
-      unsigned short port=x->x_port;
-      const char*host=x->x_hostname;
-      t_iemnet_sender  *sender  =NULL;
-      t_iemnet_receiver*receiver=NULL;
-      long addr=0;
-
-      pthread_mutex_unlock(&x->x_connlock);
-      state=tcpclient_child_connect(host, port, x, &sender, &receiver, &addr);
-      pthread_mutex_lock  (&x->x_connlock);
-      x->x_connectstate=(state>0);
-      x->x_fd=state;
-      x->x_addr=addr;
-      x->x_sender=sender;
-      x->x_receiver=receiver;
-      pthread_mutex_unlock(&x->x_connlock);
-
-      sys_lock();
-      if(state>0)
-        outlet_float(x->x_connectout, 1);
-      sys_unlock();
-      pthread_mutex_lock(&x->x_connlock);
-    }
-
-  }
-  pthread_mutex_unlock(&x->x_connlock);
-
-  return (x);
-}
 static void tcpclient_tick(t_tcpclient *x)
 {
     outlet_float(x->x_connectout, 1);
@@ -223,23 +153,48 @@ static void tcpclient_disconnect(t_tcpclient *x);
 
 static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fportno)
 {
-  pthread_mutex_lock( &x->x_connlock);
+  long addr=0;
+  int state;
+  if(x->x_hostname || x->x_port) {
+    state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
+    if(state) {
+      outlet_float(x->x_connectout, 0);
+    } else {
+      if(!x->x_port) {
+	pd_error(x, "[%s]: not connected", objName);
+      }
+    }
+  }
+
   /* we get hostname and port and pass them on
      to the child thread that establishes the connection */
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
 
-  pthread_cond_signal (&x->x_conncond);
-  pthread_mutex_unlock( &x->x_connlock);
+
+  state=tcpclient_do_connect(x->x_hostname, x->x_port, x,
+			     &x->x_sender, &x->x_receiver,
+			     &x->x_addr);
+  x->x_connectstate=(state>0);
+  x->x_fd=state;
+  if(state>0)
+    outlet_float(x->x_connectout, 1);
+
 }
 
 static void tcpclient_disconnect(t_tcpclient *x)
 {
-  pthread_mutex_lock( &x->x_connlock);
-  x->x_port=0;
+  if(x->x_hostname || x->x_port) {
+    int state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
 
-  pthread_cond_signal (&x->x_conncond);
-  pthread_mutex_unlock( &x->x_connlock);
+    if(!state && !x->x_port) {
+      pd_error(x, "[%s]: not connected", objName);
+    }
+  }
+  outlet_float(x->x_connectout, 0);
+
+  x->x_port=0;
+  x->x_hostname=NULL;
 }
 
 /* sending/receiving */
@@ -268,7 +223,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c) {
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
   } else {
     // disconnected
@@ -284,7 +239,7 @@ static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit) {
 /* constructor/destructor */
 static void tcpclient_free_simple(t_tcpclient *x) {
   if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
-	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+  if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 
   if(x->x_msgout)outlet_free(x->x_msgout);
   if(x->x_addrout)outlet_free(x->x_addrout);
@@ -302,13 +257,6 @@ static void *tcpclient_new(void)
 
   x->x_serialize=1;
 
-  /* prepare child thread */
-  pthread_mutex_init(&x->x_connlock, 0);
-  pthread_cond_init (&x->x_conncond, 0);
-
-  pthread_mutex_lock(&x->x_connlock);
-
-
   x->x_fd = -1;
 
   x->x_addr = 0L;
@@ -317,33 +265,15 @@ static void *tcpclient_new(void)
   x->x_sender=NULL;
   x->x_receiver=NULL;
 
-  x->x_keeprunning=1;
-
   x->x_clock = clock_new(x, (t_method)tcpclient_tick);
   x->x_floatlist=iemnet__floatlist_create(1024);
 
-  if(pthread_create(&x->x_threadid, 0, tcpclient_connectthread, x)) {
-    error("%s: failed to create connection thread", objName);
-    tcpclient_free_simple(x);
-    //pd_free(x);
-    return NULL;
-  } else {
-    pthread_cond_wait(&x->x_conncond, &x->x_connlock);
-  }
-  pthread_mutex_unlock(&x->x_connlock);
   return (x);
 }
 
 static void tcpclient_free(t_tcpclient *x)
 {
   tcpclient_disconnect(x);
-  /* FIXXME: destroy thread */
-  pthread_mutex_lock  (&x->x_connlock);
-  x->x_keeprunning=0;
-  pthread_cond_signal (&x->x_conncond);
-  pthread_mutex_unlock(&x->x_connlock);
-  pthread_join(x->x_threadid, NULL);
-
   tcpclient_free_simple(x);
 }
 
