@@ -103,7 +103,8 @@ t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
  * \param addr originating address (can be NULL)
  * \return a new chunk that holds a copy of data
  */
-t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data, struct sockaddr_in*addr);
+t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data,
+    struct sockaddr_in*addr);
 /**
  * initialize a "chunk" (allocate memory,...) with given data
  * receiver address will be set to 0
@@ -130,7 +131,8 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
  * \param dest the destination list
  * \return the destination list if all went well, else NULL
  */
-t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c, t_iemnet_floatlist*dest);
+t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c,
+                                      t_iemnet_floatlist*dest);
 
 
 /**

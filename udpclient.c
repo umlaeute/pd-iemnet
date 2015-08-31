@@ -33,8 +33,7 @@ static t_class *udpclient_class;
 static const char objName[] = "udpclient";
 
 
-typedef struct _udpclient
-{
+typedef struct _udpclient {
   t_object        x_obj;
   t_clock         *x_clock;
   t_outlet        *x_msgout;
@@ -57,7 +56,7 @@ typedef struct _udpclient
   pthread_t       x_threadid; /* id of child thread */
   pthread_attr_t  x_threadattr; /* attributes of child thread */
 
-	t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist         *x_floatlist;
 } t_udpclient;
 
 
@@ -67,45 +66,43 @@ static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 /* connection handling */
 
-static void *udpclient_doconnect(t_udpclient*x, int subthread) {
+static void *udpclient_doconnect(t_udpclient*x, int subthread)
+{
   struct sockaddr_in  server;
   struct hostent      *hp;
   int                 sockfd;
   int                 broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
-  if (x->x_sender)
-    {
-      error("[%s] already connected", objName);
-      return (x);
-    }
+  if (x->x_sender) {
+    error("[%s] already connected", objName);
+    return (x);
+  }
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DEBUG("send socket %d\n", sockfd);
-  if (sockfd < 0)
-    {
-      sys_sockerror("udpclient: socket");
-      return (x);
-    }
+  if (sockfd < 0) {
+    sys_sockerror("udpclient: socket");
+    return (x);
+  }
 
   /* Based on zmoelnig's patch 2221504:
      Enable sending of broadcast messages (if hostname is a broadcast address)*/
 #ifdef SO_BROADCAST
-  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
-    {
-      error("[%s] couldn't switch to broadcast mode", objName);
-    }
+  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
+                      (const void *)&broadcast, sizeof(broadcast))) {
+    error("[%s] couldn't switch to broadcast mode", objName);
+  }
 #endif /* SO_BROADCAST */
-    
+
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
   hp = gethostbyname(x->x_hostname);
-  if (hp == 0)
-    {
-      error("[%s] bad host '%s'?", objName, x->x_hostname);
-      return (x);
-    }
+  if (hp == 0) {
+    error("[%s] bad host '%s'?", objName, x->x_hostname);
+    return (x);
+  }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
   /* assign client port number */
@@ -113,17 +110,17 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread) {
 
   DEBUG("connecting to port %d", x->x_port);
   /* try to connect. */
-  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
-    {
-      sys_sockerror("udpclient: connecting stream socket");
-      iemnet__closesocket(sockfd);
-      return (x);
-    }
+  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+    sys_sockerror("udpclient: connecting stream socket");
+    iemnet__closesocket(sockfd);
+    return (x);
+  }
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, subthread);
-  x->x_receiver=iemnet__receiver_create(sockfd, x,  udpclient_receive_callback, subthread);
+  x->x_receiver=iemnet__receiver_create(sockfd, x,
+                                        udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
 
@@ -144,25 +141,34 @@ static void udpclient_tick(t_udpclient *x)
 
 static void udpclient_disconnect(t_udpclient *x)
 {
-  if (x->x_fd >= 0)
-    {
+  if (x->x_fd >= 0) {
 
-      DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
-      if(x->x_receiver)iemnet__receiver_destroy(x->x_receiver, 0); x->x_receiver=NULL;
-      if(x->x_sender)iemnet__sender_destroy(x->x_sender, 0); x->x_sender=NULL;
-
-      iemnet__closesocket(x->x_fd);
-      x->x_fd = -1;
-      x->x_connectstate = 0;
-      outlet_float(x->x_connectout, 0);
+    DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
+    if(x->x_receiver) {
+      iemnet__receiver_destroy(x->x_receiver, 0);
     }
-  else pd_error(x, "[%s] not connected", objName);
+    x->x_receiver=NULL;
+    if(x->x_sender) {
+      iemnet__sender_destroy(x->x_sender, 0);
+    }
+    x->x_sender=NULL;
+
+    iemnet__closesocket(x->x_fd);
+    x->x_fd = -1;
+    x->x_connectstate = 0;
+    outlet_float(x->x_connectout, 0);
+  } else {
+    pd_error(x, "[%s] not connected", objName);
+  }
 }
 
 
-static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fportno)
+static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
+                              t_floatarg fportno)
 {
-  if(x->x_fd>=0)udpclient_disconnect(x);
+  if(x->x_fd>=0) {
+    udpclient_disconnect(x);
+  }
   /* we get hostname and port and pass them on
      to the child thread that establishes the connection */
   x->x_hostname = hostname->s_name;
@@ -170,8 +176,10 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fpo
   x->x_connectstate = 0;
 #if 0
   /* start child thread */
-  if(pthread_create(&x->x_threadid, &x->x_threadattr, udpclient_child_connect, x) < 0)
+  if(pthread_create(&x->x_threadid, &x->x_threadattr,
+                    udpclient_child_connect, x) < 0) {
     error("%s: could not create new thread", objName);
+  }
 #else
   udpclient_doconnect(x, 0);
 #endif
@@ -179,7 +187,8 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname, t_floatarg fpo
 
 /* sending/receiving */
 
-static void udpclient_send(t_udpclient *x, t_symbol *s, int argc, t_atom *argv)
+static void udpclient_send(t_udpclient *x, t_symbol *s, int argc,
+                           t_atom *argv)
 {
   int size=0;
   t_atom output_atom;
@@ -192,16 +201,20 @@ static void udpclient_send(t_udpclient *x, t_symbol *s, int argc, t_atom *argv)
   iemnet__chunk_destroy(chunk);
 
   SETFLOAT(&output_atom, size);
-  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 1, &output_atom);
+  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 1,
+                   &output_atom);
 }
 
-static void udpclient_receive_callback(void*y, t_iemnet_chunk*c) {
+static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
+{
   t_udpclient *x=(t_udpclient*)y;
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
-    outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc, x->x_floatlist->argv);
+    x->x_floatlist=iemnet__chunk2list(c,
+                                      x->x_floatlist); // gets destroyed in the dtor
+    outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
+                x->x_floatlist->argv);
   } else {
     // disconnected
     DEBUG("disconnected");
@@ -218,8 +231,10 @@ static void *udpclient_new(void)
   t_udpclient *x = (t_udpclient *)pd_new(udpclient_class);
   x->x_msgout = outlet_new(&x->x_obj, 0);	/* received data */
   x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
-  x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
-  x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
+  x->x_connectout = outlet_new(&x->x_obj,
+                               gensym("float"));	/* connection state */
+  x->x_statusout = outlet_new(&x->x_obj,
+                              0);/* last outlet for everything else */
 
   x->x_fd = -1;
   x->x_addr = 0L;
@@ -233,11 +248,14 @@ static void *udpclient_new(void)
   x->x_floatlist=iemnet__floatlist_create(1024);
 
   /* prepare child thread */
-  if(pthread_attr_init(&x->x_threadattr) < 0)
+  if(pthread_attr_init(&x->x_threadattr) < 0) {
     verbose(1, "[%s] warning: could not prepare child thread", objName);
-  if(pthread_attr_setdetachstate(&x->x_threadattr, PTHREAD_CREATE_DETACHED) < 0)
+  }
+  if(pthread_attr_setdetachstate(&x->x_threadattr,
+                                 PTHREAD_CREATE_DETACHED) < 0) {
     verbose(1, "[%s] warning: could not prepare child thread", objName);
-    
+  }
+
 
   return (x);
 }
@@ -245,20 +263,31 @@ static void *udpclient_new(void)
 static void udpclient_free(t_udpclient *x)
 {
   udpclient_disconnect(x);
-  if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
-	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+  if(x->x_clock) {
+    clock_free(x->x_clock);
+  }
+  x->x_clock=NULL;
+  if(x->x_floatlist) {
+    iemnet__floatlist_destroy(x->x_floatlist);
+  }
+  x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void udpclient_setup(void)
 {
-  if(!iemnet__register(objName))return;
+  if(!iemnet__register(objName)) {
+    return;
+  }
   udpclient_class = class_new(gensym(objName), (t_newmethod)udpclient_new,
                               (t_method)udpclient_free,
                               sizeof(t_udpclient), 0, A_DEFFLOAT, 0);
-  class_addmethod(udpclient_class, (t_method)udpclient_connect, gensym("connect")
+  class_addmethod(udpclient_class, (t_method)udpclient_connect,
+                  gensym("connect")
                   , A_SYMBOL, A_FLOAT, 0);
-  class_addmethod(udpclient_class, (t_method)udpclient_disconnect, gensym("disconnect"), 0);
-  class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"), A_GIMME, 0);
+  class_addmethod(udpclient_class, (t_method)udpclient_disconnect,
+                  gensym("disconnect"), 0);
+  class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"),
+                  A_GIMME, 0);
   class_addlist(udpclient_class, (t_method)udpclient_send);
 
   DEBUGMETHOD(udpclient_class);

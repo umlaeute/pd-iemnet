@@ -38,7 +38,8 @@ struct _iemnet_receiver {
 };
 
 
-static void pollfun(void*z, int fd) {
+static void pollfun(void*z, int fd)
+{
   // read data from socket and call callback
   t_iemnet_receiver*rec=(t_iemnet_receiver*)z;
 
@@ -56,7 +57,8 @@ static void pollfun(void*z, int fd) {
   recv_flags|=MSG_DONTWAIT;
 #endif
   errno=0;
-  result = recvfrom(rec->sockfd, data, size, recv_flags, (struct sockaddr *)&from, &fromlen);
+  result = recvfrom(rec->sockfd, data, size, recv_flags,
+                    (struct sockaddr *)&from, &fromlen);
   local_errno=errno;
   //fprintf(stderr, "read %d bytes...\n", result);
   DEBUG("recvfrom %d bytes: %d %p %d", result, rec->sockfd, data, size);
@@ -69,8 +71,11 @@ static void pollfun(void*z, int fd) {
   iemnet__chunk_destroy(chunk);
 }
 
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_receivecallback callback, int subthread) {
-  t_iemnet_receiver*rec=(t_iemnet_receiver*)malloc(sizeof(t_iemnet_receiver));
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata,
+    t_iemnet_receivecallback callback, int subthread)
+{
+  t_iemnet_receiver*rec=(t_iemnet_receiver*)malloc(sizeof(
+                          t_iemnet_receiver));
 
   DEBUG("create new receiver for 0x%X:%d", userdata, sock);
   //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
@@ -79,27 +84,38 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata, t_iemnet_rece
     rec->userdata=userdata;
     rec->callback=callback;
 
-    if(subthread)sys_lock();
+    if(subthread) {
+      sys_lock();
+    }
     sys_addpollfn(sock, pollfun, rec);
-    if(subthread)sys_unlock();
+    if(subthread) {
+      sys_unlock();
+    }
 
   }
   //fprintf(stderr, "new receiver created\n");
 
   return rec;
 }
-void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread) {
+void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread)
+{
   int sockfd;
-  if(NULL==rec)return;
+  if(NULL==rec) {
+    return;
+  }
 
   sockfd=rec->sockfd;
 
-  if(subthread)sys_lock();
+  if(subthread) {
+    sys_lock();
+  }
   sys_rmpollfn(rec->sockfd);
 
   // FIXXME: read any remaining bytes from the socket
 
-  if(subthread)sys_unlock();
+  if(subthread) {
+    sys_unlock();
+  }
 
   DEBUG("[%p] really destroying receiver %d", sockfd);
   //iemnet__closesocket(sockfd);
@@ -115,8 +131,10 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread) {
 
 
 /* just dummy, since we don't maintain a queue any more */
-int iemnet__receiver_getsize(t_iemnet_receiver*x) {
-  if(x)
+int iemnet__receiver_getsize(t_iemnet_receiver*x)
+{
+  if(x) {
     return 0;
+  }
   return -1;
 }

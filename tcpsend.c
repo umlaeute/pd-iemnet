@@ -36,8 +36,7 @@ static const char objName[] = "tcpsend";
 
 static t_class *tcpsend_class;
 
-typedef struct _tcpsend
-{
+typedef struct _tcpsend {
   t_object x_obj;
   int      x_fd;
   t_iemnet_sender*x_sender;
@@ -45,20 +44,22 @@ typedef struct _tcpsend
 
 static void tcpsend_disconnect(t_tcpsend *x)
 {
-  if (x->x_fd >= 0)
-    {
-      if(x->x_sender)iemnet__sender_destroy(x->x_sender, 0); x->x_sender=NULL;
-      iemnet__closesocket(x->x_fd);
-      x->x_fd = -1;
-      outlet_float(x->x_obj.ob_outlet, 0);
-      //post("tcpsend: disconnected");
+  if (x->x_fd >= 0) {
+    if(x->x_sender) {
+      iemnet__sender_destroy(x->x_sender, 0);
     }
+    x->x_sender=NULL;
+    iemnet__closesocket(x->x_fd);
+    x->x_fd = -1;
+    outlet_float(x->x_obj.ob_outlet, 0);
+    //post("tcpsend: disconnected");
+  }
 }
 
 
 
 static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
-			    t_floatarg fportno)
+                            t_floatarg fportno)
 {
   struct sockaddr_in  server;
   struct hostent      *hp;
@@ -67,33 +68,31 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   int                 intarg;
   memset(&server, 0, sizeof(server));
 
-  if (x->x_fd >= 0)
-    {
-      error("tcpsend: already connected");
-      return;
-    }
+  if (x->x_fd >= 0) {
+    error("tcpsend: already connected");
+    return;
+  }
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   DEBUG("send socket %d\n", sockfd);
-  if (sockfd < 0)
-    {
-      sys_sockerror("tcpsend: socket");
-      return;
-    }
+  if (sockfd < 0) {
+    sys_sockerror("tcpsend: socket");
+    return;
+  }
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
   hp = gethostbyname(hostname->s_name);
-  if (hp == 0)
-    {
-      post("tcpsend: bad host?\n");
-      return;
-    }
+  if (hp == 0) {
+    post("tcpsend: bad host?\n");
+    return;
+  }
   /* for stream (TCP) sockets, specify "nodelay" */
   intarg = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
-		 (char *)&intarg, sizeof(intarg)) < 0)
+                 (char *)&intarg, sizeof(intarg)) < 0) {
     post("tcpsend: setsockopt (TCP_NODELAY) failed\n");
+  }
 
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
@@ -102,12 +101,11 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
 
   post("tcpsend: connecting to port %d", portno);
   /* try to connect. */
-  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
-    {
-      sys_sockerror("tcpsend: connecting stream socket");
-      iemnet__closesocket(sockfd);
-      return;
-    }
+  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+    sys_sockerror("tcpsend: connecting stream socket");
+    iemnet__closesocket(sockfd);
+    return;
+  }
   x->x_fd = sockfd;
 
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
@@ -141,18 +139,20 @@ static void *tcpsend_new(void)
 
 IEMNET_EXTERN void tcpsend_setup(void)
 {
-  if(!iemnet__register(objName))return;
-  tcpsend_class = class_new(gensym(objName), 
-			    (t_newmethod)tcpsend_new, (t_method)tcpsend_free,
-			    sizeof(t_tcpsend), 
-			    0, 0);
+  if(!iemnet__register(objName)) {
+    return;
+  }
+  tcpsend_class = class_new(gensym(objName),
+                            (t_newmethod)tcpsend_new, (t_method)tcpsend_free,
+                            sizeof(t_tcpsend),
+                            0, 0);
 
   class_addmethod(tcpsend_class, (t_method)tcpsend_connect,
-		  gensym("connect"), A_SYMBOL, A_FLOAT, 0);
+                  gensym("connect"), A_SYMBOL, A_FLOAT, 0);
   class_addmethod(tcpsend_class, (t_method)tcpsend_disconnect,
-		  gensym("disconnect"), 0);
+                  gensym("disconnect"), 0);
   class_addmethod(tcpsend_class, (t_method)tcpsend_send, gensym("send"),
-		  A_GIMME, 0);
+                  A_GIMME, 0);
   class_addlist(tcpsend_class, (t_method)tcpsend_send);
 
   DEBUGMETHOD(tcpsend_class);

@@ -40,8 +40,7 @@ static t_class *tcpreceive_class;
 
 #define MAX_CONNECTIONS 128 // this is going to cause trouble down the line...:(
 
-typedef struct _tcpconnection
-{
+typedef struct _tcpconnection {
   long            addr;
   unsigned short  port;
   int             socket;
@@ -49,8 +48,7 @@ typedef struct _tcpconnection
   t_iemnet_receiver*receiver;
 } t_tcpconnection;
 
-typedef struct _tcpreceive
-{
+typedef struct _tcpreceive {
   t_object        x_obj;
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
@@ -64,14 +62,17 @@ typedef struct _tcpreceive
   int             x_nconnections;
   t_tcpconnection x_connection[MAX_CONNECTIONS];
 
-	t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist         *x_floatlist;
 } t_tcpreceive;
 
 
-static int tcpreceive_find_socket(t_tcpreceive *x, int fd) {
+static int tcpreceive_find_socket(t_tcpreceive *x, int fd)
+{
   int i;
   for (i = 0; i < MAX_CONNECTIONS; ++i)
-    if (x->x_connection[i].socket == fd)return i;
+    if (x->x_connection[i].socket == fd) {
+      return i;
+    }
 
   return -1;
 }
@@ -83,14 +84,18 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
   t_tcpconnection*y=(t_tcpconnection*)w;
   t_tcpreceive*x=NULL;
   int index=-1;
-  if(NULL==y || NULL==(x=y->owner))return;
+  if(NULL==y || NULL==(x=y->owner)) {
+    return;
+  }
 
   index=tcpreceive_find_socket(x, y->socket);
   if(index>=0) {
     if(c) {
       // TODO?: outlet info about connection
-      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // gets destroyed in the dtor
-      iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
+      x->x_floatlist=iemnet__chunk2list(c,
+                                        x->x_floatlist); // gets destroyed in the dtor
+      iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
+                        x->x_serialize);
     } else {
       // disconnected
       tcpreceive_disconnect(x, index);
@@ -100,26 +105,25 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 
 /* tcpreceive_addconnection tries to add the socket fd to the list */
 /* returns 1 on success, else 0 */
-static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr, unsigned short port)
+static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
+                                    unsigned short port)
 {
   int i;
-  for (i = 0; i < MAX_CONNECTIONS; ++i)
-    {
-      if (x->x_connection[i].socket == -1)
-        {
-	  x->x_connection[i].socket = fd;
-	  x->x_connection[i].addr = addr;
-	  x->x_connection[i].port = port;
-	  x->x_connection[i].owner = x;
-	  x->x_connection[i].receiver=
-	    iemnet__receiver_create(fd, 
-                              x->x_connection+i,
-                              tcpreceive_read_callback,
-                              0);
-	  
-	  return 1;
-        }
+  for (i = 0; i < MAX_CONNECTIONS; ++i) {
+    if (x->x_connection[i].socket == -1) {
+      x->x_connection[i].socket = fd;
+      x->x_connection[i].addr = addr;
+      x->x_connection[i].port = port;
+      x->x_connection[i].owner = x;
+      x->x_connection[i].receiver=
+        iemnet__receiver_create(fd,
+                                x->x_connection+i,
+                                tcpreceive_read_callback,
+                                0);
+
+      return 1;
     }
+  }
   return 0;
 }
 
@@ -135,24 +139,21 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
   int                 fd;
 
   fd = accept(x->x_connectsocket, (struct sockaddr *)&from, &fromlen);
-  if (fd < 0) error("[%s]  accept failed", objName);
-  else
-    {
-      /* get the sender's ip */
-      addr = ntohl(from.sin_addr.s_addr);
-      port = ntohs(from.sin_port);
-      if (tcpreceive_addconnection(x, fd, addr, port))
-	{
-	  x->x_nconnections++;
-	  outlet_float(x->x_connectout, x->x_nconnections);
-	  iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
-        }
-      else
-        {
-	  error ("[%s] Too many connections", objName);
-	  iemnet__closesocket(fd);
-        }
+  if (fd < 0) {
+    error("[%s]  accept failed", objName);
+  } else {
+    /* get the sender's ip */
+    addr = ntohl(from.sin_addr.s_addr);
+    port = ntohs(from.sin_port);
+    if (tcpreceive_addconnection(x, fd, addr, port)) {
+      x->x_nconnections++;
+      outlet_float(x->x_connectout, x->x_nconnections);
+      iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
+    } else {
+      error ("[%s] Too many connections", objName);
+      iemnet__closesocket(fd);
     }
+  }
 }
 
 
@@ -180,10 +181,9 @@ static void tcpreceive_disconnect_all(t_tcpreceive *x)
 {
   int i;
 
-  for (i = 0; i < MAX_CONNECTIONS; i++)
-    {
-      tcpreceive_disconnect(x, i);
-    }
+  for (i = 0; i < MAX_CONNECTIONS; i++) {
+    tcpreceive_disconnect(x, i);
+  }
 }
 
 
@@ -194,13 +194,11 @@ static void tcpreceive_disconnect_all(t_tcpreceive *x)
 static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
 {
   int i;
-  for (i = 0; i < MAX_CONNECTIONS; ++i)
-    {
-      if (x->x_connection[i].socket == fd)
-        {
-	  return tcpreceive_disconnect(x, i);
-        }
+  for (i = 0; i < MAX_CONNECTIONS; ++i) {
+    if (x->x_connection[i].socket == fd) {
+      return tcpreceive_disconnect(x, i);
     }
+  }
   return 0;
 }
 
@@ -238,7 +236,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 #ifdef SO_REUSEADDR
   intarg = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-		 (char *)&intarg, sizeof(intarg)) 
+                 (char *)&intarg, sizeof(intarg))
       < 0) {
     error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
   }
@@ -246,7 +244,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 #ifdef SO_REUSEPORT
   intarg = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
-		 (char *)&intarg, sizeof(intarg)) 
+                 (char *)&intarg, sizeof(intarg))
       < 0) {
     error("[%s]: setsockopt (SO_REUSEPORT) failed", objName);
   }
@@ -255,8 +253,9 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   /* Stream (TCP) sockets are set NODELAY */
   intarg = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
-		 (char *)&intarg, sizeof(intarg)) < 0)
+                 (char *)&intarg, sizeof(intarg)) < 0) {
     post("[%s]: setsockopt (TCP_NODELAY) failed", objName);
+  }
 
 
   server.sin_family = AF_INET;
@@ -264,30 +263,26 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   server.sin_port = htons((u_short)portno);
 
   /* name the socket */
-  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
-    {
-      sys_sockerror("[tcpreceive] bind failed");
-      iemnet__closesocket(sockfd);
-      sockfd = -1;
-      outlet_anything(x->x_statout, gensym("port"), 1, ap);
-      return;
-    }
+  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
+    sys_sockerror("[tcpreceive] bind failed");
+    iemnet__closesocket(sockfd);
+    sockfd = -1;
+    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    return;
+  }
 
   /* streaming protocol */
-  if (listen(sockfd, 5) < 0)
-    {
-      sys_sockerror("[tcpreceive] listen");
-      iemnet__closesocket(sockfd);
-      sockfd = -1;
-      outlet_anything(x->x_statout, gensym("port"), 1, ap);
-      return;
-    }
-  else
-    {
-      sys_addpollfn(sockfd, 
-		    (t_fdpollfn)tcpreceive_connectpoll, 
-		    x); // wait for new connections 
-    }
+  if (listen(sockfd, 5) < 0) {
+    sys_sockerror("[tcpreceive] listen");
+    iemnet__closesocket(sockfd);
+    sockfd = -1;
+    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    return;
+  } else {
+    sys_addpollfn(sockfd,
+                  (t_fdpollfn)tcpreceive_connectpoll,
+                  x); // wait for new connections
+  }
 
   x->x_connectsocket = sockfd;
   x->x_port = portno;
@@ -302,20 +297,24 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
 
-static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit) {
+static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
+{
   x->x_serialize=doit;
 }
 
 
 static void tcpreceive_free(t_tcpreceive *x)
-{ /* is this ever called? */
-  if (x->x_connectsocket >= 0)
-    {
-      sys_rmpollfn(x->x_connectsocket);
-      iemnet__closesocket(x->x_connectsocket);
-    }
+{
+  /* is this ever called? */
+  if (x->x_connectsocket >= 0) {
+    sys_rmpollfn(x->x_connectsocket);
+    iemnet__closesocket(x->x_connectsocket);
+  }
   tcpreceive_disconnect_all(x);
-	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+  if(x->x_floatlist) {
+    iemnet__floatlist_destroy(x->x_floatlist);
+  }
+  x->x_floatlist=NULL;
 }
 
 static void *tcpreceive_new(t_floatarg fportno)
@@ -337,12 +336,11 @@ static void *tcpreceive_new(t_floatarg fportno)
   x->x_nconnections=0;
 
   /* clear the connection list */
-  for (i = 0; i < MAX_CONNECTIONS; ++i)
-    {
-      x->x_connection[i].socket = -1;
-      x->x_connection[i].addr = 0L;
-      x->x_connection[i].port = 0;
-    }
+  for (i = 0; i < MAX_CONNECTIONS; ++i) {
+    x->x_connection[i].socket = -1;
+    x->x_connection[i].addr = 0L;
+    x->x_connection[i].port = 0;
+  }
 
   x->x_floatlist=iemnet__floatlist_create(1024);
 
@@ -354,16 +352,20 @@ static void *tcpreceive_new(t_floatarg fportno)
 
 IEMNET_EXTERN void tcpreceive_setup(void)
 {
-  if(!iemnet__register(objName))return;
+  if(!iemnet__register(objName)) {
+    return;
+  }
   tcpreceive_class = class_new(gensym(objName),
-			       (t_newmethod)tcpreceive_new, (t_method)tcpreceive_free,
-			       sizeof(t_tcpreceive), 
-			       0, 
-			       A_DEFFLOAT, 0);
-  
-  class_addmethod(tcpreceive_class, (t_method)tcpreceive_port, gensym("port"), A_DEFFLOAT, 0);
+                               (t_newmethod)tcpreceive_new, (t_method)tcpreceive_free,
+                               sizeof(t_tcpreceive),
+                               0,
+                               A_DEFFLOAT, 0);
 
-  class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize, gensym("serialize"), A_FLOAT, 0);
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_port,
+                  gensym("port"), A_DEFFLOAT, 0);
+
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize,
+                  gensym("serialize"), A_FLOAT, 0);
   DEBUGMETHOD(tcpreceive_class);
 }
 

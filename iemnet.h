@@ -71,7 +71,8 @@ EXTERN_STRUCT _iemnet_sender;
  * this function is guaranteed to be called with a valid 'chunk',
  * and the 'userdata' and 'sockfd' provided at sender-creation
  */
-typedef int (*t_iemnet_sendfunction)(const void*userdata, int sockfd, t_iemnet_chunk*chunk);
+typedef int (*t_iemnet_sendfunction)(const void*userdata, int sockfd,
+                                     t_iemnet_chunk*chunk);
 
 /**
  * create a sender to a given socket
@@ -130,8 +131,8 @@ EXTERN_STRUCT _iemnet_receiver;
  * if rawdata is NULL, this signifies that the socket has been closed
  */
 typedef void (*t_iemnet_receivecallback)(void*userdata
-					 , t_iemnet_chunk*rawdata
-					 );
+    , t_iemnet_chunk*rawdata
+                                        );
 
 /**
  * create a receiver object
@@ -145,7 +146,8 @@ typedef void (*t_iemnet_receivecallback)(void*userdata
  *
  * \note the callback will be scheduled in the caller's thread with clock_delay()
  */
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback, int subthread);
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*data,
+    t_iemnet_receivecallback callback, int subthread);
 /**
  * destroy a receiver at a given socket
  * destroying a receiver will free all resources of the receiver
@@ -187,7 +189,8 @@ void iemnet__closesocket(int fd);
  *
  * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
  */
-void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
+void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
+                     long address, unsigned short port);
 
 /**
  * output the socket we received data from
@@ -198,7 +201,8 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long addre
  * \param socket_outlet outlet for sockets only
  * \param sockfd the socket
  */
-void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockfd);
+void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet,
+                       int sockfd);
 
 /**
  * output the number of connections
@@ -209,7 +213,8 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockf
  * \param address_outlet outlet for numconnections only
  * \param numconnections the number of connections
  */
-void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int numconnections);
+void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet,
+                        int numconnections);
 
 /**
  * output a list as a stream (serialize)
@@ -268,7 +273,8 @@ int iemnet__register(const char*name);
 #endif
 
 void iemnet_debuglevel(void*,t_float);
-int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*function);
+int iemnet_debug(int debuglevel, const char*file, unsigned int line,
+                 const char*function);
 #define DEBUGMETHOD(c) class_addmethod(c, (t_method)iemnet_debuglevel, gensym("debug"), A_FLOAT, 0)
 
 
@@ -277,7 +283,10 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*
 # undef DEBUG
 # define DEBUG if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post
 #else
-static void debug_dummy(const char *format, ...)  {;}
+static void debug_dummy(const char *format, ...)
+{
+  ;
+}
 # define DEBUG debug_dummy
 #endif
 #define MARK() post("%s:%d [%s]",  __FILE__, __LINE__, __FUNCTION__)
