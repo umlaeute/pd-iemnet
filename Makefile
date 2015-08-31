@@ -8,7 +8,7 @@ LIBRARY_NAME = iemnet
 # objects, the matching .tcl file too
 SOURCES = tcpserver.c tcpclient.c tcpsend.c tcpreceive.c udpreceive.c udpsend.c udpclient.c udpserver.c
 
-SHARED_SOURCES = iemnet.c iemnet_data.c  iemnet_receiver.c  iemnet_sender.c iemnet_notify.c
+SHARED_SOURCES = iemnet.c iemnet_data.c  iemnet_receiver.c  iemnet_sender.c
 SHARED_HEADERS = iemnet_data.h  iemnet.h
 
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will
@@ -230,6 +230,8 @@ ifeq (MINGW,$(findstring MINGW,$(UNAME)))
   STRIP = strip --strip-unneeded -R .note -R .comment
   DISTBINDIR=$(DISTDIR)-$(OS)
 endif
+
+-include Makefile.local
 
 # in case somebody manually set the HELPPATCHES above
 HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)

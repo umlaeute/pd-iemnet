@@ -2,7 +2,7 @@
  * iemnet
  *     networking for Pd
  *
- *  (c) 2010 IOhannes m zmölnig
+ *  (c) 2010 IOhannes m zmÃ¶lnig
  *           Institute of Electronic Music and Acoustics (IEM)
  *           University of Music and Dramatic Arts (KUG), Graz, Austria
  *
@@ -23,9 +23,8 @@
 /* GNU General Public License for more details.                                 */
 /*                                                                              */
 /* You should have received a copy of the GNU General Public License            */
-/* along with this program; if not, write to the Free Software                  */
-/* Foundation, Inc.,                                                            */
-/* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.                  */
+/* along with this program; if not, see                                         */
+/*     http://www.gnu.org/licenses/                                             */
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
@@ -67,6 +66,7 @@ typedef struct _iemnet_chunk {
 
   long addr;
   unsigned short port;
+  short family; // AF_INET, AF_INET6
 } t_iemnet_chunk;
 
 /**
@@ -103,7 +103,8 @@ t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
  * \param addr originating address (can be NULL)
  * \return a new chunk that holds a copy of data
  */
-t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data, struct sockaddr_in*addr);
+t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data,
+    struct sockaddr_in*addr);
 /**
  * initialize a "chunk" (allocate memory,...) with given data
  * receiver address will be set to 0
@@ -130,7 +131,8 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*source);
  * \param dest the destination list
  * \return the destination list if all went well, else NULL
  */
-t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c, t_iemnet_floatlist*dest);
+t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c,
+                                      t_iemnet_floatlist*dest);
 
 
 /**

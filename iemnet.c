@@ -1,7 +1,7 @@
 /* iemnet
  * this file provides core infrastructure for the iemnet-objects
  *
- *  copyright (c) 2010-2011 IOhannes m zmölnig, IEM
+ *  copyright (c) 2010-2011 IOhannes m zmÃ¶lnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */
@@ -15,9 +15,8 @@
 /* GNU General Public License for more details.                                 */
 /*                                                                              */
 /* You should have received a copy of the GNU General Public License            */
-/* along with this program; if not, write to the Free Software                  */
-/* Foundation, Inc.,                                                            */
-/* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.                  */
+/* along with this program; if not, see                                         */
+/*     http://www.gnu.org/licenses/                                             */
 /*                                                                              */
 
 #define DEBUGLEVEL
@@ -27,16 +26,37 @@
 
 #include <pthread.h>
 
+/* close a socket properly */
+void iemnet__closesocket(int sockfd)
+{
+  if(sockfd >=0) {
+#ifndef SHUT_RDWR
+# define SHUT_RDWR 2
+#endif
+    int how=SHUT_RDWR;
+    int err = shutdown(sockfd,
+                       how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    if(err) {
+      perror("iemnet:socket-shutdown");
+    }
+    sys_closesocket(sockfd);
+  }
+}
 
-void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, 
-		     long address, unsigned short port) {
+
+/* various functions to send data to output in a uniform way */
+void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
+                     long address, unsigned short port)
+{
 
   static t_atom addr[5];
   static int firsttime=1;
 
   if(firsttime) {
     int i=0;
-    for(i=0; i<5; i++)SETFLOAT(addr+i, 0);
+    for(i=0; i<5; i++) {
+      SETFLOAT(addr+i, 0);
+    }
     firsttime=0;
   }
 
@@ -46,29 +66,48 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
   addr[3].a_w.w_float = (address & 0x0FF);
   addr[4].a_w.w_float = port;
 
-  if(status_outlet )outlet_anything(status_outlet , gensym("address"), 5, addr);
-  if(address_outlet)outlet_list    (address_outlet, gensym("list"   ), 5, addr);
+  if(status_outlet ) {
+    outlet_anything(status_outlet , gensym("address"), 5, addr);
+  }
+  if(address_outlet) {
+    outlet_list    (address_outlet, gensym("list"   ), 5, addr);
+  }
 }
 
-void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numcon_outlet, int numconnections) {
+void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numcon_outlet,
+                        int numconnections)
+{
   t_atom atom[1];
   SETFLOAT(atom, numconnections);
 
-  if(status_outlet)outlet_anything(status_outlet , gensym("connections"), 1, atom);
-  if(numcon_outlet)outlet_float   (numcon_outlet, numconnections);
+  if(status_outlet) {
+    outlet_anything(status_outlet , gensym("connections"), 1, atom);
+  }
+  if(numcon_outlet) {
+    outlet_float   (numcon_outlet, numconnections);
+  }
 }
 
-void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int socketfd) {
+void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet,
+                       int socketfd)
+{
   t_atom atom[1];
   SETFLOAT(atom, socketfd);
 
-  if(status_outlet)outlet_anything(status_outlet , gensym("socket"), 1, atom);
-  if(socket_outlet)outlet_float   (socket_outlet, socketfd);
+  if(status_outlet) {
+    outlet_anything(status_outlet , gensym("socket"), 1, atom);
+  }
+  if(socket_outlet) {
+    outlet_float   (socket_outlet, socketfd);
+  }
 }
 
 
-void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv, int stream) {
-  if(NULL==outlet)return;
+void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv, int stream)
+{
+  if(NULL==outlet) {
+    return;
+  }
 
   if(stream) {
     while(argc-->0) {
@@ -85,7 +124,8 @@ typedef struct _names {
   struct _names*next;
 } t_iemnet_names;
 static t_iemnet_names*namelist=0;
-static int iemnet__nametaken(const char*namestring) {
+static int iemnet__nametaken(const char*namestring)
+{
   t_symbol*name=gensym(namestring);
   t_iemnet_names*curname=namelist;
   t_iemnet_names*lastname=curname;
@@ -102,16 +142,20 @@ static int iemnet__nametaken(const char*namestring) {
   curname->name=name;
   curname->next=0;
 
-  if(lastname)
+  if(lastname) {
     lastname->next=curname;
-  else
+  } else {
     namelist=curname;
+  }
 
   return 0;
 }
 
-int iemnet__register(const char*name) {
-  if(iemnet__nametaken(name))return 0;
+int iemnet__register(const char*name)
+{
+  if(iemnet__nametaken(name)) {
+    return 0;
+  }
   post("iemnet - networking with Pd: [%s]", name);
 #ifdef LIBRARY_VERSION
   post("        version "LIBRARY_VERSION"");
@@ -140,46 +184,52 @@ void udpserver_setup(void);
 static int iemnet_debuglevel_=0;
 static pthread_mutex_t debug_mtx = PTHREAD_MUTEX_INITIALIZER;
 
-void iemnet_debuglevel(void*x, t_float f) {
+void iemnet_debuglevel(void*x, t_float f)
+{
   static int firsttime=1;
 #ifdef IEMNET_HAVE_DEBUG
   int debuglevel=(int)f;
 
- pthread_mutex_lock(&debug_mtx);
+  pthread_mutex_lock(&debug_mtx);
   iemnet_debuglevel_=debuglevel;
- pthread_mutex_unlock(&debug_mtx);
+  pthread_mutex_unlock(&debug_mtx);
 
   post("iemnet: setting debuglevel to %d", debuglevel);
 #else
-  if(firsttime)post("iemnet compiled without debug!");
+  if(firsttime) {
+    post("iemnet compiled without debug!");
+  }
 #endif
   firsttime=0;
 }
 
-int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*function) {
+int iemnet_debug(int debuglevel, const char*file, unsigned int line,
+                 const char*function)
+{
 #ifdef IEMNET_HAVE_DEBUG
   int debuglevel_=0;
- pthread_mutex_lock(&debug_mtx);
+  pthread_mutex_lock(&debug_mtx);
   debuglevel_=iemnet_debuglevel_;
- pthread_mutex_unlock(&debug_mtx);
+  pthread_mutex_unlock(&debug_mtx);
   if(debuglevel_ & debuglevel) {
-    startpost("[%s:%d#%d] ", function, line, debuglevel);
+    startpost("[%s[%d]:%s#%d] ", file, line, function, debuglevel);
     return 1;
   }
 #endif
   return 0;
 }
 
-IEMNET_EXTERN void iemnet_setup(void) {
+IEMNET_EXTERN void iemnet_setup(void)
+{
 #ifdef _MSC_VER
- tcpclient_setup();
- tcpreceive_setup();
- tcpsend_setup();
- tcpserver_setup();
+  tcpclient_setup();
+  tcpreceive_setup();
+  tcpsend_setup();
+  tcpserver_setup();
 
- udpclient_setup();
- udpreceive_setup();
- udpsend_setup();
- udpserver_setup();
+  udpclient_setup();
+  udpreceive_setup();
+  udpsend_setup();
+  udpserver_setup();
 #endif
 }

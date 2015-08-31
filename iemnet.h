@@ -2,7 +2,7 @@
  * iemnet
  *     networking for Pd
  *
- *  (c) 2010 IOhannes m zmölnig
+ *  (c) 2010 IOhannes m zmÃ¶lnig
  *           Institute of Electronic Music and Acoustics (IEM)
  *           University of Music and Dramatic Arts (KUG), Graz, Austria
  *
@@ -23,9 +23,8 @@
 /* GNU General Public License for more details.                                 */
 /*                                                                              */
 /* You should have received a copy of the GNU General Public License            */
-/* along with this program; if not, write to the Free Software                  */
-/* Foundation, Inc.,                                                            */
-/* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.                  */
+/* along with this program; if not, see                                         */
+/*     http://www.gnu.org/licenses/                                             */
 /*                                                                              */
 
 /* ---------------------------------------------------------------------------- */
@@ -67,27 +66,42 @@ typedef struct _iemnet_sender t_iemnet_sender;
 EXTERN_STRUCT _iemnet_sender;
 
 /**
+ * user provided send function
+ * (defaults to just using send)
+ * this function is guaranteed to be called with a valid 'chunk',
+ * and the 'userdata' and 'sockfd' provided at sender-creation
+ */
+typedef int (*t_iemnet_sendfunction)(const void*userdata, int sockfd,
+                                     t_iemnet_chunk*chunk);
+
+/**
  * create a sender to a given socket
  *
  * \param sock a previously opened socket
+ * \param sendfun a send()-implementation (or NULL, to use the default send/sendto based implementation)
+ * \param userdata pointer to optional userdata to be passsed to `sendfun`
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  * \return pointer to a sender object
  * \note the socket must be writeable
  */
-t_iemnet_sender*iemnet__sender_create(int sock);
+t_iemnet_sender*iemnet__sender_create(int sock,
+                                      t_iemnet_sendfunction sendfun, const void*userdata,
+                                      int);
 /**
  * destroy a sender to a given socket
  * destroying a sender will free all resources of the sender
  *
  * \param pointer to a sender object to be destroyed
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note  it will also close() the socket
  */
-void iemnet__sender_destroy(t_iemnet_sender*);
+void iemnet__sender_destroy(t_iemnet_sender*, int);
 
 /**
  * send data over a socket
  *
- * \param pointer to a sender object 
+ * \param pointer to a sender object
  * \param pointer to a chunk of data to be sent
  * \return the current fill state of the send buffer
  *
@@ -98,7 +112,7 @@ int iemnet__sender_send(t_iemnet_sender*, t_iemnet_chunk*);
 /**
  * query the fill state of the send buffer
  *
- * \param pointer to a sender object 
+ * \param pointer to a sender object
  * \return the current fill state of the send buffer
  */
 int iemnet__sender_getsize(t_iemnet_sender*);
@@ -114,9 +128,11 @@ EXTERN_STRUCT _iemnet_receiver;
 /**
  * callback function for receiving
  * whenever data arrives at the socket, a callback will be called synchronously
+ * if rawdata is NULL, this signifies that the socket has been closed
  */
-typedef void (*t_iemnet_receivecallback)(void*userdata, 
-					 t_iemnet_chunk*rawdata);
+typedef void (*t_iemnet_receivecallback)(void*userdata
+    , t_iemnet_chunk*rawdata
+                                        );
 
 /**
  * create a receiver object
@@ -126,61 +142,40 @@ typedef void (*t_iemnet_receivecallback)(void*userdata,
  * \param sock the (readable) socket to receive from
  * \param data user data to be passed to callback
  * \param callback a callback function that is called on the caller's side
+ * \param subthread bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note the callback will be scheduled in the caller's thread with clock_delay()
  */
-t_iemnet_receiver*iemnet__receiver_create(int sock, void*data, t_iemnet_receivecallback callback);
+t_iemnet_receiver*iemnet__receiver_create(int sock, void*data,
+    t_iemnet_receivecallback callback, int subthread);
 /**
  * destroy a receiver at a given socket
  * destroying a receiver will free all resources of the receiver
  *
  * \param pointer to a receiver object to be destroyed
+ * \param bool indicating whether this function is called from a subthread (1) or the mainthread (0)
  *
  * \note  it will also close() the socket
  */
-void iemnet__receiver_destroy(t_iemnet_receiver*);
+void iemnet__receiver_destroy(t_iemnet_receiver*, int subthread);
 
 /**
  * query the fill state of the receive buffer
  *
- * \param pointer to a receiver object 
+ * \param pointer to a receiver object
  * \return the current fill state of the receive buffer
  */
 int iemnet__receiver_getsize(t_iemnet_receiver*);
 
 
-/**
- * opaque data type used for a notification server
- */
-#define t_iemnet_notifier struct _iemnet_notifier
-EXTERN_STRUCT _iemnet_notifier;
-t_iemnet_notifier*iemnet__notify_create(void);
-void iemnet__notify_destroy(t_iemnet_notifier*x);
-
-/**
- * opaque data type used for a notification client
- */
-#define t_iemnet_notify struct _iemnet_notify
-EXTERN_STRUCT _iemnet_notify;
-void iemnet__notify_remove(t_iemnet_notify*notify);
-/**
- * callback function from main thread on notification
- */ 
-typedef void (*t_iemnet_notifun)(void *data);
-/**
- * register a new notification callback with the 'notifier' server.
- * on success, returns a notification client to be passed to iemnet__notify()
- * on failure, returns NULL
- */
-t_iemnet_notify*iemnet__notify_add(t_iemnet_notifier*notifier, t_iemnet_notifun fun, void*data);
-/**
- * tell mainthread that something happened with 'notify' client
- * (will call the callback associated to 'notify' asap)
- */
-void iemnet__notify(t_iemnet_notify*notify);
-
-
 /* convenience functions */
+
+/**
+ * properly close a socket fd
+ *
+ * \param sock socket to close
+ */
+void iemnet__closesocket(int fd);
 
 /**
  * output the address  (IP, port)
@@ -194,7 +189,8 @@ void iemnet__notify(t_iemnet_notify*notify);
  *
  * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
  */
-void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long address, unsigned short port);
+void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
+                     long address, unsigned short port);
 
 /**
  * output the socket we received data from
@@ -205,7 +201,8 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet, long addre
  * \param socket_outlet outlet for sockets only
  * \param sockfd the socket
  */
-void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockfd);
+void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet,
+                       int sockfd);
 
 /**
  * output the number of connections
@@ -216,7 +213,8 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet, int sockf
  * \param address_outlet outlet for numconnections only
  * \param numconnections the number of connections
  */
-void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet, int numconnections);
+void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numconn_outlet,
+                        int numconnections);
 
 /**
  * output a list as a stream (serialize)
@@ -275,7 +273,8 @@ int iemnet__register(const char*name);
 #endif
 
 void iemnet_debuglevel(void*,t_float);
-int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*function);
+int iemnet_debug(int debuglevel, const char*file, unsigned int line,
+                 const char*function);
 #define DEBUGMETHOD(c) class_addmethod(c, (t_method)iemnet_debuglevel, gensym("debug"), A_FLOAT, 0)
 
 
@@ -284,9 +283,13 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line, const char*
 # undef DEBUG
 # define DEBUG if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post
 #else
-static void debug_dummy(const char *format, ...)  {;}
+static void debug_dummy(const char *format, ...)
+{
+  ;
+}
 # define DEBUG debug_dummy
 #endif
+#define MARK() post("%s:%d [%s]",  __FILE__, __LINE__, __FUNCTION__)
 
 
 #endif /* INCLUDE_IEMNET_H_ */
