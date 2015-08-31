@@ -43,18 +43,27 @@
 
 /* data handling */
 
-t_iemnet_floatlist*iemnet__floatlist_init(t_iemnet_floatlist*cl) {
+t_iemnet_floatlist*iemnet__floatlist_init(t_iemnet_floatlist*cl)
+{
   unsigned int i;
-  if(NULL==cl)return NULL;
-  for(i=0; i<cl->size; i++)
+  if(NULL==cl) {
+    return NULL;
+  }
+  for(i=0; i<cl->size; i++) {
     SETFLOAT((cl->argv+i), 0.f);
+  }
 
   return cl;
 }
 
-void iemnet__floatlist_destroy(t_iemnet_floatlist*cl) {
-  if(NULL==cl)return;
-  if(cl->argv) free(cl->argv);
+void iemnet__floatlist_destroy(t_iemnet_floatlist*cl)
+{
+  if(NULL==cl) {
+    return;
+  }
+  if(cl->argv) {
+    free(cl->argv);
+  }
   cl->argv=NULL;
   cl->argc=0;
   cl->size=0;
@@ -62,9 +71,13 @@ void iemnet__floatlist_destroy(t_iemnet_floatlist*cl) {
   free(cl);
 }
 
-t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size) {
-  t_iemnet_floatlist*result=(t_iemnet_floatlist*)malloc(sizeof(t_iemnet_floatlist));
-  if(NULL==result)return NULL;
+t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size)
+{
+  t_iemnet_floatlist*result=(t_iemnet_floatlist*)malloc(sizeof(
+                              t_iemnet_floatlist));
+  if(NULL==result) {
+    return NULL;
+  }
 
   result->argv = (t_atom*)malloc(size*sizeof(t_atom));
   if(NULL==result->argv) {
@@ -80,7 +93,9 @@ t_iemnet_floatlist*iemnet__floatlist_create(unsigned int size) {
   return result;
 }
 
-t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int size) {
+t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl,
+    unsigned int size)
+{
   t_atom*tmp;
   if (NULL==cl) {
     return iemnet__floatlist_create(size);
@@ -92,7 +107,9 @@ t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int 
   }
 
   tmp=(t_atom*)malloc(size*sizeof(t_atom));
-  if(NULL==tmp) return NULL;
+  if(NULL==tmp) {
+    return NULL;
+  }
 
   free(cl->argv);
 
@@ -104,10 +121,15 @@ t_iemnet_floatlist*iemnet__floatlist_resize(t_iemnet_floatlist*cl, unsigned int 
   return cl;
 }
 
-void iemnet__chunk_destroy(t_iemnet_chunk*c) {
-  if(NULL==c)return;
+void iemnet__chunk_destroy(t_iemnet_chunk*c)
+{
+  if(NULL==c) {
+    return;
+  }
 
-  if(c->data)free(c->data);
+  if(c->data) {
+    free(c->data);
+  }
 
   c->data=NULL;
   c->size=0;
@@ -116,18 +138,25 @@ void iemnet__chunk_destroy(t_iemnet_chunk*c) {
 }
 
 
-void iemnet__chunk_print(t_iemnet_chunk*c) {
+void iemnet__chunk_print(t_iemnet_chunk*c)
+{
   unsigned int i=0;
   startpost("chunk[%p:%d]", c, c?c->size:0);
-  if(!c)return;
-  for(i=0; i<c->size; i++)
+  if(!c) {
+    return;
+  }
+  for(i=0; i<c->size; i++) {
     startpost(" %d", c->data[i]);
+  }
   endpost();
 }
 
-t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
+t_iemnet_chunk* iemnet__chunk_create_empty(int size)
+{
   t_iemnet_chunk*result=NULL;
-  if(size<1) return NULL;
+  if(size<1) {
+    return NULL;
+  }
   result=(t_iemnet_chunk*)malloc(sizeof(t_iemnet_chunk));
   if(result) {
     result->size=size;
@@ -149,7 +178,8 @@ t_iemnet_chunk* iemnet__chunk_create_empty(int size) {
   return result;
 }
 
-t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data) {
+t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data)
+{
   t_iemnet_chunk*result=iemnet__chunk_create_empty(size);
   if(result) {
     memcpy(result->data, data, result->size);
@@ -158,8 +188,9 @@ t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data) {
 }
 
 t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
-					      unsigned char*data,
-					      struct sockaddr_in*addr) {
+    unsigned char*data,
+    struct sockaddr_in*addr)
+{
   t_iemnet_chunk*result=iemnet__chunk_create_data(size, data);
   if(result && addr) {
     result->addr = ntohl(addr->sin_addr.s_addr);
@@ -169,10 +200,13 @@ t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
   return result;
 }
 
-t_iemnet_chunk* iemnet__chunk_create_list(int argc, t_atom*argv) {
+t_iemnet_chunk* iemnet__chunk_create_list(int argc, t_atom*argv)
+{
   int i;
   t_iemnet_chunk*result=iemnet__chunk_create_empty(argc);
-  if(NULL==result)return NULL;
+  if(NULL==result) {
+    return NULL;
+  }
 
   for(i=0; i<argc; i++) {
     unsigned char c = atom_getint(argv);
@@ -183,9 +217,12 @@ t_iemnet_chunk* iemnet__chunk_create_list(int argc, t_atom*argv) {
   return result;
 }
 
-t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c) {
+t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c)
+{
   t_iemnet_chunk*result=NULL;
-  if(NULL==c)return NULL;
+  if(NULL==c) {
+    return NULL;
+  }
   result=iemnet__chunk_create_data(c->size, c->data);
   if(result) {
     result->addr=c->addr;
@@ -195,11 +232,17 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c) {
 }
 
 
-t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c, t_iemnet_floatlist*dest) {
+t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c,
+                                      t_iemnet_floatlist*dest)
+{
   unsigned int i;
-  if(NULL==c)return NULL;
+  if(NULL==c) {
+    return NULL;
+  }
   dest=iemnet__floatlist_resize(dest, c->size);
-  if(NULL==dest)return NULL;
+  if(NULL==dest) {
+    return NULL;
+  }
 
   for(i=0; i<c->size; i++) {
     dest->argv[i].a_w.w_float = c->data[i];
@@ -238,12 +281,14 @@ struct _iemnet_queue {
   int used; // use counter, so queue_finish can wait for blocking accesses to finish
 };
 
-static void queue_use_increment(t_iemnet_queue* _this) {
+static void queue_use_increment(t_iemnet_queue* _this)
+{
   pthread_mutex_lock(&_this->usedmtx);
   _this->used++;
   pthread_mutex_unlock(&_this->usedmtx);
 }
-static void queue_use_decrement(t_iemnet_queue* _this) {
+static void queue_use_decrement(t_iemnet_queue* _this)
+{
   pthread_mutex_lock(&_this->usedmtx);
   _this->used--;
   pthread_cond_signal(&_this->usedcond);
@@ -254,19 +299,24 @@ static void queue_use_decrement(t_iemnet_queue* _this) {
  * this will return the current queue size
  */
 int queue_push(
-	       t_iemnet_queue* const _this,
-	       t_iemnet_chunk* const data
-	       ) {
+  t_iemnet_queue* const _this,
+  t_iemnet_chunk* const data
+)
+{
   t_node* tail;
   t_node* n=NULL;
   int size=-1;
-  if(NULL == _this)return size;
+  if(NULL == _this) {
+    return size;
+  }
 
   pthread_mutex_lock(&_this->mtx);
   size=_this->size;
   pthread_mutex_unlock(&_this->mtx);
 
-  if(NULL == data) return size;
+  if(NULL == data) {
+    return size;
+  }
 
   n=(t_node*)malloc(sizeof(t_node));
 
@@ -298,12 +348,15 @@ int queue_push(
  *   OR the queue is "done" (in which case NULL is returned)
  */
 t_iemnet_chunk* queue_pop_block(
-				t_iemnet_queue* const _this
-				) {
+  t_iemnet_queue* const _this
+)
+{
 
   t_node* head=0;
   t_iemnet_chunk*data=0;
-  if(NULL == _this)return NULL;
+  if(NULL == _this) {
+    return NULL;
+  }
 
   queue_use_increment(_this);
   pthread_mutex_lock(&_this->mtx);
@@ -348,11 +401,14 @@ t_iemnet_chunk* queue_pop_block(
  * (note that despite of the name this does block for synchronization)
  */
 t_iemnet_chunk* queue_pop_noblock(
-				  t_iemnet_queue* const _this
-				  ) {
+  t_iemnet_queue* const _this
+)
+{
   t_node* head=0;
   t_iemnet_chunk*data=0;
-  if(NULL == _this)return NULL;
+  if(NULL == _this) {
+    return NULL;
+  }
 
   queue_use_increment(_this);
   pthread_mutex_lock(&_this->mtx);
@@ -381,11 +437,13 @@ t_iemnet_chunk* queue_pop_noblock(
   return data;
 }
 
-t_iemnet_chunk* queue_pop(t_iemnet_queue* const _this) {
+t_iemnet_chunk* queue_pop(t_iemnet_queue* const _this)
+{
   return queue_pop_block(_this);
 }
 
-int queue_getsize(t_iemnet_queue* const _this) {
+int queue_getsize(t_iemnet_queue* const _this)
+{
   int size=-1;
   if(_this) {
     pthread_mutex_lock(&_this->mtx);
@@ -394,9 +452,12 @@ int queue_getsize(t_iemnet_queue* const _this) {
   }
   return size;
 }
-void queue_finish(t_iemnet_queue* q) {
+void queue_finish(t_iemnet_queue* q)
+{
   DEBUG("queue_finish: %x", q);
-  if(NULL==q) return;
+  if(NULL==q) {
+    return;
+  }
 
   pthread_mutex_lock(&q->mtx);
   q->done=1;
@@ -407,16 +468,20 @@ void queue_finish(t_iemnet_queue* q) {
 
   /* wait until queue is no longer used */
   pthread_mutex_lock(&q->usedmtx);
-  while(q->used) pthread_cond_wait(&q->usedcond, &q->usedmtx);
+  while(q->used) {
+    pthread_cond_wait(&q->usedcond, &q->usedmtx);
+  }
   pthread_mutex_unlock(&q->usedmtx);
 
   DEBUG("queue_finished: %x", q);
 }
 
-void queue_destroy(t_iemnet_queue* q) {
+void queue_destroy(t_iemnet_queue* q)
+{
   t_iemnet_chunk*c=NULL;
-  if(NULL==q)
+  if(NULL==q) {
     return;
+  }
   DEBUG("queue destroy %x", q);
 
   queue_finish(q);
@@ -440,13 +505,16 @@ void queue_destroy(t_iemnet_queue* q) {
   DEBUG("queue destroyed %x", q);
 }
 
-t_iemnet_queue* queue_create(void) {
+t_iemnet_queue* queue_create(void)
+{
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
   t_iemnet_queue*q=(t_iemnet_queue*)malloc(sizeof(t_iemnet_queue));
   DEBUG("queue create %x", q);
-  if(NULL==q)return NULL;
+  if(NULL==q) {
+    return NULL;
+  }
 
   q->head = NULL;
   q->tail = NULL;

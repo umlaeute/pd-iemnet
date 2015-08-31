@@ -39,8 +39,7 @@
 static t_class *tcpserver_class;
 static const char objName[] = "tcpserver";
 
-typedef struct _tcpserver_socketreceiver
-{
+typedef struct _tcpserver_socketreceiver {
   struct _tcpserver *sr_owner;
 
   long           sr_host;
@@ -50,8 +49,7 @@ typedef struct _tcpserver_socketreceiver
   t_iemnet_receiver*sr_receiver;
 } t_tcpserver_socketreceiver;
 
-typedef struct _tcpserver
-{
+typedef struct _tcpserver {
   t_object                    x_obj;
   t_outlet                    *x_msgout;
   t_outlet                    *x_connectout;
@@ -64,20 +62,25 @@ typedef struct _tcpserver
   t_tcpserver_socketreceiver  *x_sr[MAX_CONNECT]; /* socket per connection */
   unsigned int              x_nconnections;
 
-  int                       x_connectsocket;    /* socket waiting for new connections */
+  int
+  x_connectsocket;    /* socket waiting for new connections */
   int                       x_port;
 
-  int                         x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
+  int
+  x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
   t_iemnet_floatlist         *x_floatlist;
 } t_tcpserver;
 
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
 
-static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
+static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
+  t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
 {
-  t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
+  t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(
+                                    sizeof(*x));
   if(NULL==x) {
-    error("%s_socketreceiver: unable to allocate %d bytes", objName, (int)sizeof(*x));
+    error("%s_socketreceiver: unable to allocate %d bytes", objName,
+          (int)sizeof(*x));
     return NULL;
   } else {
     x->sr_owner=owner;
@@ -88,7 +91,8 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
     x->sr_port=ntohs(addr->sin_port);
 
     x->sr_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
-    x->sr_receiver=iemnet__receiver_create(sockfd, x, tcpserver_receive_callback, 0);
+    x->sr_receiver=iemnet__receiver_create(sockfd, x,
+                                           tcpserver_receive_callback, 0);
   }
   return (x);
 }
@@ -96,27 +100,30 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(t_tcpserver *own
 static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 {
   DEBUG("freeing %x", x);
-  if (x != NULL)
-    {
-      int sockfd=x->sr_fd;
-      t_iemnet_sender*sender=x->sr_sender;
-      t_iemnet_receiver*receiver=x->sr_receiver;
+  if (x != NULL) {
+    int sockfd=x->sr_fd;
+    t_iemnet_sender*sender=x->sr_sender;
+    t_iemnet_receiver*receiver=x->sr_receiver;
 
-      x->sr_owner=NULL;
-      x->sr_sender=NULL;
-      x->sr_receiver=NULL;
+    x->sr_owner=NULL;
+    x->sr_sender=NULL;
+    x->sr_receiver=NULL;
 
-      x->sr_fd=-1;
-		
-		
-      if(sender)  iemnet__sender_destroy(sender, 0);
-	  if(receiver)iemnet__receiver_destroy(receiver, 0);
+    x->sr_fd=-1;
 
-      iemnet__closesocket(sockfd);
-		
 
-      freebytes(x, sizeof(*x));
+    if(sender) {
+      iemnet__sender_destroy(sender, 0);
     }
+    if(receiver) {
+      iemnet__receiver_destroy(receiver, 0);
+    }
+
+    iemnet__closesocket(sockfd);
+
+
+    freebytes(x, sizeof(*x));
+  }
   DEBUG("freeed %x", x);
 }
 
@@ -143,7 +150,8 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
   }
 
   if (!((client > 0) && (client <= x->x_nconnections))) {
-    pd_error(x, "[%s] client %d out of range [1..%d]", objName, client, (int)(x->x_nconnections));
+    pd_error(x, "[%s] client %d out of range [1..%d]", objName, client,
+             (int)(x->x_nconnections));
     return -1;
   }
   return (client-1);
@@ -187,7 +195,8 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
 }
 
 
-static void tcpserver_info(t_tcpserver *x) {
+static void tcpserver_info(t_tcpserver *x)
+{
   static t_atom output_atom[4];
   int sockfd=x->x_connectsocket;
 
@@ -215,16 +224,19 @@ static void tcpserver_info(t_tcpserver *x) {
 }
 
 
-static void tcpserver_info_connection(t_tcpserver *x, t_tcpserver_socketreceiver*y)
+static void tcpserver_info_connection(t_tcpserver *x,
+                                      t_tcpserver_socketreceiver*y)
 {
   iemnet__addrout(x->x_statout, x->x_addrout, y->sr_host, y->sr_port);
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
 /* ---------------- main tcpserver (send) stuff --------------------- */
-static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket);
+static void tcpserver_disconnect_socket(t_tcpserver *x,
+                                        t_floatarg fsocket);
 
-static void tcpserver_send_bytes_client(t_tcpserver*x, t_tcpserver_socketreceiver*sr, int client, t_iemnet_chunk*chunk)
+static void tcpserver_send_bytes_client(t_tcpserver*x,
+                                        t_tcpserver_socketreceiver*sr, int client, t_iemnet_chunk*chunk)
 {
   if(sr) {
     t_atom                  output_atom[3];
@@ -248,16 +260,21 @@ static void tcpserver_send_bytes_client(t_tcpserver*x, t_tcpserver_socketreceive
   }
 }
 
-static void tcpserver_send_bytes(t_tcpserver*x, int client, t_iemnet_chunk*chunk)
+static void tcpserver_send_bytes(t_tcpserver*x, int client,
+                                 t_iemnet_chunk*chunk)
 {
   t_tcpserver_socketreceiver*sr=NULL;
-  if(x&&client<MAX_CONNECT)sr=x->x_sr[client];
+  if(x&&client<MAX_CONNECT) {
+    sr=x->x_sr[client];
+  }
   DEBUG("send_bytes to %p[%d] -> %p", x, client, sr);
   tcpserver_send_bytes_client(x, sr, client, chunk);
 }
 
 /* send the chunk to all non-null clients */
-static void tcpserver_send_bytes_clients(t_tcpserver*x, t_tcpserver_socketreceiver**sr, unsigned int nsr, t_iemnet_chunk*chunk) {
+static void tcpserver_send_bytes_clients(t_tcpserver*x,
+    t_tcpserver_socketreceiver**sr, unsigned int nsr, t_iemnet_chunk*chunk)
+{
   unsigned int i=0;
   for(i=0; i<nsr; i++) {
     tcpserver_send_bytes_client(x, sr[i], i, chunk);
@@ -265,22 +282,27 @@ static void tcpserver_send_bytes_clients(t_tcpserver*x, t_tcpserver_socketreceiv
 }
 
 /* broadcasts a message to all connected clients but the given one */
-static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but, int argc, t_atom *argv)
+static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but,
+                                     int argc, t_atom *argv)
 {
   unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
-  if(!x || !x->x_nconnections)return;
+  if(!x || !x->x_nconnections) {
+    return;
+  }
 
   chunk=iemnet__chunk_create_list(argc, argv);
-  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
+  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections,
+                                          sizeof(t_tcpserver_socketreceiver*));
 
   for(client=0; client<x->x_nconnections; client++) {
     sr[client]=x->x_sr[client];
   }
 
-  if(but<x->x_nconnections)
+  if(but<x->x_nconnections) {
     sr[but]=NULL;
+  }
 
   tcpserver_send_bytes_clients(x, sr, x->x_nconnections, chunk);
 
@@ -288,7 +310,8 @@ static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but, int argc,
   iemnet__chunk_destroy(chunk);
 }
 /* sends a message to a given client */
-static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client, int argc, t_atom *argv)
+static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client,
+                                    int argc, t_atom *argv)
 {
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   tcpserver_send_bytes(x, client, chunk);
@@ -298,13 +321,16 @@ static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client, int arg
 /* send message to client using client number
    note that the client numbers might change in case a client disconnects! */
 /* clients start at 1 but our index starts at 0 */
-static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc,
+                                  t_atom *argv)
 {
   int client=0;
 
   if (argc > 0) {
     client=tcpserver_fixindex(x, atom_getint(argv));
-    if(client<0)return;
+    if(client<0) {
+      return;
+    }
     if(argc==1) {
       tcpserver_info_client(x, client);
     } else {
@@ -313,21 +339,26 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc, t_atom 
     return;
   } else {
     unsigned int client;
-    for(client=0; client<x->x_nconnections; client++)
+    for(client=0; client<x->x_nconnections; client++) {
       tcpserver_info_client(x, client);
+    }
   }
 }
 
 /* broadcasts a message to all connected clients */
-static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc,
+                                t_atom *argv)
 {
   unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
-  if(!x || !x->x_nconnections)return;
+  if(!x || !x->x_nconnections) {
+    return;
+  }
 
   chunk=iemnet__chunk_create_list(argc, argv);
-  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(t_tcpserver_socketreceiver*));
+  sr=(t_tcpserver_socketreceiver**)calloc(x->x_nconnections,
+                                          sizeof(t_tcpserver_socketreceiver*));
 
   for(client=0; client<x->x_nconnections; client++) {
     sr[client]=x->x_sr[client];
@@ -340,7 +371,8 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc, t_atom *a
 }
 
 /* broadcasts a message to all connected clients */
-static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc,
+                                   t_atom *argv)
 {
   int but=-1;
   //int client=0;
@@ -349,11 +381,14 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc, t_atom
   if(argc<2) {
     return;
   }
-  if((but=tcpserver_fixindex(x, atom_getint(argv)))<0)return;
+  if((but=tcpserver_fixindex(x, atom_getint(argv)))<0) {
+    return;
+  }
   tcpserver_send_butclient(x, but, argc-1, argv+1);
 }
 
-static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc,
+                                  t_atom *argv)
 {
   int client=-1;
   int sockfd=x->x_defaulttarget;
@@ -363,7 +398,8 @@ static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom 
       tcpserver_send_toclient(x, client, argc, argv);
       return;
     }
-    pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName, sockfd);
+    pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName,
+             sockfd);
     x->x_defaulttarget=0;
   } else if(sockfd<0) {
     client=tcpserver_socket2index(x, -sockfd);
@@ -371,7 +407,8 @@ static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc, t_atom 
       tcpserver_send_butclient(x, client, argc, argv);
       return;
     }
-    pd_error(x, "[%s] illegal !ocket %d, switching to broadcast mode", objName, sockfd);
+    pd_error(x, "[%s] illegal !ocket %d, switching to broadcast mode", objName,
+             sockfd);
     x->x_defaulttarget=0;
   }
 
@@ -384,7 +421,8 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
   unsigned int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
-    error("[%s] target %d out of range [0..%d]", objName, client, (int)(x->x_nconnections));
+    error("[%s] target %d out of range [0..%d]", objName, client,
+          (int)(x->x_nconnections));
     return;
   }
 
@@ -393,7 +431,9 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
     sockfd=x->x_sr[client-1]->sr_fd;
   }
 
-  if(rawclient<0)sockfd=-sockfd;
+  if(rawclient<0) {
+    sockfd=-sockfd;
+  }
 
   x->x_defaulttarget=sockfd;
 }
@@ -406,13 +446,16 @@ static void tcpserver_targetsocket(t_tcpserver *x, t_floatarg f)
 
 
 /* send message to client using socket number */
-static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc,
+                                  t_atom *argv)
 {
   int     client = -1;
   t_iemnet_chunk*chunk=NULL;
   if(argc) {
     client = tcpserver_socket2index(x, atom_getint(argv));
-    if(client<0)return;
+    if(client<0) {
+      return;
+    }
   } else {
     pd_error(x, "%s_send: no socket specified", objName);
     return;
@@ -446,10 +489,9 @@ static void tcpserver_disconnect(t_tcpserver *x, unsigned int client)
   x->x_sr[client]=NULL;
 
   /* rearrange list now: move entries to close the gap */
-  for(k = client; k < x->x_nconnections; k++)
-    {
-      x->x_sr[k] = x->x_sr[k + 1];
-    }
+  for(k = client; k < x->x_nconnections; k++) {
+    x->x_sr[k] = x->x_sr[k + 1];
+  }
   x->x_sr[k + 1]=NULL;
   x->x_nconnections--;
 
@@ -463,7 +505,9 @@ static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
 {
   int client = tcpserver_fixindex(x, fclient);
 
-  if(client<0)return;
+  if(client<0) {
+    return;
+  }
   tcpserver_disconnect(x, client);
 }
 
@@ -472,8 +516,9 @@ static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
 {
   int id=tcpserver_socket2index(x, (int)fsocket);
-  if(id>=0)
+  if(id>=0) {
     tcpserver_disconnect_client(x, id+1);
+  }
 }
 
 
@@ -489,15 +534,20 @@ static void tcpserver_disconnect_all(t_tcpserver *x)
 
 /* ---------------- main tcpserver (receive) stuff --------------------- */
 static void tcpserver_receive_callback(void *y0,
-				       t_iemnet_chunk*c) {
+                                       t_iemnet_chunk*c)
+{
   t_tcpserver_socketreceiver *y=(t_tcpserver_socketreceiver*)y0;
   t_tcpserver*x=NULL;
-  if(NULL==y || NULL==(x=y->sr_owner))return;
+  if(NULL==y || NULL==(x=y->sr_owner)) {
+    return;
+  }
 
   if(c) {
     tcpserver_info_connection(x, y);
-	  x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
-    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
+    x->x_floatlist=iemnet__chunk2list(c,
+                                      x->x_floatlist); // get's destroyed in the dtor
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
+                      x->x_serialize);
   } else {
     // disconnected
     int sockfd=y->sr_fd;
@@ -512,31 +562,32 @@ static void tcpserver_connectpoll(t_tcpserver *x)
 {
   struct sockaddr_in  incomer_address;
   socklen_t           sockaddrl = sizeof( struct sockaddr );
-  int                 fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address, &sockaddrl);
+  int                 fd = accept(x->x_connectsocket,
+                                  (struct sockaddr*)&incomer_address, &sockaddrl);
   int                 i;
 
-  if (fd < 0) post("%s: accept failed", objName);
-  else
-    {
-      t_tcpserver_socketreceiver *y = NULL;
-      if(x->x_nconnections>=MAX_CONNECT) {
-        pd_error(x, "%s: cannot handle more than %d connections, dropping", objName, x->x_nconnections);
-        iemnet__closesocket(fd);
-      }
-
-
-      y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
-      if (!y)
-        {
-          iemnet__closesocket(fd);
-          return;
-        }
-      x->x_nconnections++;
-      i = x->x_nconnections - 1;
-      x->x_sr[i] = y;
-
-      tcpserver_info_connection(x, y);
+  if (fd < 0) {
+    post("%s: accept failed", objName);
+  } else {
+    t_tcpserver_socketreceiver *y = NULL;
+    if(x->x_nconnections>=MAX_CONNECT) {
+      pd_error(x, "%s: cannot handle more than %d connections, dropping",
+               objName, x->x_nconnections);
+      iemnet__closesocket(fd);
     }
+
+
+    y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
+    if (!y) {
+      iemnet__closesocket(fd);
+      return;
+    }
+    x->x_nconnections++;
+    i = x->x_nconnections - 1;
+    x->x_sr[i] = y;
+
+    tcpserver_info_connection(x, y);
+  }
 
   outlet_float(x->x_connectout, x->x_nconnections);
 }
@@ -577,27 +628,24 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   /* assign server port number */
   server.sin_port = htons((u_short)portno);
   /* name the socket */
-  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
-    {
-      sys_sockerror("tcpserver: bind");
-      iemnet__closesocket(sockfd);
-      outlet_anything(x->x_statout, gensym("port"), 1, ap);
-      return;
-    }
+  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
+    sys_sockerror("tcpserver: bind");
+    iemnet__closesocket(sockfd);
+    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    return;
+  }
 
   /* streaming protocol */
-  if (listen(sockfd, 5) < 0)
-    {
-      sys_sockerror("tcpserver: listen");
-      iemnet__closesocket(sockfd);
-      sockfd = -1;
-      outlet_anything(x->x_statout, gensym("port"), 1, ap);
-      return;
-    }
-  else
-    {
-      sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x); // wait for new connections
-    }
+  if (listen(sockfd, 5) < 0) {
+    sys_sockerror("tcpserver: listen");
+    iemnet__closesocket(sockfd);
+    sockfd = -1;
+    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    return;
+  } else {
+    sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll,
+                  x); // wait for new connections
+  }
 
   x->x_connectsocket = sockfd;
   x->x_port = portno;
@@ -613,7 +661,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
 
-static void tcpserver_serialize(t_tcpserver *x, t_floatarg doit) {
+static void tcpserver_serialize(t_tcpserver *x, t_floatarg doit)
+{
   x->x_serialize=doit;
 }
 
@@ -626,10 +675,12 @@ static void *tcpserver_new(t_floatarg fportno)
   x = (t_tcpserver *)pd_new(tcpserver_class);
 
   x->x_msgout = outlet_new(&x->x_obj, 0); /* 1st outlet for received data */
-  x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* 2nd outlet for number of connected clients */
+  x->x_connectout = outlet_new(&x->x_obj,
+                               gensym("float")); /* 2nd outlet for number of connected clients */
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
-  x->x_statout = outlet_new(&x->x_obj, 0);/* 5th outlet for everything else */
+  x->x_statout = outlet_new(&x->x_obj,
+                            0);/* 5th outlet for everything else */
 
   x->x_serialize=1;
 
@@ -637,14 +688,13 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_port = -1;
   x->x_nconnections = 0;
 
-  for(i = 0; i < MAX_CONNECT; i++)
-    {
-      x->x_sr[i] = NULL;
-    }
+  for(i = 0; i < MAX_CONNECT; i++) {
+    x->x_sr[i] = NULL;
+  }
 
   x->x_defaulttarget=0;
-	
-	
+
+
   x->x_floatlist=iemnet__floatlist_create(1024);
 
   tcpserver_port(x, fportno);
@@ -656,46 +706,60 @@ static void tcpserver_free(t_tcpserver *x)
 {
   int     i;
 
-  for(i = 0; i < MAX_CONNECT; i++)
-    {
-      if (NULL!=x->x_sr[i]) {
-        DEBUG("[%s] free %x", objName, x);
-        tcpserver_socketreceiver_free(x->x_sr[i]);
-        x->x_sr[i]=NULL;
-      }
+  for(i = 0; i < MAX_CONNECT; i++) {
+    if (NULL!=x->x_sr[i]) {
+      DEBUG("[%s] free %x", objName, x);
+      tcpserver_socketreceiver_free(x->x_sr[i]);
+      x->x_sr[i]=NULL;
     }
-  if (x->x_connectsocket >= 0)
-    {
-      sys_rmpollfn(x->x_connectsocket);
-      iemnet__closesocket(x->x_connectsocket);
-    }
-	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+  }
+  if (x->x_connectsocket >= 0) {
+    sys_rmpollfn(x->x_connectsocket);
+    iemnet__closesocket(x->x_connectsocket);
+  }
+  if(x->x_floatlist) {
+    iemnet__floatlist_destroy(x->x_floatlist);
+  }
+  x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void tcpserver_setup(void)
 {
-  if(!iemnet__register(objName))return;
+  if(!iemnet__register(objName)) {
+    return;
+  }
 
-  tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new, (t_method)tcpserver_free,
+  tcpserver_class = class_new(gensym(objName),(t_newmethod)tcpserver_new,
+                              (t_method)tcpserver_free,
                               sizeof(t_tcpserver), 0, A_DEFFLOAT, 0);
-  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_client, gensym("disconnectclient"), A_DEFFLOAT, 0);
-  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_socket, gensym("disconnectsocket"), A_DEFFLOAT, 0);
-  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_all, gensym("disconnect"), 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_client,
+                  gensym("disconnectclient"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_socket,
+                  gensym("disconnectsocket"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_disconnect_all,
+                  gensym("disconnect"), 0);
 
-  class_addmethod(tcpserver_class, (t_method)tcpserver_send_socket, gensym("send"), A_GIMME, 0);
-  class_addmethod(tcpserver_class, (t_method)tcpserver_send_client, gensym("client"), A_GIMME, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_send_socket,
+                  gensym("send"), A_GIMME, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_send_client,
+                  gensym("client"), A_GIMME, 0);
 
-  class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast, gensym("broadcast"), A_GIMME, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_broadcast,
+                  gensym("broadcast"), A_GIMME, 0);
 
-  class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget, gensym("target"), A_DEFFLOAT, 0);
-  class_addmethod(tcpserver_class, (t_method)tcpserver_targetsocket, gensym("targetsocket"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_defaulttarget,
+                  gensym("target"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_targetsocket,
+                  gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist  (tcpserver_class, (t_method)tcpserver_defaultsend);
 
 
-  class_addmethod(tcpserver_class, (t_method)tcpserver_serialize, gensym("serialize"), A_FLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_serialize,
+                  gensym("serialize"), A_FLOAT, 0);
 
 
-  class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"), A_DEFFLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"),
+                  A_DEFFLOAT, 0);
   class_addbang  (tcpserver_class, (t_method)tcpserver_info);
 
   DEBUGMETHOD(tcpserver_class);

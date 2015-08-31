@@ -32,8 +32,7 @@ static t_class *tcpclient_class;
 static char objName[] = "tcpclient";
 
 
-typedef struct _tcpclient
-{
+typedef struct _tcpclient {
   t_object        x_obj;
   t_clock         *x_clock;
   t_outlet        *x_msgout;
@@ -85,7 +84,9 @@ static void tcpclient_info(t_tcpclient *x)
 }
 
 /* connection handling */
-static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender, t_iemnet_receiver*receiver) {
+static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender,
+                                   t_iemnet_receiver*receiver)
+{
   if(sender) {
     iemnet__sender_destroy(sender, 0);
     sender=NULL;
@@ -100,8 +101,10 @@ static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender, t_iemnet_rece
   }
   return 0;
 }
-static int tcpclient_do_connect(const char*host, unsigned short port, t_tcpclient*x,
-                                   t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT) {
+static int tcpclient_do_connect(const char*host, unsigned short port,
+                                t_tcpclient*x,
+                                t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT)
+{
   struct sockaddr_in  server;
   struct hostent      *hp;
   int                 sockfd=-1;
@@ -135,23 +138,31 @@ static int tcpclient_do_connect(const char*host, unsigned short port, t_tcpclien
   }
 
   sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
-  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback, 0);
+  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback,
+                                   0);
 
-  if(addrOUT)*addrOUT= ntohl(*(long *)hp->h_addr);
-  if(senderOUT)*senderOUT=sender;
-  if(receiverOUT)*receiverOUT=receiver;
+  if(addrOUT) {
+    *addrOUT= ntohl(*(long *)hp->h_addr);
+  }
+  if(senderOUT) {
+    *senderOUT=sender;
+  }
+  if(receiverOUT) {
+    *receiverOUT=receiver;
+  }
   return sockfd;
 }
 
 static void tcpclient_tick(t_tcpclient *x)
 {
-    outlet_float(x->x_connectout, 1);
+  outlet_float(x->x_connectout, 1);
 }
 
 
 static void tcpclient_disconnect(t_tcpclient *x);
 
-static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fportno)
+static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
+                              t_floatarg fportno)
 {
   long addr=0;
   int state;
@@ -161,7 +172,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fpo
       outlet_float(x->x_connectout, 0);
     } else {
       if(!x->x_port) {
-	pd_error(x, "[%s]: not connected", objName);
+        pd_error(x, "[%s]: not connected", objName);
       }
     }
   }
@@ -173,12 +184,13 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname, t_floatarg fpo
 
 
   state=tcpclient_do_connect(x->x_hostname, x->x_port, x,
-			     &x->x_sender, &x->x_receiver,
-			     &x->x_addr);
+                             &x->x_sender, &x->x_receiver,
+                             &x->x_addr);
   x->x_connectstate=(state>0);
   x->x_fd=state;
-  if(state>0)
+  if(state>0) {
     outlet_float(x->x_connectout, 1);
+  }
 
 }
 
@@ -199,7 +211,8 @@ static void tcpclient_disconnect(t_tcpclient *x)
 
 /* sending/receiving */
 
-static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
+static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc,
+                           t_atom *argv)
 {
   int size=0;
   t_atom output_atom;
@@ -212,39 +225,59 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc, t_atom *argv)
   iemnet__chunk_destroy(chunk);
 
   SETFLOAT(&output_atom, size);
-  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 1, &output_atom);
+  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 1,
+                   &output_atom);
   if(size<0) {
     tcpclient_disconnect(x);
   }
 }
 
-static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c) {
+static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
+{
   t_tcpclient *x=(t_tcpclient*)y;
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist); // get's destroyed in the dtor
-    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv, x->x_serialize);
+    x->x_floatlist=iemnet__chunk2list(c,
+                                      x->x_floatlist); // get's destroyed in the dtor
+    iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
+                      x->x_serialize);
   } else {
     // disconnected
     tcpclient_disconnect(x);
   }
 }
 
-static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit) {
+static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit)
+{
   x->x_serialize=doit;
 }
 
 
 /* constructor/destructor */
-static void tcpclient_free_simple(t_tcpclient *x) {
-  if(x->x_clock)clock_free(x->x_clock);x->x_clock=NULL;
-  if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
+static void tcpclient_free_simple(t_tcpclient *x)
+{
+  if(x->x_clock) {
+    clock_free(x->x_clock);
+  }
+  x->x_clock=NULL;
+  if(x->x_floatlist) {
+    iemnet__floatlist_destroy(x->x_floatlist);
+  }
+  x->x_floatlist=NULL;
 
-  if(x->x_msgout)outlet_free(x->x_msgout);
-  if(x->x_addrout)outlet_free(x->x_addrout);
-  if(x->x_connectout)outlet_free(x->x_connectout);
-  if(x->x_statusout)outlet_free(x->x_statusout);
+  if(x->x_msgout) {
+    outlet_free(x->x_msgout);
+  }
+  if(x->x_addrout) {
+    outlet_free(x->x_addrout);
+  }
+  if(x->x_connectout) {
+    outlet_free(x->x_connectout);
+  }
+  if(x->x_statusout) {
+    outlet_free(x->x_statusout);
+  }
 }
 
 static void *tcpclient_new(void)
@@ -252,8 +285,10 @@ static void *tcpclient_new(void)
   t_tcpclient *x = (t_tcpclient *)pd_new(tcpclient_class);
   x->x_msgout = outlet_new(&x->x_obj, 0);	/* received data */
   x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
-  x->x_connectout = outlet_new(&x->x_obj, gensym("float"));	/* connection state */
-  x->x_statusout = outlet_new(&x->x_obj, 0);/* last outlet for everything else */
+  x->x_connectout = outlet_new(&x->x_obj,
+                               gensym("float"));	/* connection state */
+  x->x_statusout = outlet_new(&x->x_obj,
+                              0);/* last outlet for everything else */
 
   x->x_serialize=1;
 
@@ -279,17 +314,23 @@ static void tcpclient_free(t_tcpclient *x)
 
 IEMNET_EXTERN void tcpclient_setup(void)
 {
-  if(!iemnet__register(objName))return;
+  if(!iemnet__register(objName)) {
+    return;
+  }
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
                               sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
-  class_addmethod(tcpclient_class, (t_method)tcpclient_connect, gensym("connect")
+  class_addmethod(tcpclient_class, (t_method)tcpclient_connect,
+                  gensym("connect")
                   , A_SYMBOL, A_FLOAT, 0);
-  class_addmethod(tcpclient_class, (t_method)tcpclient_disconnect, gensym("disconnect"), 0);
+  class_addmethod(tcpclient_class, (t_method)tcpclient_disconnect,
+                  gensym("disconnect"), 0);
 
-  class_addmethod(tcpclient_class, (t_method)tcpclient_serialize, gensym("serialize"), A_FLOAT, 0);
+  class_addmethod(tcpclient_class, (t_method)tcpclient_serialize,
+                  gensym("serialize"), A_FLOAT, 0);
 
-  class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"), A_GIMME, 0);
+  class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"),
+                  A_GIMME, 0);
   class_addlist(tcpclient_class, (t_method)tcpclient_send);
 
   class_addbang(tcpclient_class, (t_method)tcpclient_info);

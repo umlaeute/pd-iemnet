@@ -31,14 +31,13 @@ static const char objName[] = "udpsend";
 
 static t_class *udpsend_class;
 
-typedef struct _udpsend
-{
+typedef struct _udpsend {
   t_object x_obj;
   t_iemnet_sender*x_sender;
 } t_udpsend;
 
 static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
-			    t_floatarg fportno)
+                            t_floatarg fportno)
 {
   struct sockaddr_in  server;
   int                 sockfd;
@@ -46,30 +45,28 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   int                 broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
-  if (x->x_sender)
-    {
-      error("[%s] already connected", objName);
-      return;
-    }
+  if (x->x_sender) {
+    error("[%s] already connected", objName);
+    return;
+  }
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DEBUG("send socket %d\n", sockfd);
-  if (sockfd < 0)
-    {
-      sys_sockerror("[udpsend] socket");
-      return;
-    }
+  if (sockfd < 0) {
+    sys_sockerror("[udpsend] socket");
+    return;
+  }
 
   /* Based on zmoelnig's patch 2221504:
      Enable sending of broadcast messages (if hostname is a broadcast address)*/
 #ifdef SO_BROADCAST
-  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const void *)&broadcast, sizeof(broadcast)))
-    {
-      error("[%s] couldn't switch to broadcast mode", objName);
-    }
+  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
+                      (const void *)&broadcast, sizeof(broadcast))) {
+    error("[%s] couldn't switch to broadcast mode", objName);
+  }
 #endif /* SO_BROADCAST */
-    
+
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
 
@@ -82,20 +79,19 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     } else {
       struct addrinfo * res;
       for (res = addr; res != NULL; res = res->ai_next) {
-	struct sockaddr_in *sa = (struct sockaddr_in *) res->ai_addr;
-	int len = res->ai_addrlen;
-	//      memcpy((char *)&server.sin_addr, (char *)res->ai_addr, hp->h_length);
-	// LATER check how to do that...
+        struct sockaddr_in *sa = (struct sockaddr_in *) res->ai_addr;
+        int len = res->ai_addrlen;
+        //      memcpy((char *)&server.sin_addr, (char *)res->ai_addr, hp->h_length);
+        // LATER check how to do that...
       }
     }
     freeaddrinfo(addr);
 #else
     struct hostent      *hp = gethostbyname(hostname->s_name);
-    if (hp == 0)
-      {
-	error("[%s] bad host '%s'?", objName, hostname->s_name);
-	return;
-      }
+    if (hp == 0) {
+      error("[%s] bad host '%s'?", objName, hostname->s_name);
+      return;
+    }
     memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 #endif
   } while(0);
@@ -105,12 +101,11 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 
   DEBUG("connecting to port %d", portno);
   /* try to connect. */
-  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
-    {
-      sys_sockerror("[udpsend] connecting stream socket");
-      iemnet__closesocket(sockfd);
-      return;
-    }
+  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+    sys_sockerror("[udpsend] connecting stream socket");
+    iemnet__closesocket(sockfd);
+    return;
+  }
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
   outlet_float(x->x_obj.ob_outlet, 1);
 }
@@ -150,18 +145,20 @@ static void *udpsend_new(void)
 
 IEMNET_EXTERN void udpsend_setup(void)
 {
-  if(!iemnet__register(objName))return;
+  if(!iemnet__register(objName)) {
+    return;
+  }
   udpsend_class = class_new(gensym(objName), (t_newmethod)udpsend_new,
-			    (t_method)udpsend_free,
-			    sizeof(t_udpsend), 0, 0);
+                            (t_method)udpsend_free,
+                            sizeof(t_udpsend), 0, 0);
 
   class_addmethod(udpsend_class, (t_method)udpsend_connect,
-		  gensym("connect"), A_SYMBOL, A_FLOAT, 0);
+                  gensym("connect"), A_SYMBOL, A_FLOAT, 0);
   class_addmethod(udpsend_class, (t_method)udpsend_disconnect,
-		  gensym("disconnect"), 0);
+                  gensym("disconnect"), 0);
 
   class_addmethod(udpsend_class, (t_method)udpsend_send, gensym("send"),
-		  A_GIMME, 0);
+                  A_GIMME, 0);
   class_addlist(udpsend_class, (t_method)udpsend_send);
   DEBUGMETHOD(udpsend_class);
 }
