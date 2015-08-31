@@ -1,7 +1,7 @@
 #N canvas 2026 49 530 584 10;
 #X msg 5 222 disconnect;
 #X msg 46 107 connect localhost 44100;
-#X obj 46 285 iemnet/tcpclient;
+#X obj 46 285 tcpclient;
 #X obj 148 391 list prepend;
 #X obj 46 322 sel 255;
 #X obj 85 429 list append;
