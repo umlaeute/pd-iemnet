@@ -27,6 +27,7 @@
 #include "iemnet_data.h"
 
 #include <stdlib.h>
+#include <errno.h>
 
 #define INBUFSIZE 65536L /* was 4096: size of receiving data buffer */
 
@@ -45,6 +46,7 @@ static void pollfun(void*z, int fd) {
   unsigned int size=INBUFSIZE;
   t_iemnet_chunk*chunk=NULL;
   int result = 0;
+  int local_errno = 0;
 
   struct sockaddr_in  from;
   socklen_t           fromlen = sizeof(from);
@@ -53,12 +55,15 @@ static void pollfun(void*z, int fd) {
 #ifdef MSG_DONTWAIT
   recv_flags|=MSG_DONTWAIT;
 #endif
-
+  errno=0;
   result = recvfrom(rec->sockfd, data, size, recv_flags, (struct sockaddr *)&from, &fromlen);
+  local_errno=errno;
   //fprintf(stderr, "read %d bytes...\n", result);
-  DEBUG("recfrom %d bytes: %p", result, data);
+  DEBUG("recvfrom %d bytes: %d %p %d", result, rec->sockfd, data, size);
+  DEBUG("errno=%d", local_errno);
   chunk = iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
 
+  // call the callback with a NULL-chunk to signal a disconnect event.
   (rec->callback)(rec->userdata, chunk);
 
   iemnet__chunk_destroy(chunk);
