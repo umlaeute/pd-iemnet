@@ -4,8 +4,8 @@
 #X obj 335 71 list prepend broadcast;
 #X obj 335 93 list trim;
 #X obj 298 62 t a;
-#X obj 335 44 iemnet/tcpserver 44100;
-#X obj 46 285 iemnet/tcpclient;
+#X obj 335 44 tcpserver 44100;
+#X obj 46 285 tcpclient;
 #X obj 23 102 t b b b;
 #X obj 107 172 del 30;
 #X obj 23 184 del 60;
