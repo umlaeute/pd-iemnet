@@ -1,4 +1,4 @@
-#N canvas 1498 597 826 376 10;
+#N canvas 148 388 826 376 10;
 #X obj 116 59 tcpserver 9999;
 #X obj 28 66 t a a;
 #X msg 144 26 serialize 0;
@@ -33,7 +33,8 @@
 #X obj 229 172 / 1000;
 #X obj 229 194 int;
 #X obj 286 174 % 1000;
-#X floatatom 286 196 5 0 0 0 - - -;
+#X floatatom 286 196 5 0 0 0 - - -, f 5;
+#X msg 205 106 bang;
 #X connect 0 0 1 0;
 #X connect 1 0 19 0;
 #X connect 1 1 21 0;
@@ -55,3 +56,4 @@
 #X connect 31 0 32 0;
 #X connect 32 0 29 0;
 #X connect 33 0 34 0;
+#X connect 35 0 24 0;
