@@ -1,0 +1,11 @@
+#N canvas 529 261 450 300 10;
+#X obj 302 40 udpreceive 9990;
+#X floatatom 302 62 5 0 0 0 - - -, f 5;
+#X obj 304 97 tcpreceive 9990;
+#X floatatom 304 119 5 0 0 0 - - -, f 5;
+#X obj 128 38 test-sender udpsend;
+#X obj 128 58 test-sender udpclient;
+#X obj 128 98 test-sender tcpsend;
+#X obj 128 118 test-sender tcpclient;
+#X connect 0 0 1 0;
+#X connect 2 0 3 0;
