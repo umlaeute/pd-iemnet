@@ -48,10 +48,10 @@ static void tcpsend_disconnect(t_tcpsend *x)
   if (x->x_fd >= 0)
     {
       if(x->x_sender)iemnet__sender_destroy(x->x_sender, 0); x->x_sender=NULL;
-      sys_closesocket(x->x_fd);
+      iemnet__closesocket(x->x_fd);
       x->x_fd = -1;
       outlet_float(x->x_obj.ob_outlet, 0);
-      post("tcpsend: disconnected");
+      //post("tcpsend: disconnected");
     }
 }
 
@@ -105,7 +105,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
       sys_sockerror("tcpsend: connecting stream socket");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       return;
     }
   x->x_fd = sockfd;

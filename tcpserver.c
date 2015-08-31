@@ -111,8 +111,8 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 		
       if(sender)  iemnet__sender_destroy(sender, 0);
 	  if(receiver)iemnet__receiver_destroy(receiver, 0);
-		
-    sys_closesocket(sockfd);
+
+      iemnet__closesocket(sockfd);
 		
 
       freebytes(x, sizeof(*x));
@@ -521,14 +521,14 @@ static void tcpserver_connectpoll(t_tcpserver *x)
       t_tcpserver_socketreceiver *y = NULL;
       if(x->x_nconnections>=MAX_CONNECT) {
         pd_error(x, "%s: cannot handle more than %d connections, dropping", objName, x->x_nconnections);
-        sys_closesocket(fd);
+        iemnet__closesocket(fd);
       }
 
 
       y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
       if (!y)
         {
-          sys_closesocket(fd);
+          iemnet__closesocket(fd);
           return;
         }
       x->x_nconnections++;
@@ -558,7 +558,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     sys_rmpollfn(sockfd);
-    sys_closesocket(sockfd);
+    iemnet__closesocket(sockfd);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -580,7 +580,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
     {
       sys_sockerror("tcpserver: bind");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       outlet_anything(x->x_statout, gensym("port"), 1, ap);
       return;
     }
@@ -589,7 +589,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   if (listen(sockfd, 5) < 0)
     {
       sys_sockerror("tcpserver: listen");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       sockfd = -1;
       outlet_anything(x->x_statout, gensym("port"), 1, ap);
       return;
@@ -667,7 +667,7 @@ static void tcpserver_free(t_tcpserver *x)
   if (x->x_connectsocket >= 0)
     {
       sys_rmpollfn(x->x_connectsocket);
-      sys_closesocket(x->x_connectsocket);
+      iemnet__closesocket(x->x_connectsocket);
     }
 	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }

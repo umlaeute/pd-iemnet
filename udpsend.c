@@ -108,7 +108,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
       sys_sockerror("[udpsend] connecting stream socket");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       return;
     }
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);

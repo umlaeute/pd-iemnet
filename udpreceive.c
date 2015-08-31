@@ -114,7 +114,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
     {
       sys_sockerror("[udpreceive] bind failed");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       sockfd = -1;
       return 0;
     }
