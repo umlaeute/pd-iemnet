@@ -109,7 +109,7 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
       if(sender)  iemnet__sender_destroy(sender, 0);
 
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
     }
   /* coverity[pass_freed_arg]: this is merely for debugging printout */
   DEBUG("freeed %x", x);
@@ -623,7 +623,7 @@ static void udpserver_connectpoll(t_udpserver *x)
       t_udpserver_sender *y = udpserver_sender_new(x, host, port);
       if (!y)
         {
-          sys_closesocket(fd);
+          iemnet__closesocket(fd);
           return;
         }
       x->x_nconnections++;
@@ -653,7 +653,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     //sys_rmpollfn(sockfd);
-    sys_closesocket(sockfd);
+    iemnet__closesocket(sockfd);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -676,7 +676,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0)
     {
       sys_sockerror("udpserver: bind");
-      sys_closesocket(sockfd);
+      iemnet__closesocket(sockfd);
       outlet_anything(x->x_statout, gensym("port"), 1, ap);
       return;
     }
@@ -747,7 +747,7 @@ static void udpserver_free(t_udpserver *x)
   if (x->x_connectsocket >= 0)
     {
       //sys_rmpollfn(x->x_connectsocket);
-      sys_closesocket(x->x_connectsocket);
+      iemnet__closesocket(x->x_connectsocket);
     }
 	if(x->x_floatlist)iemnet__floatlist_destroy(x->x_floatlist);x->x_floatlist=NULL;
 }
