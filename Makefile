@@ -25,7 +25,7 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 # list them here.  This can be anything from header files, test patches,
 # documentation, etc.  README.txt and LICENSE.txt are required and therefore
 # automatically included
-EXTRA_DIST = 
+EXTRA_DIST = ChangeLog FEATURES.txt NOTES.txt
 
 
 LIBS_windows=-lpthread
@@ -298,6 +298,7 @@ install-doc:
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_DATA) README.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/README.txt
 	$(INSTALL_DATA) LICENSE.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/LICENSE.txt
+	$(INSTALL_DATA) ChangeLog $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
 
 install-examples:
 	test -z "$(strip $(EXAMPLES))" || \
