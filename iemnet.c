@@ -1,7 +1,7 @@
 /* iemnet
  * this file provides core infrastructure for the iemnet-objects
  *
- *  copyright (c) 2010-2011 IOhannes m zmölnig, IEM
+ *  copyright © 2010-2015 IOhannes m zmölnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */
@@ -161,7 +161,7 @@ int iemnet__register(const char*name)
   post("        version "LIBRARY_VERSION"");
 #endif
   post("        compiled on "__DATE__" at " __TIME__"");
-  post("        copyright (c) 2010-2011 IOhannes m zmoelnig, IEM");
+  post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
   return 1;
 }
