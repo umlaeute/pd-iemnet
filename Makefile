@@ -250,19 +250,21 @@ SHARED_LIB ?= lib$(LIBRARY_NAME:=.$(SHARED_EXTENSION))
 all: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB)
 
 %.o: %.c $(SHARED_HEADERS)
-	$(CC) $(ALL_CFLAGS) -o "$*.o" -c "$*.c"
+	$(CC) $(ALL_CFLAGS) -o $@ -c $<
 
 %.$(EXTENSION): %.o $(SHARED_LIB)
-	$(CC) $(ALL_LDFLAGS) -o "$*.$(EXTENSION)" "$*.o"  $(ALL_LIBS) $(SHARED_LIB)
-	chmod a-x "$*.$(EXTENSION)"
+	$(CC) $(ALL_LDFLAGS) -o $@ $^  $(ALL_LIBS)
+	chmod a-x $@
 
 # this links everything into a single binary file
-$(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
-	$(CC) $(ALL_LDFLAGS) -o $(LIBRARY_NAME).$(EXTENSION) $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(ALL_LIBS)
-	chmod a-x $(LIBRARY_NAME).$(EXTENSION)
+$(LIBRARY_NAME): $(LIBRARY_NAME).$(EXTENSION)
+
+$(LIBRARY_NAME).$(EXTENSION): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
+	$(CC) $(ALL_LDFLAGS) -o $@ $^ $(ALL_LIBS)
+	chmod a-x $@
 
 $(SHARED_LIB): $(SHARED_SOURCES:.c=.o)
-	$(CC) $(SHARED_LDFLAGS) -o $(SHARED_LIB) $(SHARED_SOURCES:.c=.o) $(ALL_LIBS)
+	$(CC) $(SHARED_LDFLAGS) -o $@ $^ $(ALL_LIBS)
 
 install: libdir_install
 
