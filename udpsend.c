@@ -34,6 +34,7 @@ static t_class *udpsend_class;
 typedef struct _udpsend {
   t_object x_obj;
   t_iemnet_sender*x_sender;
+  int x_fd;
 } t_udpsend;
 
 static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
@@ -93,6 +94,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     return;
   }
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  x->x_fd = sockfd;
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
@@ -100,7 +102,11 @@ static void udpsend_disconnect(t_udpsend *x)
 {
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender, 0);
-    x->x_sender=NULL;
+  }
+  x->x_sender=NULL;
+  if(x->x_fd >= 0) {
+    iemnet__closesocket(x->x_fd);
+    x->x_fd=-1;
     outlet_float(x->x_obj.ob_outlet, 0);
   }
 }
