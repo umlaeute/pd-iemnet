@@ -76,8 +76,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     return;
   }
 
-  /* Based on zmoelnig's patch 2221504:
-     Enable sending of broadcast messages (if hostname is a broadcast address)*/
+  /* Enable sending of broadcast messages (if hostname is a broadcast address)*/
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
                       (const void *)&broadcast, sizeof(broadcast))) {
