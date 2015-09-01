@@ -245,7 +245,12 @@ SHARED_SOURCES ?= $(shell test ! -e lib$(LIBRARY_NAME).c || \
 SHARED_HEADERS ?= $(shell test ! -e $(LIBRARY_NAME).h || echo $(LIBRARY_NAME).h)
 SHARED_LIB ?= lib$(LIBRARY_NAME:=.$(SHARED_EXTENSION))
 
-.PHONY = install libdir_install single_install install-doc install-examples install-manual clean distclean dist etags $(LIBRARY_NAME)
+.PHONY = all clean distclean install dist \
+        etags dpkg-source showsetup \
+        libdir_install install-objects \
+        single_install install-libobject \
+        install-doc install-examples install-manual \
+        libdir $(LIBRARY_NAME)
 
 all: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB)
 
