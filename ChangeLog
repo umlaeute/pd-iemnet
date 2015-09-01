@@ -1,3 +1,14 @@
+2015-09-01 12:00  zmoelnig
+
+	* iemnet-v0.2
+
+	  got rid of threaded receiver
+	   - simplifies code
+	   - fixes a couple of stability bugs
+	   - compiles again on W32
+	  one-true-brace-style
+	  reproducible build
+
 2010-10-11 16:04  zmoelnig
 
 	* tcpreceive.c, udpreceive.c: use SO_REUSEPORT (if available during
@@ -199,7 +210,7 @@
 
 2010-08-09 09:22  zmoelnig
 
-	* iemnet_data.c: allow to resize NULL-floatlists
+	* iemnet_data.c: allow resizing of NULL-floatlists
 	  
 	  trying to resize a NULL-floatlist, will create a new one with the
 	  required size

@@ -1,5 +1,5 @@
 /* udpsend.c
- * copyright (c) 2010 IOhannes m zmölnig, IEM
+ * copyright © 2010-2015 IOhannes m zmölnig, IEM
  * copyright (c) 2006-2010 Martin Peach
  * copyright (c) Miller Puckette
  */
@@ -34,79 +34,67 @@ static t_class *udpsend_class;
 typedef struct _udpsend {
   t_object x_obj;
   t_iemnet_sender*x_sender;
+  int x_fd;
 } t_udpsend;
 
 static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
 {
   struct sockaddr_in  server;
+  struct hostent      *hp = NULL;
   int                 sockfd;
   int                 portno = fportno;
   int                 broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
   if (x->x_sender) {
-    error("[%s] already connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "already connected");
     return;
   }
-
-  /* create a socket */
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  DEBUG("send socket %d\n", sockfd);
-  if (sockfd < 0) {
-    sys_sockerror("[udpsend] socket");
-    return;
-  }
-
-  /* Based on zmoelnig's patch 2221504:
-     Enable sending of broadcast messages (if hostname is a broadcast address)*/
-#ifdef SO_BROADCAST
-  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
-                      (const void *)&broadcast, sizeof(broadcast))) {
-    error("[%s] couldn't switch to broadcast mode", objName);
-  }
-#endif /* SO_BROADCAST */
 
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
 
-  do {
-#if 0
-    struct addrinfo * addr=NULL;
-    if(getaddrinfo(hostname->s_name, NULL, NULL, &addr)) {
-      error("[%s] bad host '%s'?", objName, hostname->s_name);
-      return;
-    } else {
-      struct addrinfo * res;
-      for (res = addr; res != NULL; res = res->ai_next) {
-        struct sockaddr_in *sa = (struct sockaddr_in *) res->ai_addr;
-        int len = res->ai_addrlen;
-        //      memcpy((char *)&server.sin_addr, (char *)res->ai_addr, hp->h_length);
-        // LATER check how to do that...
-      }
-    }
-    freeaddrinfo(addr);
-#else
-    struct hostent      *hp = gethostbyname(hostname->s_name);
-    if (hp == 0) {
-      error("[%s] bad host '%s'?", objName, hostname->s_name);
-      return;
-    }
-    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-#endif
-  } while(0);
+  hp = gethostbyname(hostname->s_name);
+  if (hp == 0) {
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", hostname->s_name);
+    return;
+  }
+  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
   /* assign client port number */
   server.sin_port = htons((u_short)portno);
 
   DEBUG("connecting to port %d", portno);
+
+
+  /* create a socket */
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  DEBUG("send socket %d\n", sockfd);
+  if (sockfd < 0) {
+    iemnet_log(x, IEMNET_ERROR, "unable to create datagram socket");
+    sys_sockerror("socket");
+    return;
+  }
+
+  /* Enable sending of broadcast messages (if hostname is a broadcast address)*/
+#ifdef SO_BROADCAST
+  if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
+                      (const void *)&broadcast, sizeof(broadcast))) {
+    iemnet_log(x, IEMNET_ERROR, "unable to switch to broadcast mode");
+    sys_sockerror("setsockopt:SO_BROADCAST");
+  }
+#endif /* SO_BROADCAST */
+
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
-    sys_sockerror("[udpsend] connecting stream socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to socket:%d", sockfd);
+    sys_sockerror("connect");
     iemnet__closesocket(sockfd);
     return;
   }
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  x->x_fd = sockfd;
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
@@ -114,7 +102,11 @@ static void udpsend_disconnect(t_udpsend *x)
 {
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender, 0);
-    x->x_sender=NULL;
+  }
+  x->x_sender=NULL;
+  if(x->x_fd >= 0) {
+    iemnet__closesocket(x->x_fd);
+    x->x_fd=-1;
     outlet_float(x->x_obj.ob_outlet, 0);
   }
 }
@@ -126,7 +118,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
   } else {
-    error("[%s]: not connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "not connected");
   }
 }
 
@@ -166,4 +158,3 @@ IEMNET_EXTERN void udpsend_setup(void)
 IEMNET_INITIALIZER(udpsend_setup);
 
 /* end udpsend.c*/
-

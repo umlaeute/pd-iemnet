@@ -1,7 +1,7 @@
 /* iemnet
  * this file provides core infrastructure for the iemnet-objects
  *
- *  copyright (c) 2010-2011 IOhannes m zmölnig, IEM
+ *  copyright © 2010-2015 IOhannes m zmölnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */
@@ -151,17 +151,21 @@ static int iemnet__nametaken(const char*namestring)
   return 0;
 }
 
+#ifndef BUILD_DATE
+# define BUILD_DATE "on " __DATE__ " at " __TIME__
+#endif
+
 int iemnet__register(const char*name)
 {
   if(iemnet__nametaken(name)) {
     return 0;
   }
   post("iemnet - networking with Pd: [%s]", name);
-#ifdef LIBRARY_VERSION
-  post("        version "LIBRARY_VERSION"");
+#ifdef VERSION
+  post("        version "VERSION"");
 #endif
-  post("        compiled on "__DATE__" at " __TIME__"");
-  post("        copyright (c) 2010-2011 IOhannes m zmoelnig, IEM");
+  post("        compiled "BUILD_DATE"");
+  post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
   return 1;
 }
@@ -197,7 +201,7 @@ void iemnet_debuglevel(void*x, t_float f)
   post("iemnet: setting debuglevel to %d", debuglevel);
 #else
   if(firsttime) {
-    post("iemnet compiled without debug!");
+    error("iemnet compiled without debug!");
   }
 #endif
   firsttime=0;
@@ -231,5 +235,43 @@ IEMNET_EXTERN void iemnet_setup(void)
   udpreceive_setup();
   udpsend_setup();
   udpserver_setup();
+#endif
+}
+
+#include <stdarg.h>
+#include <string.h>
+#include <m_imp.h>
+
+void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...)
+{
+  t_pd*x=(t_pd*)object;
+  const char*name=x?((*x)->c_name->s_name):0;
+  char buf[MAXPDSTRING];
+  va_list ap;
+  t_int arg[8];
+  va_start(ap, fmt);
+  vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
+  va_end(ap);
+  strcat(buf, "\0");
+#if (defined PD_MINOR_VERSION) && (PD_MINOR_VERSION >= 43)
+  if (name) {
+    logpost(x, level, "[%s]: %s", name, buf);
+  } else {
+    logpost(x, level, "%s", buf);
+  }
+#else
+  if (name) {
+    if(level>1) {
+      post("[%s]: %s", name, buf);
+    } else {
+      pd_error(x, "[%s]: %s", name, buf);
+    }
+  } else {
+    if(level>1) {
+      post("%s", name, buf);
+    } else {
+      pd_error(x, "%s", name, buf);
+    }
+  }
 #endif
 }

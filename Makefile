@@ -25,11 +25,12 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 # list them here.  This can be anything from header files, test patches,
 # documentation, etc.  README.txt and LICENSE.txt are required and therefore
 # automatically included
-EXTRA_DIST = 
-
+EXTRA_DIST = ChangeLog FEATURES.txt NOTES.txt
 
 LIBS_windows=-lpthread
 
+#overriding the datestring
+# run `make CPPFLAGS="-DBUILD_DATE='\"somewhen in August\"'"`
 
 
 #------------------------------------------------------------------------------#
@@ -236,60 +237,63 @@ endif
 # in case somebody manually set the HELPPATCHES above
 HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
-ALL_CFLAGS := $(ALL_CFLAGS) $(CFLAGS) $(OPT_CFLAGS)
-ALL_LDFLAGS := $(LDFLAGS) $(ALL_LDFLAGS)
-ALL_LIBS := $(LIBS) $(ALL_LIBS)
+ALL_CFLAGS := $(CPPFLAGS) $(ALL_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
+ALL_LDFLAGS := $(ALL_LDFLAGS) $(LDFLAGS)
+ALL_LIBS := $(ALL_LIBS) $(LIBS)
 
 SHARED_SOURCES ?= $(shell test ! -e lib$(LIBRARY_NAME).c || \
 	echo lib$(LIBRARY_NAME).c )
 SHARED_HEADERS ?= $(shell test ! -e $(LIBRARY_NAME).h || echo $(LIBRARY_NAME).h)
 SHARED_LIB ?= lib$(LIBRARY_NAME:=.$(SHARED_EXTENSION))
 
-.PHONY = install libdir_install single_install install-doc install-examples install-manual clean distclean dist etags $(LIBRARY_NAME)
+.PHONY = all clean distclean install dist \
+        etags dpkg-source showsetup \
+        libdir_install install-objects \
+        single_install install-libobject \
+        install-doc install-examples install-manual \
+        libdir $(LIBRARY_NAME)
 
 all: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB)
 
 %.o: %.c $(SHARED_HEADERS)
-	$(CC) $(ALL_CFLAGS) -o "$*.o" -c "$*.c"
+	$(CC) $(ALL_CFLAGS) -o $@ -c $<
 
 %.$(EXTENSION): %.o $(SHARED_LIB)
-	$(CC) $(ALL_LDFLAGS) -o "$*.$(EXTENSION)" "$*.o"  $(ALL_LIBS) $(SHARED_LIB)
-	chmod a-x "$*.$(EXTENSION)"
+	$(CC) $(ALL_LDFLAGS) -o $@ $^  $(ALL_LIBS)
+	chmod a-x $@
 
 # this links everything into a single binary file
-$(LIBRARY_NAME): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
-	$(CC) $(ALL_LDFLAGS) -o $(LIBRARY_NAME).$(EXTENSION) $(SOURCES:.c=.o) $(LIBRARY_NAME).o $(ALL_LIBS)
-	chmod a-x $(LIBRARY_NAME).$(EXTENSION)
+$(LIBRARY_NAME): $(LIBRARY_NAME).$(EXTENSION)
+
+$(LIBRARY_NAME).$(EXTENSION): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
+	$(CC) $(ALL_LDFLAGS) -o $@ $^ $(ALL_LIBS)
+	chmod a-x $@
 
 $(SHARED_LIB): $(SHARED_SOURCES:.c=.o)
-	$(CC) $(SHARED_LDFLAGS) -o $(SHARED_LIB) $(SHARED_SOURCES:.c=.o) $(ALL_LIBS)
+	$(CC) $(SHARED_LDFLAGS) -o $@ $^ $(ALL_LIBS)
 
 install: libdir_install
 
 # The meta and help files are explicitly installed to make sure they are
 # actually there.  Those files are not optional, then need to be there.
-libdir_install: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) install-doc install-examples install-manual
+install-objects: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) $(PDOBJECTS) $(SHARED_TCL_LIB)
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_DATA) $(LIBRARY_NAME)-meta.pd \
 		$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	test -z "$(strip $(SOURCES))" || (\
-		$(INSTALL_PROGRAM) $(SOURCES:.c=.$(EXTENSION)) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME) && \
-		$(STRIP) $(addprefix $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/,$(SOURCES:.c=.$(EXTENSION))))
-	test -z "$(strip $(SHARED_LIB))" || \
-		$(INSTALL_DATA) $(SHARED_LIB) \
-			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+	$(INSTALL_DATA) $^ \
+		$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	test -z "$(strip $(wildcard $(SOURCES:.c=.tcl)))" || \
 		$(INSTALL_DATA) $(wildcard $(SOURCES:.c=.tcl)) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	test -z "$(strip $(PDOBJECTS))" || \
-		$(INSTALL_DATA) $(PDOBJECTS) \
-			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+libdir_install: install-objects install-doc install-examples install-manual
 
 # install library linked as single binary
-single_install: $(LIBRARY_NAME) install-doc install-examples install-manual
+install-libobject: $(LIBRARY_NAME).$(EXTENSION)
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	$(INSTALL_PROGRAM) $(LIBRARY_NAME).$(EXTENSION) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	$(STRIP) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/$(LIBRARY_NAME).$(EXTENSION)
+	$(INSTALL_PROGRAM) $^ $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+	-$(STRIP) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/$(LIBRARY_NAME).$(EXTENSION)
+
+single_install: install-libobject install-doc install-examples install-manual
 
 install-doc:
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
@@ -298,6 +302,7 @@ install-doc:
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_DATA) README.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/README.txt
 	$(INSTALL_DATA) LICENSE.txt $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/LICENSE.txt
+	$(INSTALL_DATA) ChangeLog $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/CHANGES.txt
 
 install-examples:
 	test -z "$(strip $(EXAMPLES))" || \

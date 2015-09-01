@@ -4,7 +4,7 @@
  *   sends data "chunks" to a socket
  *   possibly threaded
  *
- *  copyright (c) 2010 IOhannes m zmölnig, IEM
+ *  copyright © 2010-2015 IOhannes m zmölnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */
@@ -277,7 +277,7 @@ int iemnet__sender_getsockopt(t_iemnet_sender*s, int level, int optname,
 {
   int result=getsockopt(s->sockfd, level, optname, optval, optlen);
   if(result!=0) {
-    post("%s: getsockopt returned %d", __FUNCTION__,
+    error("iemnet::sender: getsockopt returned %d",
          iemnet__sender_getlasterror(s));
   }
   return result;
@@ -287,7 +287,7 @@ int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname,
 {
   int result=setsockopt(s->sockfd, level, optname, optval, optlen);
   if(result!=0) {
-    post("%s: setsockopt returned %d", __FUNCTION__,
+    error("iemnet::sender: setsockopt returned %d",
          iemnet__sender_getlasterror(s));
   }
   return result;
