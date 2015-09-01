@@ -151,7 +151,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
       iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
     } else {
       iemnet_log(x, IEMNET_ERROR, "too many connections");
-      iemnet__closesocket(fd);
+      iemnet__closesocket(fd, 1);
     }
   }
 }
@@ -162,7 +162,7 @@ static int tcpreceive_disconnect(t_tcpreceive *x, int id)
     iemnet__receiver_destroy(x->x_connection[id].receiver, 0);
     x->x_connection[id].receiver=NULL;
 
-    iemnet__closesocket(x->x_connection[id].socket);
+    iemnet__closesocket(x->x_connection[id].socket, 1);
     x->x_connection[id].socket = -1;
 
     x->x_connection[id].addr = 0L;
@@ -217,7 +217,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     sys_rmpollfn(sockfd);
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -265,7 +265,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
     iemnet_log(x, IEMNET_ERROR, "couldn't bind socket");
     sys_sockerror("bind");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
@@ -275,7 +275,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   if (listen(sockfd, 5) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to listen on socket");
     sys_sockerror("listen");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
@@ -307,7 +307,7 @@ static void tcpreceive_free(t_tcpreceive *x)
   /* is this ever called? */
   if (x->x_connectsocket >= 0) {
     sys_rmpollfn(x->x_connectsocket);
-    iemnet__closesocket(x->x_connectsocket);
+    iemnet__closesocket(x->x_connectsocket, 1);
   }
   tcpreceive_disconnect_all(x);
   if(x->x_floatlist) {

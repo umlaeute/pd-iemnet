@@ -175,7 +175,7 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  *
  * \param sock socket to close
  */
-void iemnet__closesocket(int fd);
+void iemnet__closesocket(int fd, int verbose);
 
 /**
  * output the address  (IP, port)

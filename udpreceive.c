@@ -80,7 +80,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
     x->x_receiver=NULL;
   }
   if(sockfd>=0) {
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     x->x_fd=-1;
     x->x_port=-1;
   }
@@ -124,7 +124,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to bind to socket");
     sys_sockerror("bind");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     sockfd = -1;
     return 0;
   }
@@ -222,7 +222,7 @@ static void udpreceive_free(t_udpreceive *x)
   }
   x->x_receiver=NULL;
   if(x->x_fd >= 0) {
-    iemnet__closesocket(x->x_fd);
+    iemnet__closesocket(x->x_fd, 1);
   }
   x->x_fd=-1;
 

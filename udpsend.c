@@ -90,7 +90,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to socket:%d", sockfd);
     sys_sockerror("connect");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     return;
   }
   x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
@@ -105,7 +105,7 @@ static void udpsend_disconnect(t_udpsend *x)
   }
   x->x_sender=NULL;
   if(x->x_fd >= 0) {
-    iemnet__closesocket(x->x_fd);
+    iemnet__closesocket(x->x_fd, 1);
     x->x_fd=-1;
     outlet_float(x->x_obj.ob_outlet, 0);
   }
