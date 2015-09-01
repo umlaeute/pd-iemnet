@@ -45,32 +45,32 @@ typedef struct _udpserver_sender {
 
   long           sr_host;
   unsigned short sr_port;
-  t_int          sr_fd;
+  int          sr_fd;
   t_iemnet_sender*sr_sender;
 } t_udpserver_sender;
 
 typedef struct _udpserver {
-  t_object                    x_obj;
-  t_outlet                   *x_msgout;
-  t_outlet                   *x_connectout;
-  t_outlet                   *x_sockout; // legacy
-  t_outlet                   *x_addrout; // legacy
-  t_outlet                   *x_statout;
+  t_object x_obj;
+  t_outlet*x_msgout;
+  t_outlet*x_connectout;
+  t_outlet*x_sockout; // legacy
+  t_outlet*x_addrout; // legacy
+  t_outlet*x_statout;
 
-  t_udpserver_sender         *x_sr[MAX_CONNECT]; /* socket per connection */
-  t_int                       x_nconnections;
+  t_udpserver_sender*x_sr[MAX_CONNECT]; /* socket per connection */
+  unsigned int       x_nconnections;
 
-  t_int
-  x_connectsocket;    /* socket waiting for new connections */
-  t_int                       x_port;
-  unsigned char
-  x_accept; /* whether we accept new connections or not */
+  int x_connectsocket;    /* socket waiting for new connections */
+  unsigned short x_port;
+  unsigned char  x_accept; /* whether we accept new connections or not */
 
-  /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
-  int  x_defaulttarget;
+  /* the default connection to send to;
+     0=broadcast; >0 use this client; <0 exclude this client
+  */
+  int x_defaulttarget;
 
-  t_iemnet_receiver          *x_receiver;
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_receiver*x_receiver;
+  t_iemnet_floatlist*x_floatlist;
 } t_udpserver;
 
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
@@ -126,7 +126,7 @@ static t_udpserver_sender* udpserver_sender_copy(t_udpserver_sender*x)
 
 static int udpserver_socket2index(t_udpserver*x, int sockfd)
 {
-  int i=0;
+  unsigned int i=0;
   for(i = 0; i < x->x_nconnections; i++) { /* check if connection exists */
     if(x->x_sr[i]->sr_fd == sockfd) {
       return i;
@@ -139,14 +139,22 @@ static int udpserver_socket2index(t_udpserver*x, int sockfd)
  *  if the id is invalid, returns -1
  *  if the id is valid, return the 0-based index (client-1)
  */
-static int udpserver_fixindex(t_udpserver*x, int client)
+static int udpserver_fixindex(t_udpserver*x, int client_)
 {
+  unsigned int client;
+  if(client_<1) {
+    iemnet_log(x, IEMNET_ERROR,
+               "client:%d out of range [1..%d]",
+               client_, (int)(x->x_nconnections));
+    return -1;
+  }
+  client = (unsigned int)client_;
   if(x->x_nconnections <= 0) {
     iemnet_log(x, IEMNET_ERROR, "no clients connected");
     return -1;
   }
 
-  if (!((client > 0) && (client <= x->x_nconnections))) {
+  if (client > x->x_nconnections) {
     iemnet_log(x, IEMNET_ERROR,
                "client:%d out of range [1..%d]",
                client, (int)(x->x_nconnections));
@@ -170,7 +178,7 @@ static int equal_addr(unsigned long host1, unsigned short port1,
 static int udpserver__find_sender(t_udpserver*x,  unsigned long host,
                                   unsigned short port)
 {
-  int i=0;
+  unsigned int i=0;
   for(i=0; i<x->x_nconnections; i++) {
     if(NULL==x->x_sr[i]) {
       return -1;
@@ -393,13 +401,14 @@ static void udpserver_send_toclient(t_udpserver *x, unsigned int client,
 static void udpserver_send_client(t_udpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
-  int client=0;
+  unsigned int client=0;
 
   if (argc > 0) {
-    client=udpserver_fixindex(x, atom_getint(argv));
-    if(client<0) {
+    int c=udpserver_fixindex(x, atom_getint(argv));
+    if(c<0) {
       return;
     }
+    client=(unsigned int)c;
     if(argc==1) {
       udpserver_info_client(x, client);
     } else {
@@ -482,7 +491,7 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 {
   int sockfd=0;
   int rawclient=f;
-  int client=(rawclient<0)?(-rawclient):rawclient;
+  unsigned int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
     iemnet_log(x, IEMNET_ERROR,
@@ -613,7 +622,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
   }
 
   if(c) {
-    int conns = x->x_nconnections;
+    unsigned int conns = x->x_nconnections;
     t_udpserver_sender*sdr=NULL;
     DEBUG("add new sender from %d", c->port);
     sdr=udpserver_sender_add(x, c->addr, c->port);
