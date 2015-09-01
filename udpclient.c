@@ -76,6 +76,19 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
 
+  /* connect socket using hostname provided in command line */
+  hp = gethostbyname(x->x_hostname);
+  if (hp == 0) {
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", x->x_hostname);
+    return (x);
+  }
+  server.sin_family = AF_INET;
+  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+
+  /* assign client port number */
+  server.sin_port = htons((u_short)x->x_port);
+  DEBUG("connecting to %s:%d", x->x_hostname, x->x_port);
+
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DEBUG("send socket %d\n", sockfd);
@@ -94,19 +107,6 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   }
 #endif /* SO_BROADCAST */
 
-  /* connect socket using hostname provided in command line */
-  server.sin_family = AF_INET;
-  hp = gethostbyname(x->x_hostname);
-  if (hp == 0) {
-    error("[%s] bad host '%s'?", objName, x->x_hostname);
-    return (x);
-  }
-  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-
-  /* assign client port number */
-  server.sin_port = htons((u_short)x->x_port);
-
-  DEBUG("connecting to port %d", x->x_port);
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
