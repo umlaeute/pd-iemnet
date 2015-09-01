@@ -779,6 +779,10 @@ static void udpserver_free(t_udpserver *x)
       x->x_sr[i]=NULL;
     }
   }
+  if(x->x_receiver) {
+      iemnet__receiver_destroy(x->x_receiver, 0);
+      x->x_receiver=NULL;
+  }
   if (x->x_connectsocket >= 0) {
     //sys_rmpollfn(x->x_connectsocket);
     iemnet__closesocket(x->x_connectsocket);
