@@ -40,8 +40,8 @@ typedef struct _udpreceive {
 
   int       x_fd;
   int       x_port;
-  t_iemnet_receiver*x_receiver;
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_receiver *x_receiver;
+  t_iemnet_floatlist*x_floatlist;
 
   int x_reuseport, x_reuseaddr;
 } t_udpreceive;
@@ -205,10 +205,10 @@ static void *udpreceive_new(t_floatarg fportno)
   x->x_port = -1;
   x->x_receiver = NULL;
 
+  x->x_floatlist=iemnet__floatlist_create(1024);
+
   x->x_reuseaddr = 1;
   x->x_reuseport = 0;
-
-  x->x_floatlist=iemnet__floatlist_create(1024);
 
   udpreceive_setport(x, fportno);
 
