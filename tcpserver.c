@@ -82,18 +82,17 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
   if(NULL==x) {
     iemnet_log(x, IEMNET_FATAL, "unable to allocate %d bytes", (int)sizeof(*x));
     return NULL;
-  } else {
-    x->sr_owner=owner;
-
-    x->sr_fd=sockfd;
-
-    x->sr_host=ntohl(addr->sin_addr.s_addr);
-    x->sr_port=ntohs(addr->sin_port);
-
-    x->sr_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
-    x->sr_receiver=iemnet__receiver_create(sockfd, x,
-                                           tcpserver_receive_callback, 0);
   }
+  x->sr_owner=owner;
+
+  x->sr_fd=sockfd;
+
+  x->sr_host=ntohl(addr->sin_addr.s_addr);
+  x->sr_port=ntohs(addr->sin_port);
+
+  x->sr_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  x->sr_receiver=iemnet__receiver_create(sockfd, x,
+                                         tcpserver_receive_callback, 0);
   return (x);
 }
 
