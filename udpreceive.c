@@ -70,6 +70,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   memset(&server, 0, sizeof(server));
 
   if(x->x_port == portno) {
+    iemnet_log(x, IEMNET_VERBOSE, "skipping re-binding to port:%d", portno);
     return 1;
   }
 
