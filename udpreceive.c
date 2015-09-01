@@ -222,7 +222,7 @@ static void udpreceive_free(t_udpreceive *x)
   }
   x->x_receiver=NULL;
   if(x->x_fd >= 0) {
-    iemnet__closesocket(x->x_fd, 1);
+    iemnet__closesocket(x->x_fd, 0);
   }
   x->x_fd=-1;
 
