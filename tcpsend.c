@@ -33,7 +33,6 @@ static const char objName[] = "tcpsend";
 # include <netinet/tcp.h>
 #endif
 
-
 static t_class *tcpsend_class;
 
 typedef struct _tcpsend {
@@ -52,11 +51,8 @@ static void tcpsend_disconnect(t_tcpsend *x)
     iemnet__closesocket(x->x_fd);
     x->x_fd = -1;
     outlet_float(x->x_obj.ob_outlet, 0);
-    //post("tcpsend: disconnected");
   }
 }
-
-
 
 static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
@@ -162,6 +158,5 @@ IEMNET_EXTERN void tcpsend_setup(void)
 }
 
 IEMNET_INITIALIZER(tcpsend_setup);
-
 
 /* end tcpsend.c */

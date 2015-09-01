@@ -71,6 +71,7 @@ typedef struct _tcpserver {
   t_iemnet_floatlist         *x_floatlist;
 } t_tcpserver;
 
+/* forward declarations */
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
@@ -110,7 +111,6 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 
     x->sr_fd=-1;
 
-
     if(sender) {
       iemnet__sender_destroy(sender, 0);
     }
@@ -120,10 +120,9 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
 
     iemnet__closesocket(sockfd);
 
-
     freebytes(x, sizeof(*x));
   }
-  DEBUG("freeed %x", x);
+  DEBUG("freed %x", x);
 }
 
 static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
@@ -156,7 +155,6 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
   }
   return (client-1);
 }
-
 
 /* ---------------- tcpserver info ---------------------------- */
 static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
@@ -194,12 +192,10 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
   }
 }
 
-
 static void tcpserver_info(t_tcpserver *x)
 {
   static t_atom output_atom[4];
   int sockfd=x->x_connectsocket;
-
 
   int port=x->x_port;
 
@@ -222,7 +218,6 @@ static void tcpserver_info(t_tcpserver *x)
   SETFLOAT (output_atom+0, port);
   outlet_anything( x->x_statout, gensym("port"), 1, output_atom);
 }
-
 
 static void tcpserver_info_connection(t_tcpserver *x,
                                       t_tcpserver_socketreceiver*y)
@@ -375,9 +370,6 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc,
                                    t_atom *argv)
 {
   int but=-1;
-  //int client=0;
-  //  t_iemnet_chunk*chunk=NULL;
-
   if(argc<2) {
     return;
   }
@@ -442,8 +434,6 @@ static void tcpserver_targetsocket(t_tcpserver *x, t_floatarg f)
   x->x_defaulttarget=sockfd;
 }
 
-
-
 /* send message to client using socket number */
 static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
@@ -494,10 +484,8 @@ static void tcpserver_disconnect(t_tcpserver *x, unsigned int client)
   x->x_sr[k + 1]=NULL;
   x->x_nconnections--;
 
-
   outlet_float(x->x_connectout, x->x_nconnections);
 }
-
 
 /* disconnect a client by number */
 static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
@@ -510,7 +498,6 @@ static void tcpserver_disconnect_client(t_tcpserver *x, t_floatarg fclient)
   tcpserver_disconnect(x, client);
 }
 
-
 /* disconnect a client by socket */
 static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
 {
@@ -519,8 +506,6 @@ static void tcpserver_disconnect_socket(t_tcpserver *x, t_floatarg fsocket)
     tcpserver_disconnect_client(x, id+1);
   }
 }
-
-
 
 /* disconnect a client by socket */
 static void tcpserver_disconnect_all(t_tcpserver *x)
@@ -691,8 +676,6 @@ static void *tcpserver_new(t_floatarg fportno)
   }
 
   x->x_defaulttarget=0;
-
-
   x->x_floatlist=iemnet__floatlist_create(1024);
 
   tcpserver_port(x, fportno);
@@ -751,7 +734,6 @@ IEMNET_EXTERN void tcpserver_setup(void)
                   gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist  (tcpserver_class, (t_method)tcpserver_defaultsend);
 
-
   class_addmethod(tcpserver_class, (t_method)tcpserver_serialize,
                   gensym("serialize"), A_FLOAT, 0);
 
@@ -764,6 +746,5 @@ IEMNET_EXTERN void tcpserver_setup(void)
 }
 
 IEMNET_INITIALIZER(tcpserver_setup);
-
 
 /* end of tcpserver.c */
