@@ -233,3 +233,25 @@ IEMNET_EXTERN void iemnet_setup(void)
   udpserver_setup();
 #endif
 }
+
+#include <stdarg.h>
+#include <string.h>
+#include <m_imp.h>
+
+void logpost(const void *object, const int level, const char *fmt, ...)
+{
+  t_pd*x=(t_pd*)object;
+  const char*name=(*x)->c_name->s_name;
+  char buf[MAXPDSTRING];
+  va_list ap;
+  t_int arg[8];
+  va_start(ap, fmt);
+  vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
+  va_end(ap);
+  strcat(buf, "\0");
+  if(level>1) {
+    post("[%s]: %s", name, buf);
+  } else {
+    pd_error(x, "[%s]: %s", name, buf);
+  }
+}
