@@ -40,15 +40,32 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
 {
   struct sockaddr_in  server;
+  struct hostent      *hp = NULL;
   int                 sockfd;
   int                 portno = fportno;
   int                 broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
   if (x->x_sender) {
-    error("[%s] already connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "already connected");
     return;
   }
+
+  /* connect socket using hostname provided in command line */
+  server.sin_family = AF_INET;
+
+  hp = gethostbyname(hostname->s_name);
+  if (hp == 0) {
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", hostname->s_name);
+    return;
+  }
+  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+
+  /* assign client port number */
+  server.sin_port = htons((u_short)portno);
+
+  DEBUG("connecting to port %d", portno);
+
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -67,39 +84,6 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   }
 #endif /* SO_BROADCAST */
 
-  /* connect socket using hostname provided in command line */
-  server.sin_family = AF_INET;
-
-  do {
-#if 0
-    struct addrinfo * addr=NULL;
-    if(getaddrinfo(hostname->s_name, NULL, NULL, &addr)) {
-      error("[%s] bad host '%s'?", objName, hostname->s_name);
-      return;
-    } else {
-      struct addrinfo * res;
-      for (res = addr; res != NULL; res = res->ai_next) {
-        struct sockaddr_in *sa = (struct sockaddr_in *) res->ai_addr;
-        int len = res->ai_addrlen;
-        //      memcpy((char *)&server.sin_addr, (char *)res->ai_addr, hp->h_length);
-        // LATER check how to do that...
-      }
-    }
-    freeaddrinfo(addr);
-#else
-    struct hostent      *hp = gethostbyname(hostname->s_name);
-    if (hp == 0) {
-      error("[%s] bad host '%s'?", objName, hostname->s_name);
-      return;
-    }
-    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-#endif
-  } while(0);
-
-  /* assign client port number */
-  server.sin_port = htons((u_short)portno);
-
-  DEBUG("connecting to port %d", portno);
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     sys_sockerror("[udpsend] connecting stream socket");
