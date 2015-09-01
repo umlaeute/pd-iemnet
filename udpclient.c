@@ -34,7 +34,6 @@ static const char objName[] = "udpclient";
 
 typedef struct _udpclient {
   t_object        x_obj;
-  t_clock         *x_clock;
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
   t_outlet        *x_connectout;
@@ -48,11 +47,6 @@ typedef struct _udpclient {
   int             x_connectstate; // 0 = not connected, 1 = connected
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int
-
-
-  /* multithread stuff */
-  pthread_t       x_threadid; /* id of child thread */
-  pthread_attr_t  x_threadattr; /* attributes of child thread */
 
   t_iemnet_floatlist         *x_floatlist;
 } t_udpclient;
@@ -122,45 +116,32 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
                                         udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
-
-  clock_delay(x->x_clock, 0);
+  outlet_float(x->x_connectout, 1);
   return (x);
 }
-static void *udpclient_child_connect(void *w)
-{
-  t_udpclient         *x = (t_udpclient*) w;
-  udpclient_doconnect(x, 1);
-  return x;
-}
-static void udpclient_tick(t_udpclient *x)
-{
-  outlet_float(x->x_connectout, 1);
-}
-
 
 static void udpclient_disconnect(t_udpclient *x)
 {
-  if (x->x_fd >= 0) {
-
-    DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
-    if(x->x_receiver) {
-      iemnet__receiver_destroy(x->x_receiver, 0);
-    }
-    x->x_receiver=NULL;
-    if(x->x_sender) {
-      iemnet__sender_destroy(x->x_sender, 0);
-    }
-    x->x_sender=NULL;
-
-    iemnet__closesocket(x->x_fd);
-    x->x_fd = -1;
-    x->x_connectstate = 0;
-    outlet_float(x->x_connectout, 0);
-  } else {
-    pd_error(x, "[%s] not connected", objName);
+  DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
+  if(x->x_receiver) {
+    iemnet__receiver_destroy(x->x_receiver, 0);
   }
-}
+  x->x_receiver=NULL;
+  if(x->x_sender) {
+    iemnet__sender_destroy(x->x_sender, 0);
+  }
+  x->x_sender=NULL;
 
+  x->x_connectstate = 0;
+  if (x->x_fd < 0) {
+    iemnet_log(x, IEMNET_ERROR, "not connected");
+    return;
+  } else {
+    iemnet__closesocket(x->x_fd);
+  }
+  x->x_fd = -1;
+  outlet_float(x->x_connectout, 0);
+}
 
 static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
                               t_floatarg fportno)
@@ -233,19 +214,7 @@ static void *udpclient_new(void)
   x->x_sender=NULL;
   x->x_receiver=NULL;
 
-  x->x_clock = clock_new(x, (t_method)udpclient_tick);
-
   x->x_floatlist=iemnet__floatlist_create(1024);
-
-  /* prepare child thread */
-  if(pthread_attr_init(&x->x_threadattr) < 0) {
-    verbose(1, "[%s] warning: could not prepare child thread", objName);
-  }
-  if(pthread_attr_setdetachstate(&x->x_threadattr,
-                                 PTHREAD_CREATE_DETACHED) < 0) {
-    verbose(1, "[%s] warning: could not prepare child thread", objName);
-  }
-
 
   return (x);
 }
@@ -253,10 +222,6 @@ static void *udpclient_new(void)
 static void udpclient_free(t_udpclient *x)
 {
   udpclient_disconnect(x);
-  if(x->x_clock) {
-    clock_free(x->x_clock);
-  }
-  x->x_clock=NULL;
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
   }
