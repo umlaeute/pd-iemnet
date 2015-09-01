@@ -71,7 +71,8 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0) {
-    sys_sockerror("[udpsend] socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to create datagram socket");
+    sys_sockerror("socket");
     return;
   }
 
@@ -80,13 +81,15 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
                       (const void *)&broadcast, sizeof(broadcast))) {
-    error("[%s] couldn't switch to broadcast mode", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to switch to broadcast mode");
+    sys_sockerror("setsockopt:SO_BROADCAST");
   }
 #endif /* SO_BROADCAST */
 
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
-    sys_sockerror("[udpsend] connecting stream socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to socket:%d", sockfd);
+    sys_sockerror("connect");
     iemnet__closesocket(sockfd);
     return;
   }
@@ -110,7 +113,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
     iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
   } else {
-    error("[%s]: not connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "not connected");
   }
 }
 
