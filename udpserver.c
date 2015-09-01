@@ -632,7 +632,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
     }
   } else {
     // disconnection never happens with a connectionless protocol like UDP
-    iemnet_log(x, IEMNET_ERROR, "received disonnection event");
+    iemnet_log(x, IEMNET_ERROR, "received disconnection event");
   }
 }
 
