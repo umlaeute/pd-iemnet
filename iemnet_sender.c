@@ -209,7 +209,6 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
 
   queue_finish(s->queue);
   DEBUG("queue finished");
-  //iemnet__closesocket(sockfd);
 
   pthread_join(s->thread, NULL);
   DEBUG("thread joined");
