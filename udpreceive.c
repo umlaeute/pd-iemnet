@@ -213,6 +213,7 @@ static void *udpreceive_new(t_floatarg fportno)
 static void udpreceive_free(t_udpreceive *x)
 {
   iemnet__receiver_destroy(x->x_receiver, 0);
+  iemnet__closesocket(x->x_connectsocket);
   x->x_connectsocket=0;
 
   outlet_free(x->x_msgout);
