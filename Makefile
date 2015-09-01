@@ -149,7 +149,7 @@ ifeq ($(UNAME),ANDROID)
   NDK_UNAME := $(shell uname -s | tr '[A-Z]' '[a-z]')
   NDK_TOOLCHAIN_BASE=$(NDK_BASE)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$(NDK_UNAME)-x86
   CC := $(NDK_TOOLCHAIN_BASE)/bin/arm-linux-androideabi-gcc --sysroot=$(NDK_SYSROOT)
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   CFLAGS += 
   LDFLAGS += -rdynamic -shared
   SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
@@ -165,7 +165,7 @@ ifeq ($(UNAME),Linux)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
@@ -181,7 +181,7 @@ ifeq ($(UNAME),GNU)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
@@ -197,7 +197,7 @@ ifeq ($(UNAME),GNU/kFreeBSD)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
@@ -212,7 +212,7 @@ ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   SHARED_EXTENSION = dll
   OS = cygwin
   PD_PATH = $(shell cygpath $$PROGRAMFILES)/pd
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += 
   ALL_LDFLAGS += -rdynamic -shared -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB) -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
