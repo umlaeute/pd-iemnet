@@ -1,0 +1,20 @@
+#N canvas 1583 339 487 300 10;
+#X obj 54 183 spigot;
+#X obj 54 227 t f f;
+#X obj 54 249 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+1;
+#X msg 120 184 disconnect \, connect localhost 9998;
+#X text 44 26 this sends all data received on TCP:9999 back on TCP:9998
+;
+#X obj 120 158 loadbang;
+#X obj 54 112 tcpreceive 9999;
+#X obj 54 205 tcpsend;
+#X obj 54 134 t a a;
+#X connect 0 0 7 0;
+#X connect 1 0 2 0;
+#X connect 1 1 0 1;
+#X connect 3 0 7 0;
+#X connect 5 0 3 0;
+#X connect 6 0 8 0;
+#X connect 7 0 1 0;
+#X connect 8 0 0 0;
