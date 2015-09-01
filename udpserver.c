@@ -690,7 +690,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     //sys_rmpollfn(sockfd);
-    iemnet__closesocket(sockfd, 1);
+    iemnet__closesocket(sockfd, 0);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -783,7 +783,7 @@ static void udpserver_free(t_udpserver *x)
       x->x_receiver=NULL;
   }
   if (x->x_connectsocket >= 0) {
-    iemnet__closesocket(x->x_connectsocket, 1);
+    iemnet__closesocket(x->x_connectsocket, 0);
     x->x_connectsocket = -1;
   }
   if(x->x_floatlist) {
