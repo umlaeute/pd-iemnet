@@ -249,7 +249,6 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
   char buf[MAXPDSTRING];
   va_list ap;
   t_int arg[8];
-  post("logging: %s", fmt);
   va_start(ap, fmt);
   vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
   va_end(ap);
