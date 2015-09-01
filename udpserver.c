@@ -786,11 +786,12 @@ static void udpserver_free(t_udpserver *x)
   if (x->x_connectsocket >= 0) {
     //sys_rmpollfn(x->x_connectsocket);
     iemnet__closesocket(x->x_connectsocket);
+    x->x_connectsocket = -1;
   }
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
+    x->x_floatlist=NULL;
   }
-  x->x_floatlist=NULL;
 }
 
 IEMNET_EXTERN void udpserver_setup(void)
