@@ -13,7 +13,7 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will
 # be included automatically
-#PDOBJECTS = mypdobject.pd
+PDOBJECTS = udpsndrcv.pd
 
 # example patches and related files, in the 'examples' subfolder
 #EXAMPLES = bothtogether.pd
