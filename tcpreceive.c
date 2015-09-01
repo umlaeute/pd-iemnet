@@ -140,7 +140,8 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
 
   fd = accept(x->x_connectsocket, (struct sockaddr *)&from, &fromlen);
   if (fd < 0) {
-    error("[%s]  accept failed", objName);
+    iemnet_log(x, IEMNET_ERROR, "could not accept new connection");
+    sys_sockerror("accept");
   } else {
     /* get the sender's ip */
     addr = ntohl(from.sin_addr.s_addr);
@@ -150,12 +151,11 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
       outlet_float(x->x_connectout, x->x_nconnections);
       iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
     } else {
-      error ("[%s] Too many connections", objName);
+      iemnet_log(x, IEMNET_ERROR, "too many connections");
       iemnet__closesocket(fd);
     }
   }
 }
-
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id)
 {
@@ -225,10 +225,10 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
     x->x_port=-1;
   }
 
-
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd<0) {
-    error("[%s]: unable to create socket", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to create socket");
+    sys_sockerror("socket");
     return;
   }
 
@@ -238,7 +238,8 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
                  (char *)&intarg, sizeof(intarg))
       < 0) {
-    error("[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to enable address re-using");
+    sys_sockerror("setsockopt:SO_REUSEADDR");
   }
 #endif /* SO_REUSEADDR */
 #ifdef SO_REUSEPORT
@@ -246,7 +247,8 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
                  (char *)&intarg, sizeof(intarg))
       < 0) {
-    error("[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to enable port re-using");
+    sys_sockerror("setsockopt:SO_REUSEPORT");
   }
 #endif /* SO_REUSEPORT */
 
@@ -254,9 +256,9 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   intarg = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
                  (char *)&intarg, sizeof(intarg)) < 0) {
-    post("[%s]: setsockopt (TCP_NODELAY) failed", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+    sys_sockerror("setsockopt:TCP_NODELAY");
   }
-
 
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
@@ -264,7 +266,8 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
-    sys_sockerror("[tcpreceive] bind failed");
+    iemnet_log(x, IEMNET_ERROR, "couldn't bind socket");
+    sys_sockerror("bind");
     iemnet__closesocket(sockfd);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
@@ -273,7 +276,8 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 
   /* streaming protocol */
   if (listen(sockfd, 5) < 0) {
-    sys_sockerror("[tcpreceive] listen");
+    iemnet_log(x, IEMNET_ERROR, "unable to listen on socket");
+    sys_sockerror("listen");
     iemnet__closesocket(sockfd);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);

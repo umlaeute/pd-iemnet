@@ -75,7 +75,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   memset(&server, 0, sizeof(server));
 
   if (x->x_sender) {
-    error("[%s] already connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "already connected");
     return (x);
   }
 
@@ -83,7 +83,8 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0) {
-    sys_sockerror("udpclient: socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to create socket");
+    sys_sockerror("socket");
     return (x);
   }
 
@@ -92,7 +93,8 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
                       (const void *)&broadcast, sizeof(broadcast))) {
-    error("[%s] couldn't switch to broadcast mode", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to switch to broadcast mode");
+    sys_sockerror("setsockopt");
   }
 #endif /* SO_BROADCAST */
 
@@ -111,7 +113,8 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   DEBUG("connecting to port %d", x->x_port);
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
-    sys_sockerror("udpclient: connecting stream socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
+    sys_sockerror("connect");
     iemnet__closesocket(sockfd);
     return (x);
   }

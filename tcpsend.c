@@ -69,7 +69,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   memset(&server, 0, sizeof(server));
 
   if (x->x_fd >= 0) {
-    error("tcpsend: already connected");
+    iemnet_log(x, IEMNET_ERROR, "already connected");
     return;
   }
 
@@ -77,21 +77,23 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   DEBUG("send socket %d\n", sockfd);
   if (sockfd < 0) {
-    sys_sockerror("tcpsend: socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to open socket");
+    sys_sockerror("socket");
     return;
   }
   /* connect socket using hostname provided in command line */
   server.sin_family = AF_INET;
   hp = gethostbyname(hostname->s_name);
   if (hp == 0) {
-    post("tcpsend: bad host?\n");
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", hostname->s_name);
     return;
   }
   /* for stream (TCP) sockets, specify "nodelay" */
   intarg = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
                  (char *)&intarg, sizeof(intarg)) < 0) {
-    post("tcpsend: setsockopt (TCP_NODELAY) failed\n");
+    iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+    sys_sockerror("setsockopt");
   }
 
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
@@ -99,10 +101,11 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   /* assign client port number */
   server.sin_port = htons((u_short)portno);
 
-  post("tcpsend: connecting to port %d", portno);
+  iemnet_log(x, IEMNET_VERBOSE, "connecting to port %d", portno);
   /* try to connect. */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
-    sys_sockerror("tcpsend: connecting stream socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to initiate connection on socket %d", sockfd);
+    sys_sockerror("connect");
     iemnet__closesocket(sockfd);
     return;
   }

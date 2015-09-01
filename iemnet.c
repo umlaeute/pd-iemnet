@@ -197,7 +197,7 @@ void iemnet_debuglevel(void*x, t_float f)
   post("iemnet: setting debuglevel to %d", debuglevel);
 #else
   if(firsttime) {
-    post("iemnet compiled without debug!");
+    error("iemnet compiled without debug!");
   }
 #endif
   firsttime=0;

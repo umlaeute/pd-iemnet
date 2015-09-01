@@ -79,8 +79,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(
                                     sizeof(*x));
   if(NULL==x) {
-    error("%s_socketreceiver: unable to allocate %d bytes", objName,
-          (int)sizeof(*x));
+    iemnet_log(x, IEMNET_FATAL, "unable to allocate %d bytes", (int)sizeof(*x));
     return NULL;
   } else {
     x->sr_owner=owner;
@@ -145,13 +144,14 @@ static int tcpserver_socket2index(t_tcpserver*x, int sockfd)
 static int tcpserver_fixindex(t_tcpserver*x, int client)
 {
   if(x->x_nconnections <= 0) {
-    pd_error(x, "[%s]: no clients connected", objName);
+    iemnet_log(x, IEMNET_ERROR, "no clients connected");
     return -1;
   }
 
-  if (!((client > 0) && (client <= x->x_nconnections))) {
-    pd_error(x, "[%s] client %d out of range [1..%d]", objName, client,
-             (int)(x->x_nconnections));
+  if (!((client > 0) && ((unsigned int)client <= x->x_nconnections))) {
+    iemnet_log(x, IEMNET_ERROR,
+               "client:%d out of range [1..%d]",
+               client, (int)(x->x_nconnections));
     return -1;
   }
   return (client-1);
@@ -204,8 +204,7 @@ static void tcpserver_info(t_tcpserver *x)
   int port=x->x_port;
 
   if(sockfd<0) {
-    // no open port
-    post("no valid sock");
+    iemnet_log(x, IEMNET_ERROR, "no open socket");
   }
 
   if(x->x_port<=0) {
@@ -215,7 +214,8 @@ static void tcpserver_info(t_tcpserver *x)
       x->x_port=ntohs(server.sin_port);
       port=x->x_port;
     } else {
-      post("gesockname failed for %d", sockfd);
+      iemnet_log(x, IEMNET_ERROR, "unable to get socket name for %d", sockfd);
+      sys_sockerror("getsockname");
     }
   }
 
@@ -398,8 +398,7 @@ static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc,
       tcpserver_send_toclient(x, client, argc, argv);
       return;
     }
-    pd_error(x, "[%s] illegal socket %d, switching to broadcast mode", objName,
-             sockfd);
+    iemnet_log(x, IEMNET_ERROR, "illegal socket:%d, switching to broadcast mode", sockfd);
     x->x_defaulttarget=0;
   } else if(sockfd<0) {
     client=tcpserver_socket2index(x, -sockfd);
@@ -407,8 +406,7 @@ static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc,
       tcpserver_send_butclient(x, client, argc, argv);
       return;
     }
-    pd_error(x, "[%s] illegal !ocket %d, switching to broadcast mode", objName,
-             sockfd);
+    iemnet_log(x, IEMNET_ERROR, "illegal socket:%d excluded, switching to broadcast mode", sockfd);
     x->x_defaulttarget=0;
   }
 
@@ -421,8 +419,9 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
   unsigned int client=(rawclient<0)?(-rawclient):rawclient;
 
   if(client > x->x_nconnections) {
-    error("[%s] target %d out of range [0..%d]", objName, client,
-          (int)(x->x_nconnections));
+    iemnet_log(x, IEMNET_ERROR,
+               "target %d out of range [0..%d]",
+               client, (int)(x->x_nconnections));
     return;
   }
 
@@ -457,7 +456,7 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc,
       return;
     }
   } else {
-    pd_error(x, "%s_send: no socket specified", objName);
+    iemnet_log(x, IEMNET_ERROR, "no socket specified");
     return;
   }
 
@@ -466,11 +465,11 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc,
     int sockfd=atom_getint(argv);
     client = tcpserver_socket2index(x, sockfd);
     if(client < 0) {
-      post("%s_send: no connection on socket %d", objName, sockfd);
+      iemnet_log(x, IEMNET_ERROR, "no connection on socket %d", sockfd);
       return;
     }
   } else {
-    post("%s_send: no socket specified", objName);
+    iemnet_log(x, IEMNET_ERROR, "only numeric sockets allowed");
     return;
   }
 
@@ -551,11 +550,9 @@ static void tcpserver_receive_callback(void *y0,
   } else {
     // disconnected
     int sockfd=y->sr_fd;
-    verbose(1, "[%s] got disconnection for socket:%d", objName, sockfd);
+    iemnet_log(x, IEMNET_VERBOSE, "got disconnection for socket:%d", sockfd);
     tcpserver_disconnect_socket(x, sockfd);
   }
-
-  //  post("tcpserver: %d bytes in %d packets", bytecount, packetcount);
 }
 
 static void tcpserver_connectpoll(t_tcpserver *x)
@@ -571,11 +568,11 @@ static void tcpserver_connectpoll(t_tcpserver *x)
   } else {
     t_tcpserver_socketreceiver *y = NULL;
     if(x->x_nconnections>=MAX_CONNECT) {
-      pd_error(x, "%s: cannot handle more than %d connections, dropping",
-               objName, x->x_nconnections);
+      iemnet_log(x, IEMNET_ERROR,
+                 "cannot handle more than %d connections, dropping!",
+                 x->x_nconnections);
       iemnet__closesocket(fd);
     }
-
 
     y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
     if (!y) {
@@ -616,7 +613,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd<0) {
-    sys_sockerror("[tcpserver]: cannot create TCP/IP socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to create TCP/IP socket");
+    sys_sockerror("socket");
     return;
   }
 
@@ -629,7 +627,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   server.sin_port = htons((u_short)portno);
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
-    sys_sockerror("tcpserver: bind");
+    iemnet_log(x, IEMNET_ERROR, "unable to bind to TCP/IP socket");
+    sys_sockerror("bind");
     iemnet__closesocket(sockfd);
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
@@ -637,25 +636,24 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
 
   /* streaming protocol */
   if (listen(sockfd, 5) < 0) {
-    sys_sockerror("tcpserver: listen");
+    iemnet_log(x, IEMNET_ERROR, "unable to listen on TCP/IP socket");
+    sys_sockerror("listen");
     iemnet__closesocket(sockfd);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
   } else {
-    sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll,
-                  x); // wait for new connections
+      /* wait for new connections */
+      sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x);
   }
 
   x->x_connectsocket = sockfd;
   x->x_port = portno;
 
-
   // find out which port is actually used (useful when assigning "0")
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
     x->x_port=ntohs(server.sin_port);
   }
-
 
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statout, gensym("port"), 1, ap);

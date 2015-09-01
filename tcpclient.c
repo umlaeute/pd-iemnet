@@ -116,14 +116,15 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   server.sin_family = AF_INET;
   hp = gethostbyname(host);
   if (hp == 0) {
-    sys_sockerror("tcpclient: bad host?\n");
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", host);
     return (-1);
   }
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    sys_sockerror("tcpclient: socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to open socket");
+    sys_sockerror("socket");
     return (sockfd);
   }
 
@@ -132,7 +133,8 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
 
   /* try to connect */
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
-    sys_sockerror("tcpclient: connecting stream socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
+    sys_sockerror("connect");
     iemnet__closesocket(sockfd);
     return (-1);
   }
@@ -166,14 +168,12 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
 {
   long addr=0;
   int state;
+
+  // first disconnect any active connection
   if(x->x_hostname || x->x_port) {
     state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
     if(state) {
       outlet_float(x->x_connectout, 0);
-    } else {
-      if(!x->x_port) {
-        pd_error(x, "[%s]: not connected", objName);
-      }
     }
   }
 
@@ -191,7 +191,6 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   if(state>0) {
     outlet_float(x->x_connectout, 1);
   }
-
 }
 
 static void tcpclient_disconnect(t_tcpclient *x)
@@ -200,7 +199,7 @@ static void tcpclient_disconnect(t_tcpclient *x)
     int state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
 
     if(!state && !x->x_port) {
-      pd_error(x, "[%s]: not connected", objName);
+      iemnet_log(x, IEMNET_ERROR, "not connected");
     }
   }
   outlet_float(x->x_connectout, 0);
