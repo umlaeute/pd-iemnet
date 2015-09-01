@@ -132,7 +132,8 @@ static void *udpsend_new(void)
   t_udpsend *x = (t_udpsend *)pd_new(udpsend_class);
   outlet_new(&x->x_obj, gensym("float"));
   x->x_sender=NULL;
-  return (x);
+  x->x_fd=-1;
+ return (x);
 }
 
 IEMNET_EXTERN void udpsend_setup(void)
