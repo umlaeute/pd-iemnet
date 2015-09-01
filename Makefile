@@ -27,9 +27,10 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 # automatically included
 EXTRA_DIST = ChangeLog FEATURES.txt NOTES.txt
 
-
 LIBS_windows=-lpthread
 
+#overriding the datestring
+# run `make CPPFLAGS="-DBUILD_DATE='\"somewhen in August\"'"`
 
 
 #------------------------------------------------------------------------------#
