@@ -118,7 +118,6 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread)
   }
 
   DEBUG("[%p] really destroying receiver %d", sockfd);
-  //iemnet__closesocket(sockfd);
   DEBUG("[%p] closed socket %d", rec, sockfd);
 
   rec->sockfd=-1;
