@@ -151,6 +151,10 @@ static int iemnet__nametaken(const char*namestring)
   return 0;
 }
 
+#ifndef BUILD_DATE
+# define BUILD_DATE "on " __DATE__ " at " __TIME__
+#endif
+
 int iemnet__register(const char*name)
 {
   if(iemnet__nametaken(name)) {
@@ -160,7 +164,7 @@ int iemnet__register(const char*name)
 #ifdef LIBRARY_VERSION
   post("        version "LIBRARY_VERSION"");
 #endif
-  post("        compiled on "__DATE__" at " __TIME__"");
+  post("        compiled "BUILD_DATE"");
   post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
   post("        based on mrpeach/net, based on maxlib");
   return 1;
