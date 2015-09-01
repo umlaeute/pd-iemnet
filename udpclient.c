@@ -117,7 +117,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
     sys_sockerror("connect");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     return (x);
   }
   x->x_fd = sockfd;
@@ -148,7 +148,7 @@ static int udpclient_do_disconnect(t_udpclient *x)
   if (x->x_fd < 0) {
     return 0;
   }
-  iemnet__closesocket(x->x_fd);
+  iemnet__closesocket(x->x_fd, 1);
   x->x_fd = -1;
   return 1;
 }

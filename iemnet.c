@@ -27,7 +27,7 @@
 #include <pthread.h>
 
 /* close a socket properly */
-void iemnet__closesocket(int sockfd)
+void iemnet__closesocket(int sockfd, int verbose)
 {
   if(sockfd >=0) {
 #ifndef SHUT_RDWR
@@ -36,7 +36,7 @@ void iemnet__closesocket(int sockfd)
     int how=SHUT_RDWR;
     int err = shutdown(sockfd,
                        how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-    if(err) {
+    if(verbose && err) {
       perror("iemnet:socket-shutdown");
     }
     sys_closesocket(sockfd);
