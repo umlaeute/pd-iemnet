@@ -3,7 +3,7 @@
  * receiver
  *   receives data "chunks" from a socket
  *
- *  copyright (c) 2010-2015 IOhannes m zmölnig, IEM
+ *  copyright © 2010-2015 IOhannes m zmölnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */

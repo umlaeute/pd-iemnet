@@ -1,5 +1,5 @@
 /* tcpreceive.c
- * copyright (c) 2010 IOhannes m zmölnig, IEM
+ * copyright © 2010-2015 IOhannes m zmölnig, IEM
  * copyright (c) 2006-2010 Martin Peach
  * copyright (c) Miller Puckette
  */
