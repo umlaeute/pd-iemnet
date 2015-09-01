@@ -771,7 +771,6 @@ static void *udpserver_new(t_floatarg fportno)
 static void udpserver_free(t_udpserver *x)
 {
   int     i;
-
   for(i = 0; i < MAX_CONNECT; i++) {
     if (NULL!=x->x_sr[i]) {
       DEBUG("[%s] free %x", objName, x);
@@ -784,7 +783,6 @@ static void udpserver_free(t_udpserver *x)
       x->x_receiver=NULL;
   }
   if (x->x_connectsocket >= 0) {
-    //sys_rmpollfn(x->x_connectsocket);
     iemnet__closesocket(x->x_connectsocket);
     x->x_connectsocket = -1;
   }
