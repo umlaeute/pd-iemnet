@@ -257,7 +257,18 @@ int iemnet__register(const char*name);
   static void autoinit__ ## f(void) { f(); }
 #endif
 
-
+typedef enum {
+  IEMNET_FATAL   = 0,
+  IEMNET_ERROR   = 1,
+  IEMNET_NORMAL  = 2,
+  IEMNET_VERBOSE = 3,
+  IEMNET_DEBUG   = 4
+} t_iemnet_loglevel;
+#if 0
+void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...);
+#else
+#define iemnet_log logpost
+#endif
 /**
  * \fn void DEBUG(const char* format,...);
  *
