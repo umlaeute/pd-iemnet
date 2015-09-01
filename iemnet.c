@@ -245,7 +245,7 @@ IEMNET_EXTERN void iemnet_setup(void)
 void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...)
 {
   t_pd*x=(t_pd*)object;
-  const char*name=x?((*x)->c_name->s_name):0;
+  const char*name=(x && (*x) && ((*x)->c_name))?((*x)->c_name->s_name):0;
   char buf[MAXPDSTRING];
   va_list ap;
   t_int arg[8];
