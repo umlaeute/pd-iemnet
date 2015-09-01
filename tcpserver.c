@@ -200,6 +200,7 @@ static void tcpserver_info(t_tcpserver *x)
 
   if(sockfd<0) {
     iemnet_log(x, IEMNET_ERROR, "no open socket");
+    return;
   }
 
   if(x->x_port<=0) {
@@ -211,6 +212,7 @@ static void tcpserver_info(t_tcpserver *x)
     } else {
       iemnet_log(x, IEMNET_ERROR, "unable to get socket name for %d", sockfd);
       sys_sockerror("getsockname");
+      return;
     }
   }
 
