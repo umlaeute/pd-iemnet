@@ -57,7 +57,7 @@ static void udpreceive_read_callback(void*y, t_iemnet_chunk*c)
     outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc,
                 x->x_floatlist->argv);
   } else {
-    post("[%s] nothing received", objName);
+    iemnet_log(x, IEMNET_VERBOSE, "nothing received");
   }
 }
 
@@ -82,7 +82,8 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd<0) {
-    pd_error(x, "[%s]: unable to create socket", objName);
+    iemnet_log(x, IEMNET_ERROR, "unable to create socket");
+    sys_sockerror("socket");
     return 0;
   }
 
@@ -93,7 +94,8 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
                    (void *)&intarg, sizeof(intarg))
         < 0) {
-      pd_error(x, "[%s]: setsockopt (SO_REUSEADDR) failed", objName);
+      iemnet_log(x, IEMNET_ERROR, "unable to enable address re-using");
+      sys_sockerror("setsockopt:SO_REUSEADDR");
     }
   }
 #endif /* SO_REUSEADDR */
@@ -103,7 +105,8 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
                    (void *)&intarg, sizeof(intarg))
         < 0) {
-      pd_error(x, "[%s]: setsockopt (SO_REUSEPORT) failed", objName);
+      iemnet_log(x, IEMNET_ERROR, "unable to enable port re-using");
+      sys_sockerror("setsockopt:SO_REUSEPORT");
     }
   }
 #endif /* SO_REUSEPORT */
@@ -114,7 +117,8 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
-    sys_sockerror("[udpreceive] bind failed");
+    iemnet_log(x, IEMNET_ERROR, "unable to bind to socket");
+    sys_sockerror("bind");
     iemnet__closesocket(sockfd);
     sockfd = -1;
     return 0;
@@ -141,7 +145,7 @@ static void udpreceive_port(t_udpreceive*x, t_symbol*s, int argc,
   t_atom ap[1];
   if(argc) {
     if(argc>1 || A_FLOAT != argv->a_type) {
-      pd_error(x, "[%s] usage: port [<portnum>]", objName);
+      iemnet_log(x, IEMNET_ERROR, "usage: %s [<portnum>]", s->s_name);
       return;
     }
     SETFLOAT(ap, -1);
@@ -166,7 +170,7 @@ static void udpreceive_optionI(t_udpreceive*x, t_symbol*s, int argc,
   }
 
   if(!reuse) {
-    pd_error(x, "[%s]: unknown option '%s'", objName, s->s_name);
+    iemnet_log(x, IEMNET_ERROR, "unknown option '%s'", s->s_name);
     return;
   }
   if(argc) {
@@ -174,7 +178,7 @@ static void udpreceive_optionI(t_udpreceive*x, t_symbol*s, int argc,
       *reuse=atom_getint(argv);
       return;
     } else {
-      pd_error(x, "[%s] usage: %s [<val>]", objName, s->s_name);
+      iemnet_log(x, IEMNET_ERROR, "usage: %s [<val>]", s->s_name);
       return;
     }
   } else {
