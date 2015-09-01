@@ -45,7 +45,9 @@ typedef struct _udpclient {
   int             x_fd; // the socket
   char           *x_hostname; // address we want to connect to as text
   int             x_connectstate; // 0 = not connected, 1 = connected
-  int             x_port; // port we're connected to
+  u_short         x_port; // port we're sending to
+  u_short         x_sendport; // port we're sending from
+
   long            x_addr; // address we're connected to as 32bit int
 
   t_iemnet_floatlist         *x_floatlist;
@@ -77,11 +79,6 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
   server.sin_family = AF_INET;
-  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-
-  /* assign client port number */
-  server.sin_port = htons((u_short)x->x_port);
-  DEBUG("connecting to %s:%d", x->x_hostname, x->x_port);
 
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -101,7 +98,22 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   }
 #endif /* SO_BROADCAST */
 
+  if(x->x_sendport>0) {
+    server.sin_family = AF_INET;
+    server.sin_port = htons(x->x_sendport);
+    server.sin_addr.s_addr = INADDR_ANY;
+    if (bind(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to bind with sending port %d (continuing with random port)", x->x_sendport);
+      sys_sockerror("bind");
+    }
+  }
+
   /* try to connect. */
+  /* assign client port number */
+  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+  server.sin_port = htons(x->x_port);
+  DEBUG("connecting to %s:%d", x->x_hostname, x->x_port);
+
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
     sys_sockerror("connect");
@@ -120,31 +132,40 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   return (x);
 }
 
-static void udpclient_disconnect(t_udpclient *x)
+static int udpclient_do_disconnect(t_udpclient *x)
 {
   DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
   if(x->x_receiver) {
+    post("~recv");
     iemnet__receiver_destroy(x->x_receiver, 0);
   }
   x->x_receiver=NULL;
   if(x->x_sender) {
+    post("~send");
     iemnet__sender_destroy(x->x_sender, 0);
   }
   x->x_sender=NULL;
 
   x->x_connectstate = 0;
   if (x->x_fd < 0) {
-    iemnet_log(x, IEMNET_ERROR, "not connected");
-    return;
-  } else {
-    iemnet__closesocket(x->x_fd);
+    return 0;
   }
+  post("~socket");
+  iemnet__closesocket(x->x_fd);
   x->x_fd = -1;
-  outlet_float(x->x_connectout, 0);
+  return 1;
+}
+static void udpclient_disconnect(t_udpclient *x) {
+  if(!udpclient_do_disconnect(x)) {
+    iemnet_log(x, IEMNET_ERROR, "not connected");
+  } else {
+    outlet_float(x->x_connectout, 0);
+  }
 }
 
 static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
-                              t_floatarg fportno)
+                              t_floatarg fportno,
+			      t_floatarg fsndportno)
 {
   if(x->x_fd>=0) {
     udpclient_disconnect(x);
@@ -153,6 +174,7 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
      to the child thread that establishes the connection */
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
+  x->x_sendport = (fsndportno>0)?fsndportno:0;
   x->x_connectstate = 0;
   udpclient_doconnect(x, 0);
 }
@@ -221,7 +243,7 @@ static void *udpclient_new(void)
 
 static void udpclient_free(t_udpclient *x)
 {
-  udpclient_disconnect(x);
+  udpclient_do_disconnect(x);
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
   }
@@ -238,7 +260,7 @@ IEMNET_EXTERN void udpclient_setup(void)
                               sizeof(t_udpclient), 0, A_DEFFLOAT, 0);
   class_addmethod(udpclient_class, (t_method)udpclient_connect,
                   gensym("connect")
-                  , A_SYMBOL, A_FLOAT, 0);
+                  , A_SYMBOL, A_FLOAT, A_DEFFLOAT, 0);
   class_addmethod(udpclient_class, (t_method)udpclient_disconnect,
                   gensym("disconnect"), 0);
   class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"),
