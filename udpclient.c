@@ -136,12 +136,10 @@ static int udpclient_do_disconnect(t_udpclient *x)
 {
   DEBUG("disconnect %x %x", x->x_sender, x->x_receiver);
   if(x->x_receiver) {
-    post("~recv");
     iemnet__receiver_destroy(x->x_receiver, 0);
   }
   x->x_receiver=NULL;
   if(x->x_sender) {
-    post("~send");
     iemnet__sender_destroy(x->x_sender, 0);
   }
   x->x_sender=NULL;
@@ -150,7 +148,6 @@ static int udpclient_do_disconnect(t_udpclient *x)
   if (x->x_fd < 0) {
     return 0;
   }
-  post("~socket");
   iemnet__closesocket(x->x_fd);
   x->x_fd = -1;
   return 1;
