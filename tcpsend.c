@@ -43,11 +43,11 @@ typedef struct _tcpsend {
 
 static void tcpsend_disconnect(t_tcpsend *x)
 {
+  if(x->x_sender) {
+    iemnet__sender_destroy(x->x_sender, 0);
+  }
+  x->x_sender=NULL;
   if (x->x_fd >= 0) {
-    if(x->x_sender) {
-      iemnet__sender_destroy(x->x_sender, 0);
-    }
-    x->x_sender=NULL;
     iemnet__closesocket(x->x_fd);
     x->x_fd = -1;
     outlet_float(x->x_obj.ob_outlet, 0);

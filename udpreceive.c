@@ -76,6 +76,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     iemnet__receiver_destroy(x->x_receiver, 0);
+    iemnet__closesocket(sockfd);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -212,9 +213,14 @@ static void *udpreceive_new(t_floatarg fportno)
 
 static void udpreceive_free(t_udpreceive *x)
 {
-  iemnet__receiver_destroy(x->x_receiver, 0);
-  iemnet__closesocket(x->x_connectsocket);
-  x->x_connectsocket=0;
+  if(x->x_receiver) {
+    iemnet__receiver_destroy(x->x_receiver, 0);
+  }
+  x->x_receiver=NULL;
+  if(x->x_connectsocket >= 0) {
+    iemnet__closesocket(x->x_connectsocket);
+  }
+  x->x_connectsocket=-1;
 
   outlet_free(x->x_msgout);
   outlet_free(x->x_addrout);
