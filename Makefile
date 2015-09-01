@@ -236,9 +236,9 @@ endif
 # in case somebody manually set the HELPPATCHES above
 HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
-ALL_CFLAGS := $(ALL_CFLAGS) $(CFLAGS) $(OPT_CFLAGS)
-ALL_LDFLAGS := $(LDFLAGS) $(ALL_LDFLAGS)
-ALL_LIBS := $(LIBS) $(ALL_LIBS)
+ALL_CFLAGS := $(ALL_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
+ALL_LDFLAGS := $(ALL_LDFLAGS) $(LDFLAGS)
+ALL_LIBS := $(ALL_LIBS) $(LIBS)
 
 SHARED_SOURCES ?= $(shell test ! -e lib$(LIBRARY_NAME).c || \
 	echo lib$(LIBRARY_NAME).c )
