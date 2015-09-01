@@ -270,28 +270,24 @@ install: libdir_install
 
 # The meta and help files are explicitly installed to make sure they are
 # actually there.  Those files are not optional, then need to be there.
-libdir_install: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) install-doc install-examples install-manual
+install-objects: $(SOURCES:.c=.$(EXTENSION)) $(SHARED_LIB) $(PDOBJECTS) $(SHARED_TCL_LIB)
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	$(INSTALL_DATA) $(LIBRARY_NAME)-meta.pd \
 		$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	test -z "$(strip $(SOURCES))" || (\
-		$(INSTALL_PROGRAM) $(SOURCES:.c=.$(EXTENSION)) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME) && \
-		$(STRIP) $(addprefix $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/,$(SOURCES:.c=.$(EXTENSION))))
-	test -z "$(strip $(SHARED_LIB))" || \
-		$(INSTALL_DATA) $(SHARED_LIB) \
-			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+	$(INSTALL_DATA) $^ \
+		$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
 	test -z "$(strip $(wildcard $(SOURCES:.c=.tcl)))" || \
 		$(INSTALL_DATA) $(wildcard $(SOURCES:.c=.tcl)) \
 			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	test -z "$(strip $(PDOBJECTS))" || \
-		$(INSTALL_DATA) $(PDOBJECTS) \
-			$(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+libdir_install: install-objects install-doc install-examples install-manual
 
 # install library linked as single binary
-single_install: $(LIBRARY_NAME) install-doc install-examples install-manual
+install-libobject: $(LIBRARY_NAME).$(EXTENSION)
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	$(INSTALL_PROGRAM) $(LIBRARY_NAME).$(EXTENSION) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
-	$(STRIP) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/$(LIBRARY_NAME).$(EXTENSION)
+	$(INSTALL_PROGRAM) $^ $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
+	-$(STRIP) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)/$(LIBRARY_NAME).$(EXTENSION)
+
+single_install: install-libobject install-doc install-examples install-manual
 
 install-doc:
 	$(INSTALL_DIR) $(DESTDIR)$(objectsdir)/$(LIBRARY_NAME)
