@@ -161,8 +161,8 @@ int iemnet__register(const char*name)
     return 0;
   }
   post("iemnet - networking with Pd: [%s]", name);
-#ifdef LIBRARY_VERSION
-  post("        version "LIBRARY_VERSION"");
+#ifdef VERSION
+  post("        version "VERSION"");
 #endif
   post("        compiled "BUILD_DATE"");
   post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
