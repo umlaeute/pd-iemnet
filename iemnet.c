@@ -238,20 +238,37 @@ IEMNET_EXTERN void iemnet_setup(void)
 #include <string.h>
 #include <m_imp.h>
 
-void logpost(const void *object, const int level, const char *fmt, ...)
+void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...)
 {
   t_pd*x=(t_pd*)object;
-  const char*name=(*x)->c_name->s_name;
+  const char*name=x?((*x)->c_name->s_name):0;
   char buf[MAXPDSTRING];
   va_list ap;
   t_int arg[8];
+  post("logging: %s", fmt);
   va_start(ap, fmt);
   vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
   va_end(ap);
   strcat(buf, "\0");
-  if(level>1) {
-    post("[%s]: %s", name, buf);
+#if (defined PD_MINOR_VERSION) && (PD_MINOR_VERSION >= 43)
+  if (name) {
+    logpost(x, level, "[%s]: %s", name, buf);
   } else {
-    pd_error(x, "[%s]: %s", name, buf);
+    logpost(x, level, "%s", buf);
   }
+#else
+  if (name) {
+    if(level>1) {
+      post("[%s]: %s", name, buf);
+    } else {
+      pd_error(x, "[%s]: %s", name, buf);
+    }
+  } else {
+    if(level>1) {
+      post("%s", name, buf);
+    } else {
+      pd_error(x, "%s", name, buf);
+    }
+  }
+#endif
 }
