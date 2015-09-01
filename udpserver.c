@@ -66,8 +66,8 @@ typedef struct _udpserver {
   unsigned char
   x_accept; /* whether we accept new connections or not */
 
-  int
-  x_defaulttarget; /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
+  /* the default connection to send to; 0=broadcast; >0 use this client; <0 exclude this client */
+  int  x_defaulttarget;
 
   t_iemnet_receiver          *x_receiver;
   t_iemnet_floatlist         *x_floatlist;
@@ -104,7 +104,6 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
     x->sr_owner=NULL;
     x->sr_sender=NULL;
-
     x->sr_fd=-1;
 
     free(x);
@@ -112,11 +111,10 @@ static void udpserver_sender_free(t_udpserver_sender *x)
     if(sender) {
       iemnet__sender_destroy(sender, 0);
     }
-
     iemnet__closesocket(sockfd);
   }
   /* coverity[pass_freed_arg]: this is merely for debugging printout */
-  DEBUG("freeed %x", x);
+  DEBUG("freed %x", x);
 }
 
 static t_udpserver_sender* udpserver_sender_copy(t_udpserver_sender*x)
@@ -249,7 +247,6 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
   }
 }
 
-
 /* ---------------- udpserver info ---------------------------- */
 static void udpserver_info_client(t_udpserver *x, int client)
 {
@@ -362,7 +359,6 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
 }
 
 
-
 /* broadcasts a message to all connected clients but the given one */
 static void udpserver_send_butclient(t_udpserver *x, unsigned int but,
                                      int argc, t_atom *argv)
@@ -388,8 +384,6 @@ static void udpserver_send_toclient(t_udpserver *x, unsigned int client,
   udpserver_send_bytes(x, client, chunk);
   iemnet__chunk_destroy(chunk);
 }
-
-
 
 /* send message to client using client number
    note that the client numbers might change in case a client disconnects! */
@@ -513,7 +507,6 @@ static void udpserver_targetsocket(t_udpserver *x, t_floatarg f)
 }
 
 
-
 /* send message to client using socket number */
 static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
@@ -574,7 +567,6 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
   outlet_float(x->x_connectout, conns);
 }
 
-
 /* disconnect a client by number */
 static void udpserver_disconnect_client(t_udpserver *x, t_floatarg fclient)
 {
@@ -586,7 +578,6 @@ static void udpserver_disconnect_client(t_udpserver *x, t_floatarg fclient)
   udpserver_disconnect(x, client);
 }
 
-
 /* disconnect a client by socket */
 static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
 {
@@ -595,8 +586,6 @@ static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
     udpserver_disconnect_client(x, id+1);
   }
 }
-
-
 
 /* disconnect a client by socket */
 static void udpserver_disconnect_all(t_udpserver *x)
@@ -612,7 +601,6 @@ static void udpserver_accept(t_udpserver *x, t_float f)
 {
   x->x_accept=(unsigned char)f;
 }
-
 
 /* ---------------- main udpserver (receive) stuff --------------------- */
 static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
@@ -733,10 +721,8 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
                                         x,
                                         udpserver_receive_callback,
                                         0);
-
   x->x_connectsocket = sockfd;
   x->x_port = portno;
-
 
   // find out which port is actually used (useful when assigning "0")
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
@@ -759,8 +745,8 @@ static void *udpserver_new(t_floatarg fportno)
                                gensym("float")); /* 2nd outlet for number of connected clients */
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
-  x->x_statout = outlet_new(&x->x_obj,
-                            0);/* 5th outlet for everything else */
+  /* 5th outlet for everything else */
+  x->x_statout = outlet_new(&x->x_obj, 0);
 
   x->x_connectsocket = -1;
   x->x_port = -1;

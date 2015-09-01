@@ -32,7 +32,6 @@
 static t_class *udpclient_class;
 static const char objName[] = "udpclient";
 
-
 typedef struct _udpclient {
   t_object        x_obj;
   t_clock         *x_clock;
@@ -43,7 +42,6 @@ typedef struct _udpclient {
 
   t_iemnet_sender*x_sender;
   t_iemnet_receiver*x_receiver;
-
 
   int             x_fd; // the socket
   char           *x_hostname; // address we want to connect to as text
@@ -60,9 +58,8 @@ typedef struct _udpclient {
 } t_udpclient;
 
 
+/* forward declarations */
 static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
-
-
 
 /* connection handling */
 
@@ -88,8 +85,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
 
-  /* Based on zmoelnig's patch 2221504:
-     Enable sending of broadcast messages (if hostname is a broadcast address)*/
+  /* Enable sending of broadcast messages (if hostname is a broadcast address) */
 #ifdef SO_BROADCAST
   if( 0 != setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
                       (const void *)&broadcast, sizeof(broadcast))) {
@@ -177,19 +173,10 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
   x->x_connectstate = 0;
-#if 0
-  /* start child thread */
-  if(pthread_create(&x->x_threadid, &x->x_threadattr,
-                    udpclient_child_connect, x) < 0) {
-    error("%s: could not create new thread", objName);
-  }
-#else
   udpclient_doconnect(x, 0);
-#endif
 }
 
 /* sending/receiving */
-
 static void udpclient_send(t_udpclient *x, t_symbol *s, int argc,
                            t_atom *argv)
 {
@@ -215,7 +202,7 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
     x->x_floatlist=iemnet__chunk2list(c,
-                                      x->x_floatlist); // gets destroyed in the dtor
+                                      x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
                 x->x_floatlist->argv);
   } else {
@@ -232,12 +219,12 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
 static void *udpclient_new(void)
 {
   t_udpclient *x = (t_udpclient *)pd_new(udpclient_class);
-  x->x_msgout = outlet_new(&x->x_obj, 0);	/* received data */
+  x->x_msgout = outlet_new(&x->x_obj, 0); /* received data */
   x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
   x->x_connectout = outlet_new(&x->x_obj,
-                               gensym("float"));	/* connection state */
+                               gensym("float")); /* connection state */
   x->x_statusout = outlet_new(&x->x_obj,
-                              0);/* last outlet for everything else */
+                              0); /* last outlet for everything else */
 
   x->x_fd = -1;
   x->x_addr = 0L;

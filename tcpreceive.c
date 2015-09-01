@@ -65,6 +65,8 @@ typedef struct _tcpreceive {
   t_iemnet_floatlist         *x_floatlist;
 } t_tcpreceive;
 
+/* forward declarations */
+static int tcpreceive_disconnect(t_tcpreceive *x, int id);
 
 static int tcpreceive_find_socket(t_tcpreceive *x, int fd)
 {
@@ -76,8 +78,6 @@ static int tcpreceive_find_socket(t_tcpreceive *x, int fd)
 
   return -1;
 }
-
-static int tcpreceive_disconnect(t_tcpreceive *x, int id);
 
 static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 {
@@ -120,7 +120,6 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
                                 x->x_connection+i,
                                 tcpreceive_read_callback,
                                 0);
-
       return 1;
     }
   }
@@ -176,6 +175,7 @@ static int tcpreceive_disconnect(t_tcpreceive *x, int id)
   return 0;
 }
 
+
 /* tcpreceive_closeall closes all open sockets and deletes them from the list */
 static void tcpreceive_disconnect_all(t_tcpreceive *x)
 {
@@ -185,9 +185,6 @@ static void tcpreceive_disconnect_all(t_tcpreceive *x)
     tcpreceive_disconnect(x, i);
   }
 }
-
-
-
 
 /* tcpreceive_removeconnection tries to delete the socket fd from the list */
 /* returns 1 on success, else 0 */
@@ -296,7 +293,6 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
     x->x_port=ntohs(server.sin_port);
   }
 
-
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statout, gensym("port"), 1, ap);
 }
@@ -305,7 +301,6 @@ static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
 {
   x->x_serialize=doit;
 }
-
 
 static void tcpreceive_free(t_tcpreceive *x)
 {
@@ -331,7 +326,7 @@ static void *tcpreceive_new(t_floatarg fportno)
   x->x_msgout = outlet_new(&x->x_obj, 0);
   x->x_addrout = outlet_new(&x->x_obj, gensym("list")); /* legacy */
   x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* legacy */
-  x->x_statout = outlet_new(&x->x_obj, 0);/* outlet for everything else */
+  x->x_statout = outlet_new(&x->x_obj, 0); /* outlet for everything else */
 
   x->x_serialize=1;
 
@@ -375,7 +370,4 @@ IEMNET_EXTERN void tcpreceive_setup(void)
 
 IEMNET_INITIALIZER(tcpreceive_setup);
 
-
 /* end x_net_tcpreceive.c */
-
-
