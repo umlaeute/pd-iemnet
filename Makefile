@@ -236,7 +236,7 @@ endif
 # in case somebody manually set the HELPPATCHES above
 HELPPATCHES ?= $(SOURCES:.c=-help.pd) $(PDOBJECTS:.pd=-help.pd)
 
-ALL_CFLAGS := $(ALL_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
+ALL_CFLAGS := $(CPPFLAGS) $(ALL_CFLAGS) $(OPT_CFLAGS) $(CFLAGS)
 ALL_LDFLAGS := $(ALL_LDFLAGS) $(LDFLAGS)
 ALL_LIBS := $(ALL_LIBS) $(LIBS)
 
