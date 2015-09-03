@@ -1,23 +1,36 @@
 language: c
 
+env:
+  global:
+        - secure: "H+FS0KWYGx4JBMcPdhhJus9LgFhh5luIU4rfWl6Fsh4q0VJmT1tSO3KYlEQYkenS4xX/sUtN/Yus1b8L0MkuM3akEEPAA26Up9leFsarIQrD3dGYmoNQ4R2eG1Et8hoNwQwXQ1f30wrqfykVK+83rzqSlpoz+nhTBKZNYC7tfn0="
+        - COVERITY_SCAN_BRANCH_PATTERN="coverity_scan"
+        - COVERITY_SCAN_NOTIFICATION_EMAIL="zmoelnig@users.sourceforge.net"
+        - COVERITY_SCAN_BUILD_COMMAND="make"
+
 matrix:
   include:
     - compiler: clang
-    - env:
-      - secure: "H+FS0KWYGx4JBMcPdhhJus9LgFhh5luIU4rfWl6Fsh4q0VJmT1tSO3KYlEQYkenS4xX/sUtN/Yus1b8L0MkuM3akEEPAA26Up9leFsarIQrD3dGYmoNQ4R2eG1Et8hoNwQwXQ1f30wrqfykVK+83rzqSlpoz+nhTBKZNYC7tfn0="
-      compiler: gcc
+    - compiler: gcc
+      env:
+        - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
 
 before_install:
 - sudo apt-get update -qq
 - sudo apt-get install -qq puredata-dev
 
+before_script:
+  # implement Coverity Scan with before_script instead of addons.coverity_scan
+  # to work around too-early quota check by the coverity_scan addon
+  - if [[ -n $COVERITY_SCAN_PROJECT_NAME ]] ; then curl -s 'https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh' | bash || true ; fi
+
+
 script:
 - make
 
-addons:
-  coverity_scan:
-    project:
-      name: umlaeute/pd-iemnet
-    notification_email: zmoelnig@users.sourceforge.net
-    build_command: make
-    branch_pattern: coverity_scan
+#addons:
+#  coverity_scan:
+#    project:
+#      name: umlaeute/pd-iemnet
+#    notification_email: zmoelnig@users.sourceforge.net
+#    build_command: make
+#    branch_pattern: coverity_scan
