@@ -1,0 +1,16 @@
+language: c
+
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -qq puredata-dev
+
+script:
+- make
+
+addons:
+  coverity_scan:
+    project:
+      name: umlaeute/pd-iemnet
+    notification_email: zmoelnig@users.sourceforge.net
+    build_command: make
+    branch_pattern: coverity_scan
