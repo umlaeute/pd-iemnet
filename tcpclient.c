@@ -96,7 +96,7 @@ static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender,
     receiver=NULL;
   }
   if (fd >= 0) {
-    iemnet__closesocket(fd);
+    iemnet__closesocket(fd, 1);
     return 1;
   }
   return 0;
@@ -135,7 +135,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
     sys_sockerror("connect");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     return (-1);
   }
 

@@ -48,7 +48,7 @@ static void tcpsend_disconnect(t_tcpsend *x)
   }
   x->x_sender=NULL;
   if (x->x_fd >= 0) {
-    iemnet__closesocket(x->x_fd);
+    iemnet__closesocket(x->x_fd, 1);
     x->x_fd = -1;
     outlet_float(x->x_obj.ob_outlet, 0);
   }
@@ -102,7 +102,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to initiate connection on socket %d", sockfd);
     sys_sockerror("connect");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     return;
   }
   x->x_fd = sockfd;

@@ -117,7 +117,7 @@ static void tcpserver_socketreceiver_free(t_tcpserver_socketreceiver *x)
       iemnet__receiver_destroy(receiver, 0);
     }
 
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
 
     freebytes(x, sizeof(*x));
   }
@@ -557,12 +557,12 @@ static void tcpserver_connectpoll(t_tcpserver *x)
       iemnet_log(x, IEMNET_ERROR,
                  "cannot handle more than %d connections, dropping!",
                  x->x_nconnections);
-      iemnet__closesocket(fd);
+      iemnet__closesocket(fd, 1);
     }
 
     y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
     if (!y) {
-      iemnet__closesocket(fd);
+      iemnet__closesocket(fd, 1);
       return;
     }
     x->x_nconnections++;
@@ -592,7 +592,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   /* cleanup any open ports */
   if(sockfd>=0) {
     sys_rmpollfn(sockfd);
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     x->x_connectsocket=-1;
     x->x_port=-1;
   }
@@ -615,7 +615,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to bind to TCP/IP socket");
     sys_sockerror("bind");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
   }
@@ -624,7 +624,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   if (listen(sockfd, 5) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to listen on TCP/IP socket");
     sys_sockerror("listen");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     sockfd = -1;
     outlet_anything(x->x_statout, gensym("port"), 1, ap);
     return;
@@ -697,7 +697,7 @@ static void tcpserver_free(t_tcpserver *x)
   }
   if (x->x_connectsocket >= 0) {
     sys_rmpollfn(x->x_connectsocket);
-    iemnet__closesocket(x->x_connectsocket);
+    iemnet__closesocket(x->x_connectsocket, 1);
   }
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);

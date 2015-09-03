@@ -1,11 +1,40 @@
-#N canvas 529 261 450 300 10;
-#X obj 302 40 udpreceive 9990;
-#X floatatom 302 62 5 0 0 0 - - -, f 5;
-#X obj 304 97 tcpreceive 9990;
-#X floatatom 304 119 5 0 0 0 - - -, f 5;
+#N canvas 534 241 634 300 10;
+#X obj 332 40 udpreceive 9990;
+#X floatatom 332 62 5 0 0 0 - - -, f 5;
+#X obj 334 97 tcpreceive 9990;
+#X floatatom 334 119 5 0 0 0 - - -, f 5;
 #X obj 128 38 test-sender udpsend;
 #X obj 128 58 test-sender udpclient;
 #X obj 128 98 test-sender tcpsend;
 #X obj 128 118 test-sender tcpclient;
+#X obj 286 119 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X msg 128 16 bang;
+#X obj 286 40 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 286 59 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 286 98 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X msg 375 118 serialize 0;
+#X obj 450 98 loadbang;
+#X msg 43 45 debug \$1;
+#X floatatom 51 16 5 0 0 0 - - -, f 5;
+#X msg 286 172 \; pd quit;
+#X obj 286 148 select 1;
 #X connect 0 0 1 0;
 #X connect 2 0 3 0;
+#X connect 4 0 5 0;
+#X connect 4 0 10 0;
+#X connect 5 0 6 0;
+#X connect 5 0 11 0;
+#X connect 6 0 7 0;
+#X connect 6 0 12 0;
+#X connect 7 0 8 0;
+#X connect 8 0 18 0;
+#X connect 9 0 4 0;
+#X connect 13 0 2 0;
+#X connect 14 0 13 0;
+#X connect 15 0 4 0;
+#X connect 16 0 15 0;
+#X connect 18 0 17 0;

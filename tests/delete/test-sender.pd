@@ -1,4 +1,4 @@
-#N canvas 488 98 645 576 10;
+#N canvas 493 78 758 639 10;
 #X text 28 37 1 delete object:;
 #X text 32 99 2a connect;
 #X text 32 114 2b disconnect;
@@ -18,7 +18,7 @@
 #X msg 343 123 auto;
 #X msg 231 37 delete;
 #X msg 343 23 auto;
-#N canvas 11 49 679 407 test1 0;
+#N canvas 12 50 679 407 test1 0;
 #X msg 101 166 connect localhost 9990;
 #X msg 265 166 disconnect;
 #X obj 25 7 inlet;
@@ -34,7 +34,7 @@
 #X obj 430 115 del 500;
 #X obj 430 187 t b b;
 #X msg 430 274 1;
-#N canvas 5 49 450 300 \$0-test1 0;
+#N canvas 5 50 450 300 \$0-test1 0;
 #X obj 86 168 \$1;
 #X obj 86 54 inlet;
 #X connect 1 0 0 0;
@@ -106,7 +106,7 @@
 #X obj 49 150 until;
 #X msg 49 125 1024;
 #X obj 49 100 until;
-#X msg 49 75 100;
+#X msg 49 75 1;
 #X connect 0 0 6 0;
 #X connect 2 0 1 0;
 #X connect 3 0 2 0;
@@ -117,6 +117,7 @@
 #X obj 430 140 t b b;
 #X obj 430 162 del 500;
 #X obj 397 240 s pd-\$0-test1;
+#X obj 249 328 r \$0-ctl;
 #X connect 0 0 15 0;
 #X connect 1 0 15 0;
 #X connect 2 0 3 0;
@@ -141,12 +142,13 @@
 #X connect 17 0 15 0;
 #X connect 18 0 19 0;
 #X connect 19 0 13 0;
+#X connect 21 0 15 0;
 #X restore 231 59 pd test1;
 #X obj 297 60 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X obj 301 160 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#N canvas 12 50 679 407 test2 0;
+#N canvas 13 50 679 407 test2 0;
 #X msg 101 166 connect localhost 9990;
 #X msg 265 166 disconnect;
 #X obj 25 7 inlet;
@@ -245,6 +247,7 @@
 #X connect 1 0 0 0;
 #X restore 118 346 pd \$0-test2;
 #X obj 397 240 s pd-\$0-test2;
+#X obj 249 329 r \$0-ctl;
 #X connect 0 0 19 0;
 #X connect 1 0 19 0;
 #X connect 2 0 3 0;
@@ -271,13 +274,14 @@
 #X connect 17 0 18 0;
 #X connect 17 1 1 0;
 #X connect 18 0 13 0;
+#X connect 21 0 19 0;
 #X restore 231 159 pd test2;
 #X msg 231 193 connect;
 #X msg 231 217 delete;
 #X msg 343 203 auto;
 #X obj 301 240 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#N canvas 13 50 679 407 test3 0;
+#N canvas 14 50 679 407 test3 0;
 #X msg 101 166 connect localhost 9990;
 #X msg 265 166 disconnect;
 #X obj 25 7 inlet;
@@ -376,6 +380,7 @@
 #X connect 1 0 0 0;
 #X restore 118 346 pd \$0-test3;
 #X obj 397 240 s pd-\$0-test3;
+#X obj 249 329 r \$0-ctl;
 #X connect 0 0 19 0;
 #X connect 1 0 19 0;
 #X connect 2 0 3 0;
@@ -401,6 +406,7 @@
 #X connect 16 0 19 0;
 #X connect 17 0 18 0;
 #X connect 18 0 13 0;
+#X connect 21 0 19 0;
 #X restore 231 239 pd test3;
 #X msg 231 273 connect;
 #X msg 231 315 disconnect;
@@ -409,7 +415,7 @@
 #X obj 301 360 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X msg 231 294 send;
-#N canvas 11 50 679 407 test4 0;
+#N canvas 12 50 679 407 test4 0;
 #X msg 101 166 connect localhost 9990;
 #X msg 265 166 disconnect;
 #X obj 25 7 inlet;
@@ -508,6 +514,7 @@
 #X connect 1 0 0 0;
 #X restore 118 346 pd \$0-test4;
 #X obj 397 240 s pd-\$0-test4;
+#X obj 249 329 r \$0-ctl;
 #X connect 0 0 19 0;
 #X connect 1 0 19 0;
 #X connect 2 0 3 0;
@@ -535,6 +542,7 @@
 #X connect 17 0 18 0;
 #X connect 17 1 1 0;
 #X connect 18 0 13 0;
+#X connect 21 0 19 0;
 #X restore 231 359 pd test4;
 #X msg 231 403 connect;
 #X msg 231 467 delete;
@@ -542,7 +550,7 @@
 #X obj 301 490 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X msg 231 424 send;
-#N canvas 14 49 679 407 test5 0;
+#N canvas 15 50 679 407 test5 0;
 #X msg 101 166 connect localhost 9990;
 #X msg 265 166 disconnect;
 #X obj 25 7 inlet;
@@ -635,12 +643,13 @@
 #X restore 275 209 pd data;
 #X obj 430 140 t b b;
 #X obj 430 162 del 500;
-#N canvas 5 49 450 300 \$0-test5 0;
+#N canvas 5 50 450 300 \$0-test5 0;
 #X obj 86 168 \$1;
 #X obj 86 54 inlet;
 #X connect 1 0 0 0;
 #X restore 118 346 pd \$0-test5;
 #X obj 397 240 s pd-\$0-test5;
+#X obj 249 329 r \$0-ctl;
 #X connect 0 0 19 0;
 #X connect 1 0 19 0;
 #X connect 2 0 3 0;
@@ -667,7 +676,38 @@
 #X connect 16 0 19 0;
 #X connect 17 0 18 0;
 #X connect 18 0 13 0;
+#X connect 21 0 19 0;
 #X restore 231 490 pd test5;
+#X obj 522 15 inlet;
+#X obj 343 58 spigot 0;
+#X obj 406 58 r \$0-auto;
+#X obj 343 80 select 1;
+#X obj 343 158 spigot 0;
+#X obj 406 158 r \$0-auto;
+#X obj 343 180 select 1;
+#X obj 343 238 spigot 0;
+#X obj 406 238 r \$0-auto;
+#X obj 343 260 select 1;
+#X obj 343 358 spigot 0;
+#X obj 406 358 r \$0-auto;
+#X obj 343 380 select 1;
+#X obj 343 508 spigot 0;
+#X obj 406 508 r \$0-auto;
+#X obj 343 530 select 1;
+#X obj 596 82 t b b;
+#X msg 628 105 1;
+#X obj 628 127 s \$0-auto;
+#X obj 343 552 t b b;
+#X msg 413 549 0;
+#X obj 413 571 s \$0-auto;
+#X obj 522 524 r \$0-auto;
+#X obj 522 546 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X msg 343 574 1;
+#X obj 343 596 outlet;
+#X obj 522 37 route debug;
+#X obj 522 81 s \$0-ctl;
+#X msg 522 59 debug \$1;
 #X connect 13 0 22 0;
 #X connect 14 0 22 0;
 #X connect 15 0 22 0;
@@ -675,19 +715,51 @@
 #X connect 17 0 19 0;
 #X connect 18 0 19 0;
 #X connect 19 0 20 0;
+#X connect 20 0 42 0;
+#X connect 21 0 45 0;
 #X connect 22 0 21 0;
 #X connect 23 0 27 0;
 #X connect 24 0 27 0;
 #X connect 25 0 27 0;
+#X connect 26 0 48 0;
 #X connect 27 0 26 0;
 #X connect 28 0 34 0;
 #X connect 29 0 34 0;
 #X connect 30 0 34 0;
 #X connect 31 0 34 0;
+#X connect 32 0 51 0;
 #X connect 33 0 34 0;
 #X connect 34 0 32 0;
 #X connect 35 0 40 0;
 #X connect 36 0 40 0;
 #X connect 37 0 40 0;
+#X connect 38 0 54 0;
 #X connect 39 0 40 0;
 #X connect 40 0 38 0;
+#X connect 41 0 67 0;
+#X connect 42 0 44 0;
+#X connect 43 0 42 1;
+#X connect 44 0 16 0;
+#X connect 45 0 47 0;
+#X connect 46 0 45 1;
+#X connect 47 0 25 0;
+#X connect 48 0 50 0;
+#X connect 49 0 48 1;
+#X connect 50 0 31 0;
+#X connect 51 0 53 0;
+#X connect 52 0 51 1;
+#X connect 53 0 37 0;
+#X connect 54 0 56 0;
+#X connect 55 0 54 1;
+#X connect 56 0 60 0;
+#X connect 57 0 18 0;
+#X connect 57 1 58 0;
+#X connect 58 0 59 0;
+#X connect 60 0 65 0;
+#X connect 60 1 61 0;
+#X connect 61 0 62 0;
+#X connect 63 0 64 0;
+#X connect 65 0 66 0;
+#X connect 67 0 69 0;
+#X connect 67 1 57 0;
+#X connect 69 0 68 0;

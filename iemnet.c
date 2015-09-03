@@ -27,7 +27,7 @@
 #include <pthread.h>
 
 /* close a socket properly */
-void iemnet__closesocket(int sockfd)
+void iemnet__closesocket(int sockfd, int verbose)
 {
   if(sockfd >=0) {
 #ifndef SHUT_RDWR
@@ -36,7 +36,7 @@ void iemnet__closesocket(int sockfd)
     int how=SHUT_RDWR;
     int err = shutdown(sockfd,
                        how); /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
-    if(err) {
+    if(verbose && err) {
       perror("iemnet:socket-shutdown");
     }
     sys_closesocket(sockfd);
@@ -245,7 +245,7 @@ IEMNET_EXTERN void iemnet_setup(void)
 void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...)
 {
   t_pd*x=(t_pd*)object;
-  const char*name=x?((*x)->c_name->s_name):0;
+  const char*name=(x && (*x) && ((*x)->c_name))?((*x)->c_name->s_name):"iemnet";
   char buf[MAXPDSTRING];
   va_list ap;
   t_int arg[8];
@@ -254,24 +254,12 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
   va_end(ap);
   strcat(buf, "\0");
 #if (defined PD_MINOR_VERSION) && (PD_MINOR_VERSION >= 43)
-  if (name) {
-    logpost(x, level, "[%s]: %s", name, buf);
-  } else {
-    logpost(x, level, "%s", buf);
-  }
+  logpost(x, level, "[%s]: %s", name, buf);
 #else
-  if (name) {
-    if(level>1) {
-      post("[%s]: %s", name, buf);
-    } else {
-      pd_error(x, "[%s]: %s", name, buf);
-    }
+  if(level>1) {
+    post("[%s]: %s", name, buf);
   } else {
-    if(level>1) {
-      post("%s", name, buf);
-    } else {
-      pd_error(x, "%s", name, buf);
-    }
+    pd_error(x, "[%s]: %s", name, buf);
   }
 #endif
 }

@@ -13,7 +13,7 @@ SHARED_HEADERS = iemnet_data.h  iemnet.h
 
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will
 # be included automatically
-#PDOBJECTS = mypdobject.pd
+PDOBJECTS = udpsndrcv.pd
 
 # example patches and related files, in the 'examples' subfolder
 #EXAMPLES = bothtogether.pd
@@ -107,18 +107,24 @@ ifeq ($(UNAME),Darwin)
     SHARED_EXTENSION = dylib
     OS = macosx
     PD_PATH = /Applications/Pd-extended.app/Contents/Resources
-    OPT_CFLAGS = -ftree-vectorize -ftree-vectorizer-verbose=2 -fast
+    OPT_CFLAGS = -ftree-vectorize
 # build universal 32-bit on 10.4 and 32/64 on newer
     ifeq ($(shell uname -r | sed 's|\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*|\1|'), 8)
       FAT_FLAGS = -arch ppc -arch i386 -mmacosx-version-min=10.4
     else
-      FAT_FLAGS = -arch ppc -arch i386 -arch x86_64 -mmacosx-version-min=10.4
+      FAT_FLAGS = -arch i386 -arch x86_64 -mmacosx-version-min=10.4
       SOURCES += $(SOURCES_iphoneos)
     endif
-    ALL_CFLAGS += $(FAT_FLAGS) -fPIC -I/sw/include
+    ALL_CFLAGS += $(FAT_FLAGS) -fPIC
+ifneq ($(strip $(realpath /sw/include)),)
+    ALL_CFLAGS += -I/sw/include
+endif
     # if the 'pd' binary exists, check the linking against it to aid with stripping
     BUNDLE_LOADER = $(shell test ! -e $(PD_PATH)/bin/pd || echo -bundle_loader $(PD_PATH)/bin/pd)
-    ALL_LDFLAGS += $(FAT_FLAGS) -bundle $(BUNDLE_LOADER) -undefined dynamic_lookup -L/sw/lib
+    ALL_LDFLAGS += $(FAT_FLAGS) -bundle $(BUNDLE_LOADER) -undefined dynamic_lookup
+ifneq ($(strip $(realpath /sw/lib)),)
+    ALL_LDFLAGS += -L/sw/lib
+endif
     SHARED_LDFLAGS += $(FAT_FLAGS) -dynamiclib -undefined dynamic_lookup \
 	-install_name @loader_path/$(SHARED_LIB) -compatibility_version 1 -current_version 1.0
     ALL_LIBS += -lc $(LIBS_macosx)
@@ -143,7 +149,7 @@ ifeq ($(UNAME),ANDROID)
   NDK_UNAME := $(shell uname -s | tr '[A-Z]' '[a-z]')
   NDK_TOOLCHAIN_BASE=$(NDK_BASE)/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$(NDK_UNAME)-x86
   CC := $(NDK_TOOLCHAIN_BASE)/bin/arm-linux-androideabi-gcc --sysroot=$(NDK_SYSROOT)
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   CFLAGS += 
   LDFLAGS += -rdynamic -shared
   SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
@@ -159,7 +165,7 @@ ifeq ($(UNAME),Linux)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -Wl,-soname,$(SHARED_LIB) -shared
@@ -175,7 +181,7 @@ ifeq ($(UNAME),GNU)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
@@ -191,7 +197,7 @@ ifeq ($(UNAME),GNU/kFreeBSD)
   SHARED_EXTENSION = so
   OS = linux
   PD_PATH = /usr
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += -fPIC
   ALL_LDFLAGS += -rdynamic -shared -fPIC -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB)
@@ -206,7 +212,7 @@ ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
   SHARED_EXTENSION = dll
   OS = cygwin
   PD_PATH = $(shell cygpath $$PROGRAMFILES)/pd
-  OPT_CFLAGS = -O6 -funroll-loops -fomit-frame-pointer
+  OPT_CFLAGS = -O2 -funroll-loops -fomit-frame-pointer
   ALL_CFLAGS += 
   ALL_LDFLAGS += -rdynamic -shared -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"
   SHARED_LDFLAGS += -shared -Wl,-soname,$(SHARED_LIB) -L"$(PD_PATH)/src" -L"$(PD_PATH)/bin"

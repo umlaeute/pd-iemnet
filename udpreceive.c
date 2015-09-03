@@ -38,10 +38,10 @@ typedef struct _udpreceive {
   t_outlet  *x_addrout;
   t_outlet  *x_statout;
 
-  int       x_connectsocket;
+  int       x_fd;
   int       x_port;
-  t_iemnet_receiver*x_receiver;
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_receiver *x_receiver;
+  t_iemnet_floatlist*x_floatlist;
 
   int x_reuseport, x_reuseaddr;
 } t_udpreceive;
@@ -65,19 +65,23 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 {
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
-  int sockfd = x->x_connectsocket;
+  int sockfd = x->x_fd;
   int intarg;
   memset(&server, 0, sizeof(server));
 
   if(x->x_port == portno) {
+    iemnet_log(x, IEMNET_VERBOSE, "skipping re-binding to port:%d", portno);
     return 1;
   }
 
   /* cleanup any open ports */
-  if(sockfd>=0) {
+  if(x->x_receiver) {
     iemnet__receiver_destroy(x->x_receiver, 0);
-    iemnet__closesocket(sockfd);
-    x->x_connectsocket=-1;
+    x->x_receiver=NULL;
+  }
+  if(sockfd>=0) {
+    iemnet__closesocket(sockfd, 1);
+    x->x_fd=-1;
     x->x_port=-1;
   }
 
@@ -120,12 +124,12 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to bind to socket");
     sys_sockerror("bind");
-    iemnet__closesocket(sockfd);
+    iemnet__closesocket(sockfd, 1);
     sockfd = -1;
     return 0;
   }
 
-  x->x_connectsocket = sockfd;
+  x->x_fd = sockfd;
   x->x_port = portno;
 
   // find out which port is actually used (useful when assigning "0")
@@ -197,14 +201,14 @@ static void *udpreceive_new(t_floatarg fportno)
   x->x_addrout = outlet_new(&x->x_obj, gensym("list"));
   x->x_statout = outlet_new(&x->x_obj, 0);
 
-  x->x_connectsocket = -1;
+  x->x_fd = -1;
   x->x_port = -1;
   x->x_receiver = NULL;
 
+  x->x_floatlist=iemnet__floatlist_create(1024);
+
   x->x_reuseaddr = 1;
   x->x_reuseport = 0;
-
-  x->x_floatlist=iemnet__floatlist_create(1024);
 
   udpreceive_setport(x, fportno);
 
@@ -217,10 +221,10 @@ static void udpreceive_free(t_udpreceive *x)
     iemnet__receiver_destroy(x->x_receiver, 0);
   }
   x->x_receiver=NULL;
-  if(x->x_connectsocket >= 0) {
-    iemnet__closesocket(x->x_connectsocket);
+  if(x->x_fd >= 0) {
+    iemnet__closesocket(x->x_fd, 0);
   }
-  x->x_connectsocket=-1;
+  x->x_fd=-1;
 
   outlet_free(x->x_msgout);
   outlet_free(x->x_addrout);
