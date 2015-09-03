@@ -558,6 +558,7 @@ static void tcpserver_connectpoll(t_tcpserver *x)
                  "cannot handle more than %d connections, dropping!",
                  x->x_nconnections);
       iemnet__closesocket(fd, 1);
+      return;
     }
 
     y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
