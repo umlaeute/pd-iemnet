@@ -52,9 +52,7 @@ ALL_LIBS =
 #------------------------------------------------------------------------------#
 
 # these can be set from outside without (usually) breaking the build
-CFLAGS = -Wall -Wno-unused -W -g
-LDFLAGS =
-LIBS =
+CFLAGS := -Wall -Wno-unused -W -g
 
 # get library version from meta file
 LIBRARY_VERSION = $(shell sed -n 's|^\#X text [0-9][0-9]* [0-9][0-9]* VERSION \(.*\);|\1|p' $(LIBRARY_NAME)-meta.pd)
@@ -276,7 +274,7 @@ $(LIBRARY_NAME).$(EXTENSION): $(SOURCES:.c=.o) $(LIBRARY_NAME).o
 	chmod a-x $@
 
 $(SHARED_LIB): $(SHARED_SOURCES:.c=.o)
-	$(CC) $(SHARED_LDFLAGS) -o $@ $^ $(ALL_LIBS)
+	$(CC) $(SHARED_LDFLAGS) $(LDFLAGS) -o $@ $^ $(ALL_LIBS)
 
 install: libdir_install
 
