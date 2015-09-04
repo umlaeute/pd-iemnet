@@ -69,6 +69,14 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
     return;
   }
 
+  /* resolve hostname provided as argument */
+  server.sin_family = AF_INET;
+  hp = gethostbyname(hostname->s_name);
+  if (hp == 0) {
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", hostname->s_name);
+    return;
+  }
+
   /* create a socket */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   DEBUG("send socket %d\n", sockfd);
@@ -77,13 +85,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
     sys_sockerror("socket");
     return;
   }
-  /* connect socket using hostname provided in command line */
-  server.sin_family = AF_INET;
-  hp = gethostbyname(hostname->s_name);
-  if (hp == 0) {
-    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", hostname->s_name);
-    return;
-  }
+
   /* for stream (TCP) sockets, specify "nodelay" */
   intarg = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
@@ -92,6 +94,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
     sys_sockerror("setsockopt");
   }
 
+  /* connect socket using hostname provided as argument */
   memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
   /* assign client port number */
