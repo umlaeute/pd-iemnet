@@ -2,14 +2,25 @@
 # For instructions on how to use this template, see:
 #  http://puredata.info/docs/developer/MakefileTemplate
 LIBRARY_NAME = iemnet
+EMPTY=
 
 # add your .c source files, one object per file, to the SOURCES
 # variable, help files will be included automatically, and for GUI
 # objects, the matching .tcl file too
-SOURCES = tcpserver.c tcpclient.c tcpsend.c tcpreceive.c udpreceive.c udpsend.c udpclient.c udpserver.c
+SOURCES = \
+	tcpserver.c \
+	tcpclient.c \
+	tcpsend.c \
+	tcpreceive.c \
+	udpreceive.c \
+	udpsend.c \
+	udpclient.c \
+	udpserver.c \
+	$(EMPTY)
 
-SHARED_SOURCES = iemnet.c iemnet_data.c  iemnet_receiver.c  iemnet_sender.c
-SHARED_HEADERS = iemnet_data.h  iemnet.h
+
+SHARED_SOURCES = iemnet.c iemnet_data.c iemnet_receiver.c iemnet_sender.c
+SHARED_HEADERS = iemnet_data.h iemnet.h
 
 # list all pd objects (i.e. myobject.pd) files here, and their helpfiles will
 # be included automatically
@@ -40,9 +51,9 @@ LIBS_windows=-lpthread
 #------------------------------------------------------------------------------#
 
 ALL_CFLAGS = -I"$(PD_INCLUDE)"
-ALL_LDFLAGS =  
+ALL_LDFLAGS =
 SHARED_LDFLAGS =
-ALL_LIBS = 
+ALL_LIBS =
 
 
 #------------------------------------------------------------------------------#
@@ -69,7 +80,7 @@ objectsdir = $(pkglibdir)
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL) -p -m 644
 INSTALL_DATA = $(INSTALL) -p -m 644
-INSTALL_DIR     = $(INSTALL) -p -m 755 -d
+INSTALL_DIR  = $(INSTALL) -p -m 755 -d
 
 ALLSOURCES := $(SOURCES) $(SOURCES_android) $(SOURCES_cygwin) $(SOURCES_macosx) \
 	         $(SOURCES_iphoneos) $(SOURCES_linux) $(SOURCES_windows)
