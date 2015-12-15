@@ -1,13 +1,3 @@
---- About branches in this repo ------------------
-  master
-    * uses Makefile based on Katja Vetter's pd-lib-builder
-      check: https://github.com/pure-data/pd-lib-builder
-
-  upstream
-    * master branch of the original pd-iemnet repo from:
-      https://github.com/umlaeute/pd-iemnet.git 
-
---- ORIGINAL README FROM HERE ---------------------
 iemnet - networking for Pd
 ==========================
 
