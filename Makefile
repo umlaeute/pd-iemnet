@@ -33,9 +33,9 @@ datafiles = \
 	LICENSE.txt \
 	README.txt
 
-ifeq ($(uname), MINGW)
+define forWindows
   ldlibs = -lwsock32
-endif
+endef
 
 # This Makefile is based on the Makefile from pd-lib-builder written by
 # Katja Vetter. You can get it from:
