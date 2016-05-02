@@ -1,4 +1,5 @@
 language: c
+sudo: false
 
 env:
   global:
@@ -14,9 +15,14 @@ matrix:
       env:
         - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
 
-before_install:
-- sudo apt-get update -qq
-- sudo apt-get install -qq puredata-dev
+addons:
+  apt:
+    packages:
+      - puredata-dev
+
+#before_install:
+#- sudo apt-get update -qq
+#- sudo apt-get install -qq puredata-dev
 
 before_script:
   # implement Coverity Scan with before_script instead of addons.coverity_scan
