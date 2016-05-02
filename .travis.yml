@@ -4,7 +4,7 @@ sudo: false
 env:
   global:
         - secure: "H+FS0KWYGx4JBMcPdhhJus9LgFhh5luIU4rfWl6Fsh4q0VJmT1tSO3KYlEQYkenS4xX/sUtN/Yus1b8L0MkuM3akEEPAA26Up9leFsarIQrD3dGYmoNQ4R2eG1Et8hoNwQwXQ1f30wrqfykVK+83rzqSlpoz+nhTBKZNYC7tfn0="
-        - COVERITY_SCAN_BRANCH_PATTERN="coverity_scan"
+        - COVERITY_SCAN_BRANCH_PATTERN="(master|coverity_scan)"
         - COVERITY_SCAN_NOTIFICATION_EMAIL="zmoelnig@users.sourceforge.net"
         - COVERITY_SCAN_BUILD_COMMAND="make"
 
