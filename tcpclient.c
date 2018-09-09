@@ -46,7 +46,7 @@ typedef struct _tcpclient {
   int              x_serialize;
 
   int             x_fd; // the socket
-  char           *x_hostname; // address we want to connect to as text
+  const char     *x_hostname; // address we want to connect to as text
   int             x_connectstate; // 0 = not connected, 1 = connected
   int             x_port; // port we're connected to
   long            x_addr; // address we're connected to as 32bit int

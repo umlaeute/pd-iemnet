@@ -43,7 +43,7 @@ typedef struct _udpclient {
   t_iemnet_receiver*x_receiver;
 
   int             x_fd; // the socket
-  char           *x_hostname; // address we want to connect to as text
+  const char     *x_hostname; // address we want to connect to as text
   int             x_connectstate; // 0 = not connected, 1 = connected
   u_short         x_port; // port we're sending to
   u_short         x_sendport; // port we're sending from
