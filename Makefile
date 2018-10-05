@@ -34,7 +34,7 @@ datafiles = \
 	README.txt
 
 define forWindows
-  ldlibs = -lwsock32
+  ldlibs = -lwsock32 -lpthread
 endef
 
 # This Makefile is based on the Makefile from pd-lib-builder written by
