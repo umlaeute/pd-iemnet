@@ -33,6 +33,8 @@ datafiles = \
 	LICENSE.txt \
 	README.txt
 
+cflags = -DVERSION='"$(lib.version)"'
+
 define forWindows
   ldlibs = -lwsock32 -lpthread
 endef
