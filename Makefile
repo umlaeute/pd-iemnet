@@ -10,13 +10,15 @@ class.sources = \
         udpreceive.c \
         udpsend.c \
         udpclient.c \
-        udpserver.c
+        udpserver.c \
+	$(empty)
 
 shared.sources = \
 	iemnet.c \
 	iemnet_data.c \
 	iemnet_receiver.c \
-	iemnet_sender.c
+	iemnet_sender.c \
+	$(empty)
 
 datafiles = \
 	iemnet-meta.pd \
@@ -31,7 +33,8 @@ datafiles = \
 	udpsndrcv-help.pd \
 	udpsndrcv.pd \
 	LICENSE.txt \
-	README.txt
+	README.txt \
+	$(empty)
 
 cflags = -DVERSION='"$(lib.version)"'
 
