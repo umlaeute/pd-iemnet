@@ -129,15 +129,18 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
 
 /* tcpreceive_connectpoll checks for incoming connection requests on the original socket */
 /* a new socket is assigned  */
-static void tcpreceive_connectpoll(t_tcpreceive *x)
+static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 {
   struct sockaddr_in  from;
   socklen_t           fromlen = sizeof(from);
   long                addr;
   unsigned short      port;
-  int                 fd;
+  if(fd != x->x_connectsocket) {
+    iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
+    return;
+  }
 
-  fd = accept(x->x_connectsocket, (struct sockaddr *)&from, &fromlen);
+  fd = accept(fd, (struct sockaddr *)&from, &fromlen);
   if (fd < 0) {
     iemnet_log(x, IEMNET_ERROR, "could not accept new connection");
     sys_sockerror("accept");
