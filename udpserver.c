@@ -321,6 +321,8 @@ static void udpserver_info(t_udpserver *x)
     }
   }
 
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("listenaddress"), 0);
+
   SETFLOAT (output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
 }
