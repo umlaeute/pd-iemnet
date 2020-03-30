@@ -48,7 +48,7 @@ void iemnet__socket2addressout(int sockfd,
                                       t_outlet*status_outlet, t_symbol*s,
                                       t_outlet*address_outlet) {
   struct sockaddr_storage address;
-  size_t addresssize = sizeof(address);
+  socklen_t addresssize = sizeof(address);
   if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
     error("unable to get address from socket:%d", sockfd);
     return;
