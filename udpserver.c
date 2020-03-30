@@ -781,8 +781,8 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
   }
     /* fall through */
   case 1: /* address */ {
-    t_symbol*interface = (A_FLOAT == argv->a_type)?0:atom_getsymbol(argv+0);
-    udpserver_do_bind(x, interface, port);
+    t_symbol*ifaddr = (A_FLOAT == argv->a_type)?0:atom_getsymbol(argv+0);
+    udpserver_do_bind(x, ifaddr, port);
   }
     break;
   }
