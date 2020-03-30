@@ -683,10 +683,9 @@ static void udpserver_connectpoll(t_udpserver *x)
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
-static void udpserver_port(t_udpserver*x, t_floatarg fportno)
+static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short portno)
 {
   static t_atom ap[1];
-  int                 portno = fportno;
   struct sockaddr_in  server;
   socklen_t           serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
@@ -747,6 +746,14 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
 
+static void udpserver_port(t_udpserver*x, t_floatarg fportno)
+{
+  if(fportno<0 || (int)fportno >= 0xFFFF) {
+    error("[%s] port %d out of range", objName, (int)fportno);
+    return;
+  }
+  udpserver_do_bind(x, 0, (unsigned short)fportno);
+}
 static void *udpserver_new(t_floatarg fportno)
 {
   t_udpserver         *x;
