@@ -66,7 +66,7 @@ hang pd!;
 #X restore 38 66 pd per.client;
 #X msg 245 227 disconnect;
 #X text 325 225 disconnect all clients;
-#N canvas 313 127 698 341 default.targets 1;
+#N canvas 313 127 698 341 default.targets 0;
 #X obj 106 268 outlet;
 #X msg 106 82 target 1;
 #X msg 157 240 64 64 64 10;
