@@ -115,8 +115,12 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
   if(x->x_sender) {
     t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
-    iemnet__sender_send(x->x_sender, chunk);
+    int size = iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
+    if(size < 1) {
+      /* ouch, the "connection" broke */
+      udpsend_disconnect(x);
+    }
   } else {
     iemnet_log(x, IEMNET_ERROR, "not connected");
   }
