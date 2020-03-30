@@ -1,3 +1,6 @@
 ---
+variables:
+  IEM_CI_PKGLIBDIR: "${CI_JOB_NAME}"
+
 include:
   - https://git.iem.at/pd/iem-ci/raw/master/pd-lib-builder/gitlab-iem.yml
