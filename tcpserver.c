@@ -320,10 +320,8 @@ static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client,
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
-  int client=0;
-
   if (argc > 0) {
-    client=tcpserver_fixindex(x, atom_getint(argv));
+    int client=tcpserver_fixindex(x, atom_getint(argv));
     if(client<0) {
       return;
     }
@@ -334,7 +332,7 @@ static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc,
     }
     return;
   } else {
-    unsigned int client;
+    unsigned int client=0;
     for(client=0; client<x->x_nconnections; client++) {
       tcpserver_info_client(x, client);
     }
