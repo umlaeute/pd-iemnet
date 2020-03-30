@@ -78,7 +78,6 @@ void iemnet__socket2addressout(int sockfd,
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
                      long address, unsigned short port)
 {
-
   static t_atom addr[5];
   static int firsttime=1;
 

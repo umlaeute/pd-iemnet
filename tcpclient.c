@@ -182,7 +182,6 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
 
-
   state=tcpclient_do_connect(x->x_hostname, x->x_port, x,
                              &x->x_sender, &x->x_receiver,
                              &x->x_addr);
