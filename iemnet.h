@@ -212,7 +212,7 @@ void iemnet__socket2addressout(int sockfd,
  * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
  */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
-                     long address, unsigned short port);
+                     uint32_t address, uint16_t port);
 
 /**
  * output the socket we received data from
