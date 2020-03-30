@@ -58,7 +58,6 @@ typedef struct _udpclient {
 static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 /* connection handling */
-
 static void *udpclient_doconnect(t_udpclient*x, int subthread)
 {
   struct sockaddr_in  server;
@@ -122,18 +121,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
 
-  if (!getsockname(sockfd, (struct sockaddr *) &server, &serversize)) {
-    uint16_t port=ntohs(server.sin_port);
-    uint32_t address=ntohl(server.sin_addr.s_addr);
-    static t_atom addr[5];
-
-    SETFLOAT(addr+0, (address & 0xFF000000)>>24);
-    SETFLOAT(addr+1, (address & 0x0FF0000)>>16);
-    SETFLOAT(addr+2, (address & 0x0FF00)>>8);
-    SETFLOAT(addr+3, (address & 0x0FF));
-    SETFLOAT(addr+4, port);
-    outlet_anything(x->x_statusout, gensym("listenaddress"), 5, addr);
-  }
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("listenaddress"), 0);
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
