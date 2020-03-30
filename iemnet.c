@@ -44,6 +44,36 @@ void iemnet__closesocket(int sockfd, int verbose)
 }
 
 
+void iemnet__socket2addressout(int sockfd,
+                                      t_outlet*status_outlet, t_symbol*s,
+                                      t_outlet*address_outlet) {
+  struct sockaddr_storage address;
+  size_t addresssize = sizeof(address);
+  if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
+    error("unable to get address from socket:%d", sockfd);
+    return;
+  }
+  switch (address.ss_family) {
+  case AF_INET: {
+    struct sockaddr_in*address4 = (struct sockaddr_in*)&address;
+    uint32_t addr4 = ntohl(address4->sin_addr.s_addr);
+    static t_atom addr[5];
+    SETFLOAT(addr+0, (addr4 & 0xFF000000)>>24);
+    SETFLOAT(addr+1, (addr4 & 0x0FF0000)>>16);
+    SETFLOAT(addr+2, (addr4 & 0x0FF00)>>8);
+    SETFLOAT(addr+3, (addr4 & 0x0FF));
+    SETFLOAT(addr+4, ntohs(address4->sin_port));
+    if(status_outlet)
+      outlet_anything(status_outlet, s, 5, addr);
+    if(address_outlet)
+      outlet_list(address_outlet, gensym("list"   ), 5, addr);
+  }
+    break;
+  default:
+    error("unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
+  }
+}
+
 /* various functions to send data to output in a uniform way */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
                      long address, unsigned short port)

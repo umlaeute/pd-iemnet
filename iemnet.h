@@ -177,6 +177,28 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 void iemnet__closesocket(int fd, int verbose);
 
+
+/**
+ * output the address  (IP, port)
+ * the address is obtained from the sockfd via getsockname().
+ * the given address is first output through the status_outlet using the
+ * provided selector (unless status_outlet is NULL), and then as a list
+ * through the address_outlet (unless it is NULL)
+ *
+ * \param sockfd the socket to read the address from
+ * \param status_outlet outlet for general status messages
+ * \param selector the selector to use when sending the status-message
+ * \param address_outlet outlet for addresses only
+ *
+ * \note depending on the address-family the output can have different length.
+ *       e.g. with IPv4 the address will be output as a 5 element list, with
+ *            the 1st 4 elements denoting the quads of the IPv4 address (as
+ *            bytes) and the last element the port.
+ */
+void iemnet__socket2addressout(int sockfd,
+                               t_outlet*status_outlet, t_symbol*selector,
+                               t_outlet*address_outlet);
+
 /**
  * output the address  (IP, port)
  * the given address is first output through the status_outlet as a "host" message
