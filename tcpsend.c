@@ -117,11 +117,10 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
 
 static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
-  int size=0;
   t_iemnet_sender*sender=x->x_sender;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   if(sender && chunk) {
-    size=iemnet__sender_send(sender, chunk);
+    iemnet__sender_send(sender, chunk);
   }
   iemnet__chunk_destroy(chunk);
 }

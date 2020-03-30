@@ -182,14 +182,12 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c)
 
 void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
 {
-  int sockfd=-1;
   /* simple protection against recursive calls:
    * s->keepsending is only set to "0" in here,
    * so if it is false, we know that we are already being called
    */
   DEBUG("destroy sender %x with queue %x (%d)", s, s->queue, s->keepsending);
   LOCK (&s->mtx);
-  sockfd=s->sockfd;
   // check s->isrunning
   DEBUG("keepsending %d\tisrunning %d", s->keepsending, s->isrunning);
   if(!s->keepsending) {
