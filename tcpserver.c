@@ -539,13 +539,17 @@ static void tcpserver_receive_callback(void *y0,
   }
 }
 
-static void tcpserver_connectpoll(t_tcpserver *x)
+static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 {
   struct sockaddr_in  incomer_address;
   socklen_t           sockaddrl = sizeof( struct sockaddr );
-  int                 fd = accept(x->x_connectsocket,
-                                  (struct sockaddr*)&incomer_address, &sockaddrl);
   int                 i;
+  if(fd != x->x_connectsocket) {
+    iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
+    return;
+  }
+
+  fd = accept(fd, (struct sockaddr*)&incomer_address, &sockaddrl);
 
   if (fd < 0) {
     post("%s: accept failed", objName);
