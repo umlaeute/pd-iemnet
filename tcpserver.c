@@ -55,7 +55,7 @@ typedef struct _tcpserver {
   t_outlet                    *x_connectout;
   t_outlet                    *x_sockout; // legacy
   t_outlet                    *x_addrout; // legacy
-  t_outlet                    *x_statout;
+  t_outlet                    *x_statusout;
 
   int                          x_serialize;
 
@@ -182,12 +182,12 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
     SETSYMBOL(output_atom+2, gensym(hostname));
     SETFLOAT (output_atom+3, port);
 
-    outlet_anything( x->x_statout, gensym("client"), 4, output_atom);
+    outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
 
     SETFLOAT (output_atom+0, client+1);
     SETFLOAT (output_atom+1, insize);
     SETFLOAT (output_atom+2, outsize);
-    outlet_anything( x->x_statout, gensym("bufsize"), 3, output_atom);
+    outlet_anything( x->x_statusout, gensym("bufsize"), 3, output_atom);
   }
 }
 
@@ -217,13 +217,13 @@ static void tcpserver_info(t_tcpserver *x)
   }
 
   SETFLOAT (output_atom+0, port);
-  outlet_anything( x->x_statout, gensym("port"), 1, output_atom);
+  outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
 }
 
 static void tcpserver_info_connection(t_tcpserver *x,
                                       t_tcpserver_socketreceiver*y)
 {
-  iemnet__addrout(x->x_statout, x->x_addrout, y->sr_host, y->sr_port);
+  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
@@ -247,7 +247,7 @@ static void tcpserver_send_bytes_client(t_tcpserver*x,
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_statout, gensym("sendbuffersize"), 3, output_atom);
+    outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
       // disconnected!
@@ -617,7 +617,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
     iemnet_log(x, IEMNET_ERROR, "unable to bind to TCP/IP socket");
     sys_sockerror("bind");
     iemnet__closesocket(sockfd, 1);
-    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   }
 
@@ -627,7 +627,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
     sys_sockerror("listen");
     iemnet__closesocket(sockfd, 1);
     sockfd = -1;
-    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   } else {
       /* wait for new connections */
@@ -643,7 +643,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   }
 
   SETFLOAT(ap, x->x_port);
-  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+  outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
 
 static void tcpserver_serialize(t_tcpserver *x, t_floatarg doit)
@@ -664,7 +664,7 @@ static void *tcpserver_new(t_floatarg fportno)
                                gensym("float")); /* 2nd outlet for number of connected clients */
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
-  x->x_statout = outlet_new(&x->x_obj,
+  x->x_statusout = outlet_new(&x->x_obj,
                             0);/* 5th outlet for everything else */
 
   x->x_serialize=1;

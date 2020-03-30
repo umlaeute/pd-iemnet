@@ -53,7 +53,7 @@ typedef struct _tcpreceive {
   t_outlet        *x_msgout;
   t_outlet        *x_addrout;
   t_outlet        *x_connectout;
-  t_outlet        *x_statout;
+  t_outlet        *x_statusout;
   int             x_connectsocket;
   int             x_port;
 
@@ -148,7 +148,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
     if (tcpreceive_addconnection(x, fd, addr, port)) {
       x->x_nconnections++;
       outlet_float(x->x_connectout, x->x_nconnections);
-      iemnet__addrout(x->x_statout, x->x_addrout, addr, port);
+      iemnet__addrout(x->x_statusout, x->x_addrout, addr, port);
     } else {
       iemnet_log(x, IEMNET_ERROR, "too many connections");
       iemnet__closesocket(fd, 1);
@@ -267,7 +267,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
     sys_sockerror("bind");
     iemnet__closesocket(sockfd, 1);
     sockfd = -1;
-    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   }
 
@@ -277,7 +277,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
     sys_sockerror("listen");
     iemnet__closesocket(sockfd, 1);
     sockfd = -1;
-    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   } else {
     sys_addpollfn(sockfd,
@@ -294,7 +294,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   }
 
   SETFLOAT(ap, x->x_port);
-  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+  outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
 
 static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
@@ -326,7 +326,7 @@ static void *tcpreceive_new(t_floatarg fportno)
   x->x_msgout = outlet_new(&x->x_obj, 0);
   x->x_addrout = outlet_new(&x->x_obj, gensym("list")); /* legacy */
   x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* legacy */
-  x->x_statout = outlet_new(&x->x_obj, 0); /* outlet for everything else */
+  x->x_statusout = outlet_new(&x->x_obj, 0); /* outlet for everything else */
 
   x->x_serialize=1;
 

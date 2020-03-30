@@ -55,7 +55,7 @@ typedef struct _udpserver {
   t_outlet*x_connectout;
   t_outlet*x_sockout; // legacy
   t_outlet*x_addrout; // legacy
-  t_outlet*x_statout;
+  t_outlet*x_statusout;
 
   t_udpserver_sender*x_sr[MAX_CONNECT]; /* socket per connection */
   unsigned int       x_nconnections;
@@ -285,12 +285,12 @@ static void udpserver_info_client(t_udpserver *x, int client)
     SETSYMBOL(output_atom+2, gensym(hostname));
     SETFLOAT (output_atom+3, port);
 
-    outlet_anything( x->x_statout, gensym("client"), 4, output_atom);
+    outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
 
     SETFLOAT (output_atom+0, client+1);
     SETFLOAT (output_atom+1, insize);
     SETFLOAT (output_atom+2, outsize);
-    outlet_anything( x->x_statout, gensym("bufsize"), 3, output_atom);
+    outlet_anything( x->x_statusout, gensym("bufsize"), 3, output_atom);
   }
 }
 
@@ -322,13 +322,13 @@ static void udpserver_info(t_udpserver *x)
   }
 
   SETFLOAT (output_atom+0, port);
-  outlet_anything( x->x_statout, gensym("port"), 1, output_atom);
+  outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
 }
 
 
 static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 {
-  iemnet__addrout(x->x_statout, x->x_addrout, y->sr_host, y->sr_port);
+  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
   //  outlet_float(x->x_sockout, y->sr_fd);
 }
 
@@ -359,7 +359,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_statout, gensym("sendbuffersize"), 3, output_atom);
+    outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
       // disconnected!
@@ -724,7 +724,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
     iemnet_log(x, IEMNET_ERROR, "unable to bind to socket");
     sys_sockerror("bind");
     iemnet__closesocket(sockfd, 1);
-    outlet_anything(x->x_statout, gensym("port"), 1, ap);
+    outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   }
 
@@ -741,7 +741,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   }
 
   SETFLOAT(ap, x->x_port);
-  outlet_anything(x->x_statout, gensym("port"), 1, ap);
+  outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
 
 static void *udpserver_new(t_floatarg fportno)
@@ -757,7 +757,7 @@ static void *udpserver_new(t_floatarg fportno)
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
   /* 5th outlet for everything else */
-  x->x_statout = outlet_new(&x->x_obj, 0);
+  x->x_statusout = outlet_new(&x->x_obj, 0);
 
   x->x_connectsocket = -1;
   x->x_port = -1;
