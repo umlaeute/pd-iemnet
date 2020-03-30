@@ -61,7 +61,7 @@ typedef struct _udpserver {
   unsigned int       x_nconnections;
 
   int x_connectsocket;    /* socket waiting for new connections */
-  unsigned short x_port;
+  unsigned short x_port; /* port we are bound to */
   unsigned char  x_accept; /* whether we accept new connections or not */
 
   /* the default connection to send to;
