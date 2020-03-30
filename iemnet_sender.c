@@ -139,7 +139,6 @@ static void*iemnet__sender_sendthread(void*arg)
 
   sockfd=sender->sockfd;
 
-
   while(sender->keepsending) {
     UNLOCK(&sender->mtx);
 
