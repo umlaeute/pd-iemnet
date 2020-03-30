@@ -121,7 +121,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
 
-  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("outputaddress"), 0);
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
