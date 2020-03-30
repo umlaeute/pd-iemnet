@@ -485,7 +485,7 @@ static void tcpserver_disconnect(t_tcpserver *x, unsigned int client)
   x->x_sr[k + 1]=NULL;
   x->x_nconnections--;
 
-  outlet_float(x->x_connectout, x->x_nconnections);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
 /* disconnect a client by number */
@@ -572,8 +572,7 @@ static void tcpserver_connectpoll(t_tcpserver *x)
 
     tcpserver_info_connection(x, y);
   }
-
-  outlet_float(x->x_connectout, x->x_nconnections);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
 static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)

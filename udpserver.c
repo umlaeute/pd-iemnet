@@ -575,7 +575,7 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
     udpserver_info_connection(x, sdr);
     free(sdr);
   }
-  outlet_float(x->x_connectout, conns);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, conns);
 }
 
 /* disconnect a client by number */
@@ -634,7 +634,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
 
       /* here we might have a reentrancy problem */
       if(conns!=x->x_nconnections) {
-        outlet_float(x->x_connectout, x->x_nconnections);
+        iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
       }
       outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc,
                   x->x_floatlist->argv);
@@ -678,8 +678,7 @@ static void udpserver_connectpoll(t_udpserver *x)
 
     udpserver_info_connection(x, y);
   }
-
-  outlet_float(x->x_connectout, x->x_nconnections);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
 static void udpserver_port(t_udpserver*x, t_floatarg fportno)

@@ -147,7 +147,7 @@ static void tcpreceive_connectpoll(t_tcpreceive *x)
     port = ntohs(from.sin_port);
     if (tcpreceive_addconnection(x, fd, addr, port)) {
       x->x_nconnections++;
-      outlet_float(x->x_connectout, x->x_nconnections);
+      iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
       iemnet__addrout(x->x_statusout, x->x_addrout, addr, port);
     } else {
       iemnet_log(x, IEMNET_ERROR, "too many connections");
@@ -168,7 +168,7 @@ static int tcpreceive_disconnect(t_tcpreceive *x, int id)
     x->x_connection[id].addr = 0L;
     x->x_connection[id].port = 0;
     x->x_nconnections--;
-    outlet_float(x->x_connectout, x->x_nconnections);
+    iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
     return 1;
   }
 

@@ -157,7 +157,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
 
 static void tcpclient_tick(t_tcpclient *x)
 {
-  outlet_float(x->x_connectout, 1);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, 1);
 }
 
 
@@ -173,7 +173,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   if(x->x_hostname || x->x_port) {
     state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
     if(state) {
-      outlet_float(x->x_connectout, 0);
+      iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
     }
   }
 
@@ -189,7 +189,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_connectstate=(state>0);
   x->x_fd=state;
   if(state>0) {
-    outlet_float(x->x_connectout, 1);
+    iemnet__numconnout(x->x_statusout, x->x_connectout, 1);
   }
 }
 
@@ -202,7 +202,7 @@ static void tcpclient_disconnect(t_tcpclient *x)
       iemnet_log(x, IEMNET_ERROR, "not connected");
     }
   }
-  outlet_float(x->x_connectout, 0);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
 
   x->x_port=0;
   x->x_hostname=NULL;

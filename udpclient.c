@@ -128,7 +128,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
                                         udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
-  outlet_float(x->x_connectout, 1);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   return (x);
 }
 
@@ -156,7 +156,7 @@ static void udpclient_disconnect(t_udpclient *x) {
   if(!udpclient_do_disconnect(x)) {
     iemnet_log(x, IEMNET_ERROR, "not connected");
   } else {
-    outlet_float(x->x_connectout, 0);
+    iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   }
 }
 
