@@ -766,6 +766,29 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   }
   udpserver_do_bind(x, 0, (unsigned short)fportno);
 }
+static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
+  unsigned short port = x->x_port;
+  switch (argc) {
+  default:
+    return;
+  case 2: /* address, port */ {
+    t_float fportno = atom_getfloat(argv+1);
+    if(fportno<0 || (int)fportno > 0xFFFF) {
+      error("[%s] port %d out of range", objName, (int)fportno);
+      return;
+    }
+    port=(unsigned short)fportno;
+  }
+    /* fall through */
+  case 1: /* address */ {
+    t_symbol*interface = (A_FLOAT == argv->a_type)?0:atom_getsymbol(argv+0);
+    udpserver_do_bind(x, interface, port);
+  }
+    break;
+  }
+}
+
+
 static void *udpserver_new(t_floatarg fportno)
 {
   t_udpserver         *x;
@@ -857,6 +880,8 @@ IEMNET_EXTERN void udpserver_setup(void)
                   gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist  (udpserver_class, (t_method)udpserver_defaultsend);
 
+  class_addmethod(udpserver_class, (t_method)udpserver_bind, gensym("bind"),
+                  A_GIMME, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_port, gensym("port"),
                   A_DEFFLOAT, 0);
   class_addbang  (udpserver_class, (t_method)udpserver_info);
