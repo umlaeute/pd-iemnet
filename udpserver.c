@@ -62,6 +62,7 @@ typedef struct _udpserver {
 
   int x_connectsocket;    /* socket waiting for new connections */
   unsigned short x_port; /* port we are bound to */
+  t_symbol*      x_ifaddr; /* interface we are bound to */
   unsigned char  x_accept; /* whether we accept new connections or not */
 
   /* the default connection to send to;
@@ -692,7 +693,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
   memset(&server, 0, sizeof(server));
 
   SETFLOAT(ap, -1);
-  if(x->x_port == portno) {
+  if(x->x_port == portno && x->x_ifaddr == ifaddr) {
     return;
   }
 
@@ -702,6 +703,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
     iemnet__closesocket(sockfd, 0);
     x->x_connectsocket=-1;
     x->x_port=-1;
+    x->x_ifaddr = 0;
   }
 
 
@@ -715,13 +717,22 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
   server.sin_family = AF_INET;
 
   /* LATER allow setting of inaddr */
-  server.sin_addr.s_addr = INADDR_ANY;
+  if (ifaddr) {
+    struct hostent *hp = gethostbyname(ifaddr->s_name);
+    if(!hp) {
+      iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", ifaddr->s_name);
+      return;
+    }
+    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+  } else
+    server.sin_addr.s_addr = INADDR_ANY;
+
 
   /* assign server port number */
   server.sin_port = htons((u_short)portno);
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to bind to socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to bind socket to %s:%d", ifaddr?ifaddr->s_name:"*", portno);
     sys_sockerror("bind");
     iemnet__closesocket(sockfd, 1);
     outlet_anything(x->x_statusout, gensym("port"), 1, ap);
@@ -734,6 +745,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
                                         0);
   x->x_connectsocket = sockfd;
   x->x_port = portno;
+  x->x_ifaddr = ifaddr;
 
   // find out which port is actually used (useful when assigning "0")
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
