@@ -741,6 +741,8 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
     x->x_port=ntohs(server.sin_port);
   }
 
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("listenaddress"), 0);
+
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
