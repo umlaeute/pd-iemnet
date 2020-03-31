@@ -95,7 +95,7 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 
   //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
   if(c->port) {
-    DEBUG("sending %d bytes to %x:%d @%d", size, c->addr, c->port, c->family);
+    DEBUG("%p sending %d bytes to %x:%d @%d", x, size, c->addr, c->port, c->family);
 
     to.sin_addr.s_addr=htonl(c->addr);
     to.sin_port       =htons(c->port);
@@ -185,7 +185,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
    * s->keepsending is only set to "0" in here,
    * so if it is false, we know that we are already being called
    */
-  DEBUG("destroy sender %x with queue %x (%d)", s, s->queue, s->keepsending);
+  DEBUG("destroy sender %x with queue %x (%d) in %sthread", s, s->queue, s->keepsending, subthread?"sub":"main ");
   LOCK (&s->mtx);
   // check s->isrunning
   DEBUG("keepsending %d\tisrunning %d", s->keepsending, s->isrunning);
@@ -229,7 +229,7 @@ t_iemnet_sender*iemnet__sender_create(int sock,
   t_iemnet_sender*result=(t_iemnet_sender*)calloc(1,
                          sizeof(t_iemnet_sender));
   int res=0;
-  DEBUG("create sender %x", result);
+  DEBUG("create sender %x in%sthread", result,subthread?"sub":"main ");
   if(NULL==result) {
     DEBUG("create sender failed");
     return NULL;
