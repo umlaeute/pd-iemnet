@@ -166,7 +166,6 @@ static void tcpclient_disconnect(t_tcpclient *x);
 static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
                               t_floatarg fportno)
 {
-  long addr=0;
   int state;
 
   // first disconnect any active connection

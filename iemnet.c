@@ -277,7 +277,6 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
   const char*name=(x && (*x) && ((*x)->c_name))?((*x)->c_name->s_name):"iemnet";
   char buf[MAXPDSTRING];
   va_list ap;
-  t_int arg[8];
   va_start(ap, fmt);
   vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
   va_end(ap);

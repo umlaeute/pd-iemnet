@@ -61,7 +61,6 @@ static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 static void *udpclient_doconnect(t_udpclient*x, int subthread)
 {
   struct sockaddr_in  server;
-  socklen_t           serversize = sizeof(server);
   struct hostent      *hp;
   int                 sockfd;
   int                 broadcast = 1;/* nonzero is true */
