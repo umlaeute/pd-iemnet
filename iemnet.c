@@ -214,8 +214,10 @@ void udpsend_setup(void);
 void udpserver_setup(void);
 #endif
 
+#ifdef IEMNET_HAVE_DEBUG
 static int iemnet_debuglevel_=0;
 static pthread_mutex_t debug_mtx = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 void iemnet_debuglevel(void*x, t_float f)
 {
