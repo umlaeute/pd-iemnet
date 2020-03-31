@@ -69,6 +69,20 @@ void iemnet__socket2addressout(int sockfd,
       outlet_list(address_outlet, gensym("list"   ), 5, addr);
   }
     break;
+  case AF_INET6: {
+    struct sockaddr_in6*address6 = (struct sockaddr_in6*)&address;
+    uint8_t*addr6 = address6->sin6_addr.s6_addr;
+    static t_atom addr[17];
+    unsigned int i;
+    for(i=0; i<16; i++)
+      SETFLOAT(addr+i, addr6[i]);
+    SETFLOAT(addr+16, ntohs(address6->sin6_port));
+    if(status_outlet)
+      outlet_anything(status_outlet, s, 17, addr);
+    if(address_outlet)
+      outlet_list(address_outlet, gensym("list"), 17, addr);
+  }
+    break;
   default:
     error("unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
   }
