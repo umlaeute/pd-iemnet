@@ -235,9 +235,11 @@ void iemnet_debuglevel(void*x, t_float f)
     error("iemnet compiled without debug!");
   }
 #endif
+  if(firsttime) {
+    (void)x; /* ignore unused variable */
+    (void)f; /* ignore unused variable */
+  }
   firsttime=0;
-  (void)x; /* ignore unused variable */
-  (void)f; /* ignore unused variable */
 }
 
 int iemnet_debug(int debuglevel, const char*file, unsigned int line,
