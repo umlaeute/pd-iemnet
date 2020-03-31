@@ -32,6 +32,22 @@
 #ifndef INCLUDE_IEMNET_H_
 #define INCLUDE_IEMNET_H_
 
+#ifdef __GNUC__
+#  define UNUSED(x) UNUSED_ ## x __attribute__((__unused__))
+#  define MAYBE_UNUSED(x) x __attribute__((__unused__))
+#else
+#  define UNUSED(x) UNUSED_ ## x
+#  define MAYBE_UNUSED(x) x
+#endif
+
+#ifdef __GNUC__
+#  define UNUSED_FUNCTION(x) __attribute__((__unused__)) UNUSED_ ## x
+#  define MAYBE_UNUSED_FUNCTION(x) __attribute__((__unused__)) x
+#else
+#  define UNUSED_FUNCTION(x) UNUSED_ ## x
+#  define MAYBE_UNUSED_FUNCTION(x) x
+#endif
+
 #include "m_pd.h"
 
 /* from s_stuff.h */
@@ -312,7 +328,7 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line,
 # undef DEBUG
 # define DEBUG if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post
 #else
-static void debug_dummy(const char *format, ...)
+static void MAYBE_UNUSED_FUNCTION(debug_dummy)(const char *format, ...)
 {
   (void)format; /* ignore unused variable */
 }
