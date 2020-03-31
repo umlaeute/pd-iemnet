@@ -212,8 +212,14 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
      * the following 3 lines assume, that there is only one client connected (the last we got data from
      */
     id=0;
-    udpserver_sender_free(x->x_sr[id]);
-    x->x_sr[id]=udpserver_sender_new(x, host, port);
+    if (x->x_sr[id]==NULL)
+      x->x_sr[id]=udpserver_sender_new(x, host, port);
+    else
+    {
+      x->x_sr[id]->sr_port = port;
+      x->x_sr[id]->sr_host = host;
+    }
+    
     x->x_nconnections=1;
 #else
     /* this is a more optimistic approach as above:
