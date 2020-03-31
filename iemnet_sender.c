@@ -261,6 +261,7 @@ t_iemnet_sender*iemnet__sender_create(int sock,
 /* coverity[param_set_but_not_used]: as x is there for potentially more specific implentations in the future */
 int iemnet__sender_getlasterror(t_iemnet_sender*x)
 {
+  (void)x; /* ignore unused variable */
 #ifdef _WIN32
   return WSAGetLastError();
 #endif

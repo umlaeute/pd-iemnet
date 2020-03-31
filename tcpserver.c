@@ -320,6 +320,7 @@ static void tcpserver_send_toclient(t_tcpserver *x, unsigned int client,
 static void tcpserver_send_client(t_tcpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
+  (void)s; /* ignore unused variable */
   if (argc > 0) {
     int client=tcpserver_fixindex(x, atom_getint(argv));
     if(client<0) {
@@ -346,6 +347,7 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc,
   unsigned int client=0;
   t_iemnet_chunk*chunk=NULL;
   t_tcpserver_socketreceiver**sr=NULL;
+  (void)s; /* ignore unused variable */
   if(!x || !x->x_nconnections) {
     return;
   }
@@ -369,6 +371,7 @@ static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc,
                                    t_atom *argv)
 {
   int but=-1;
+  (void)s; /* ignore unused variable */
   if(argc<2) {
     return;
   }
@@ -439,6 +442,7 @@ static void tcpserver_send_socket(t_tcpserver *x, t_symbol *s, int argc,
 {
   int     client = -1;
   t_iemnet_chunk*chunk=NULL;
+  (void)s; /* ignore unused variable */
   if(argc) {
     client = tcpserver_socket2index(x, atom_getint(argv));
     if(client<0) {

@@ -215,8 +215,9 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc,
   int size=0;
   t_atom output_atom;
   t_iemnet_sender*sender=x->x_sender;
-
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  (void)s; /* ignore unused variable */
+
   if(sender && chunk) {
     size=iemnet__sender_send(sender, chunk);
   }

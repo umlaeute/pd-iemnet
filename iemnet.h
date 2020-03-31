@@ -314,7 +314,7 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line,
 #else
 static void debug_dummy(const char *format, ...)
 {
-  ;
+  (void)format; /* ignore unused variable */
 }
 # define DEBUG debug_dummy
 #endif

@@ -119,6 +119,7 @@ static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
   t_iemnet_sender*sender=x->x_sender;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  (void)s; /* ignore unused variable */
   if(sender && chunk) {
     iemnet__sender_send(sender, chunk);
   }

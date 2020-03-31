@@ -234,6 +234,8 @@ void iemnet_debuglevel(void*x, t_float f)
   }
 #endif
   firsttime=0;
+  (void)x; /* ignore unused variable */
+  (void)f; /* ignore unused variable */
 }
 
 int iemnet_debug(int debuglevel, const char*file, unsigned int line,
@@ -248,6 +250,12 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line,
     startpost("[%s[%d]:%s#%d] ", file, line, function, debuglevel);
     return 1;
   }
+#else
+  /* silence up 'unused parameter' warnings */
+  (void)debuglevel;
+  (void)file;
+  (void)line;
+  (void)function;
 #endif
   return 0;
 }

@@ -405,6 +405,7 @@ static void udpserver_send_client(t_udpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
   unsigned int client=0;
+  (void)s; /* ignore unused variable */
 
   if (argc > 0) {
     int c=udpserver_fixindex(x, atom_getint(argv));
@@ -431,6 +432,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
 {
   unsigned int   client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  (void)s; /* ignore unused variable */
 
   DEBUG("broadcasting to %d clients", x->x_nconnections);
 
@@ -448,6 +450,7 @@ static void udpserver_broadcastbut(t_udpserver *x, t_symbol *s, int argc,
                                    t_atom *argv)
 {
   int but;
+  (void)s; /* ignore unused variable */
 
   if(argc<2) {
     return;
@@ -527,6 +530,7 @@ static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc,
 {
   int     client = -1;
   t_iemnet_chunk*chunk=NULL;
+  (void)s; /* ignore unused variable */
   if(argc) {
     client = udpserver_socket2index(x, atom_getint(argv));
     if(client<0) {
@@ -768,6 +772,7 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
 }
 static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
   unsigned short port = x->x_port;
+  (void)s; /* ignore unused variable */
   switch (argc) {
   default:
     return;

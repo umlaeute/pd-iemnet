@@ -113,6 +113,7 @@ static void udpsend_disconnect(t_udpsend *x)
 
 static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
+  (void)s; /* ignore unused variable */
   if(x->x_sender) {
     t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
     int size = iemnet__sender_send(x->x_sender, chunk);
