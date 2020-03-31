@@ -26,6 +26,10 @@
 
 #include <pthread.h>
 
+#ifdef __unix__
+# include <sys/un.h>
+#endif
+
 /* close a socket properly */
 void iemnet__closesocket(int sockfd, int verbose)
 {
@@ -83,6 +87,18 @@ void iemnet__socket2addressout(int sockfd,
       outlet_list(address_outlet, gensym("list"), 17, addr);
   }
     break;
+#ifdef __unix__
+  case AF_UNIX: {
+    struct sockaddr_un*addressu = (struct sockaddr_un*)&address;
+    t_atom addr[1];
+    SETSYMBOL(addr+0, gensym(addressu->sun_path));
+    if(status_outlet)
+      outlet_anything(status_outlet, s, 1, addr);
+    if(address_outlet)
+      outlet_list(address_outlet, gensym("list"), 1, addr);
+  }
+    break;
+#endif
   default:
     error("unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
   }
