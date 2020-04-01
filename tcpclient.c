@@ -193,10 +193,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
                              &x->x_addr);
   x->x_connectstate=(state>0);
   x->x_fd=state;
-  if(state>0) {
-    iemnet__socket2addressout(x->x_fd, x->x_statusout, gensym("local_address"), 0);
-    iemnet__numconnout(x->x_statusout, x->x_connectout, 1);
-  }
+  tcpclient_info(x);
 }
 
 static void tcpclient_disconnect(t_tcpclient *x)

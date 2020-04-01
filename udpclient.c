@@ -150,7 +150,6 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
     return (x);
   }
 
-  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
@@ -159,7 +158,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
                                         udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
-  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
+  udpclient_info(x);
   return (x);
 }
 
