@@ -177,6 +177,9 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   // first disconnect any active connection
   if(x->x_hostname || x->x_port) {
     state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
+    x->x_connectstate=0;
+    x->x_sender=NULL;
+    x->x_receiver=NULL;
     if(state) {
       iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
     }
@@ -211,6 +214,8 @@ static void tcpclient_disconnect(t_tcpclient *x)
 
   x->x_port=0;
   x->x_hostname=NULL;
+  x->x_sender=NULL;
+  x->x_receiver=NULL;
 }
 
 /* sending/receiving */
