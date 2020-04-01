@@ -67,7 +67,7 @@ static void udpclient_info(t_udpclient *x)
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
   if(sockfd>=0)
-    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   if(connected) {
     unsigned short port   = x->x_port;

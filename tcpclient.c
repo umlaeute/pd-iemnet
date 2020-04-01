@@ -66,7 +66,7 @@ static void tcpclient_info(t_tcpclient *x)
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
   if(sockfd>=0)
-    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, connected);
   if(connected) {
     unsigned short port   = x->x_port;

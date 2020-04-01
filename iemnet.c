@@ -48,9 +48,7 @@ void iemnet__closesocket(int sockfd, int verbose)
 }
 
 
-void iemnet__socket2addressout(int sockfd,
-                                      t_outlet*status_outlet, t_symbol*s,
-                                      t_outlet*address_outlet) {
+void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
   struct sockaddr_storage address;
   socklen_t addresssize = sizeof(address);
   if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
@@ -68,10 +66,7 @@ void iemnet__socket2addressout(int sockfd,
     SETFLOAT(addr+3, (addr4 & 0x0FF00)>>8);
     SETFLOAT(addr+4, (addr4 & 0x0FF));
     SETFLOAT(addr+5, ntohs(address4->sin_port));
-    if(status_outlet)
-      outlet_anything(status_outlet, s, 6, addr);
-    if(address_outlet)
-      outlet_list(address_outlet, gensym("list"   ), 6, addr);
+    outlet_anything(status_outlet, s, 6, addr);
   }
     break;
   case AF_INET6: {
@@ -83,10 +78,7 @@ void iemnet__socket2addressout(int sockfd,
     for(i=0; i<16; i++)
       SETFLOAT(addr+i+1, addr6[i]);
     SETFLOAT(addr+17, ntohs(address6->sin6_port));
-    if(status_outlet)
-      outlet_anything(status_outlet, s, 17, addr);
-    if(address_outlet)
-      outlet_list(address_outlet, gensym("list"), 17, addr);
+    outlet_anything(status_outlet, s, 17, addr);
   }
     break;
 #ifdef __unix__
@@ -96,8 +88,6 @@ void iemnet__socket2addressout(int sockfd,
     SETSYMBOL(addr+0, gensym(addressu->sun_path));
     if(status_outlet)
       outlet_anything(status_outlet, s, 1, addr);
-    if(address_outlet)
-      outlet_list(address_outlet, gensym("list"), 1, addr);
   }
     break;
 #endif

@@ -328,7 +328,7 @@ static void udpserver_info(t_udpserver *x)
     }
   }
 
-  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
 
   SETFLOAT (output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
@@ -746,7 +746,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
     x->x_port=ntohs(server.sin_port);
   }
 
-  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+  iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
 
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statusout, gensym("port"), 1, ap);
