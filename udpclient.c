@@ -66,7 +66,9 @@ static void udpclient_info(t_udpclient *x)
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
-
+  if(sockfd>=0)
+    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   if(connected) {
     unsigned short port   = x->x_port;
     const char*hostname=x->x_hostname;
@@ -83,10 +85,6 @@ static void udpclient_info(t_udpclient *x)
     SETFLOAT (output_atom+1, outsize);
     outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
   }
-  if(sockfd>=0)
-    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
-  SETFLOAT (output_atom+0, connected);
-  outlet_anything(x->x_statusout, gensym("connected"), 1, output_atom);
 }
 
 /* connection handling */
