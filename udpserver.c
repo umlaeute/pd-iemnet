@@ -219,7 +219,7 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
       x->x_sr[id]->sr_port = port;
       x->x_sr[id]->sr_host = host;
     }
-    
+
     x->x_nconnections=1;
 #else
     /* this is a more optimistic approach as above:
