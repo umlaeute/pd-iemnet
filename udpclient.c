@@ -287,8 +287,7 @@ IEMNET_EXTERN void udpclient_setup(void)
                               (t_method)udpclient_free,
                               sizeof(t_udpclient), 0, A_DEFFLOAT, 0);
   class_addmethod(udpclient_class, (t_method)udpclient_connect,
-                  gensym("connect")
-                  , A_SYMBOL, A_FLOAT, A_DEFFLOAT, 0);
+                  gensym("connect"), A_SYMBOL, A_FLOAT, A_DEFFLOAT, 0);
   class_addmethod(udpclient_class, (t_method)udpclient_disconnect,
                   gensym("disconnect"), 0);
   class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"),
