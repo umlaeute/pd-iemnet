@@ -84,10 +84,10 @@ void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
 #ifdef __unix__
   case AF_UNIX: {
     struct sockaddr_un*addressu = (struct sockaddr_un*)&address;
-    t_atom addr[1];
-    SETSYMBOL(addr+0, gensym(addressu->sun_path));
-    if(status_outlet)
-      outlet_anything(status_outlet, s, 1, addr);
+    t_atom addr[2];
+    SETSYMBOL(addr+0, gensym("unix"));
+    SETSYMBOL(addr+1, gensym(addressu->sun_path));
+    outlet_anything(status_outlet, s, 2, addr);
   }
     break;
 #endif
