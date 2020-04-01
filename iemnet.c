@@ -61,26 +61,28 @@ void iemnet__socket2addressout(int sockfd,
   case AF_INET: {
     struct sockaddr_in*address4 = (struct sockaddr_in*)&address;
     uint32_t addr4 = ntohl(address4->sin_addr.s_addr);
-    static t_atom addr[5];
-    SETFLOAT(addr+0, (addr4 & 0xFF000000)>>24);
-    SETFLOAT(addr+1, (addr4 & 0x0FF0000)>>16);
-    SETFLOAT(addr+2, (addr4 & 0x0FF00)>>8);
-    SETFLOAT(addr+3, (addr4 & 0x0FF));
-    SETFLOAT(addr+4, ntohs(address4->sin_port));
+    static t_atom addr[6];
+    SETSYMBOL(addr+0, gensym("IPv4"));
+    SETFLOAT(addr+1, (addr4 & 0xFF000000)>>24);
+    SETFLOAT(addr+2, (addr4 & 0x0FF0000)>>16);
+    SETFLOAT(addr+3, (addr4 & 0x0FF00)>>8);
+    SETFLOAT(addr+4, (addr4 & 0x0FF));
+    SETFLOAT(addr+5, ntohs(address4->sin_port));
     if(status_outlet)
-      outlet_anything(status_outlet, s, 5, addr);
+      outlet_anything(status_outlet, s, 6, addr);
     if(address_outlet)
-      outlet_list(address_outlet, gensym("list"   ), 5, addr);
+      outlet_list(address_outlet, gensym("list"   ), 6, addr);
   }
     break;
   case AF_INET6: {
     struct sockaddr_in6*address6 = (struct sockaddr_in6*)&address;
     uint8_t*addr6 = address6->sin6_addr.s6_addr;
-    static t_atom addr[17];
+    static t_atom addr[18];
     unsigned int i;
+    SETSYMBOL(addr+0, gensym("IPv6"));
     for(i=0; i<16; i++)
-      SETFLOAT(addr+i, addr6[i]);
-    SETFLOAT(addr+16, ntohs(address6->sin6_port));
+      SETFLOAT(addr+i+1, addr6[i]);
+    SETFLOAT(addr+17, ntohs(address6->sin6_port));
     if(status_outlet)
       outlet_anything(status_outlet, s, 17, addr);
     if(address_outlet)
