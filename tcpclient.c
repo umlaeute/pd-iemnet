@@ -75,11 +75,11 @@ static void tcpclient_info(t_tcpclient *x)
     SETSYMBOL(output_atom+1, gensym(hostname));
     SETFLOAT (output_atom+2, port);
 
-    outlet_anything( x->x_statusout, gensym("server"), 3, output_atom);
+    outlet_anything(x->x_statusout, gensym("server"), 3, output_atom);
 
     SETFLOAT (output_atom+0, insize);
     SETFLOAT (output_atom+1, outsize);
-    outlet_anything( x->x_statusout, gensym("bufsize"), 2, output_atom);
+    outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
   }
 }
 
