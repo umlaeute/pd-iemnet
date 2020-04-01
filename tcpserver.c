@@ -366,21 +366,6 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc,
   iemnet__chunk_destroy(chunk);
 }
 
-/* broadcasts a message to all connected clients */
-static void tcpserver_broadcastbut(t_tcpserver *x, t_symbol *s, int argc,
-                                   t_atom *argv)
-{
-  int but=-1;
-  (void)s; /* ignore unused variable */
-  if(argc<2) {
-    return;
-  }
-  if((but=tcpserver_fixindex(x, atom_getint(argv)))<0) {
-    return;
-  }
-  tcpserver_send_butclient(x, but, argc-1, argv+1);
-}
-
 static void tcpserver_defaultsend(t_tcpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {

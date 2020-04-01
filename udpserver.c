@@ -451,22 +451,6 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
   iemnet__chunk_destroy(chunk);
 }
 
-/* broadcasts a message to all connected clients */
-static void udpserver_broadcastbut(t_udpserver *x, t_symbol *s, int argc,
-                                   t_atom *argv)
-{
-  int but;
-  (void)s; /* ignore unused variable */
-
-  if(argc<2) {
-    return;
-  }
-  if((but=udpserver_fixindex(x, atom_getint(argv)))<0) {
-    return;
-  }
-  udpserver_send_butclient(x, but, argc-1, argv+1);
-}
-
 static void udpserver_defaultsend(t_udpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
