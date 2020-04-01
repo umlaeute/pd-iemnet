@@ -57,6 +57,38 @@ typedef struct _udpclient {
 /* forward declarations */
 static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
+
+
+static void udpclient_info(t_udpclient *x)
+{
+  // "server <socket> <IP> <port>"
+  // "bufsize <insize> <outsize>"
+  static t_atom output_atom[3];
+  int connected = x->x_connectstate;
+  int sockfd = x->x_fd;
+
+  if(connected) {
+    unsigned short port   = x->x_port;
+    const char*hostname=x->x_hostname;
+
+    int insize =iemnet__receiver_getsize(x->x_receiver);
+    int outsize=iemnet__sender_getsize  (x->x_sender  );
+
+    SETFLOAT (output_atom+0, sockfd);
+    SETSYMBOL(output_atom+1, gensym(hostname));
+    SETFLOAT (output_atom+2, port);
+    outlet_anything(x->x_statusout, gensym("server"), 3, output_atom);
+
+    SETFLOAT (output_atom+0, insize);
+    SETFLOAT (output_atom+1, outsize);
+    outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
+  }
+  if(sockfd>=0)
+    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"), 0);
+  SETFLOAT (output_atom+0, connected);
+  outlet_anything(x->x_statusout, gensym("connected"), 1, output_atom);
+}
+
 /* connection handling */
 static void *udpclient_doconnect(t_udpclient*x, int subthread)
 {
@@ -265,6 +297,7 @@ IEMNET_EXTERN void udpclient_setup(void)
   class_addmethod(udpclient_class, (t_method)udpclient_send, gensym("send"),
                   A_GIMME, 0);
   class_addlist(udpclient_class, (t_method)udpclient_send);
+  class_addbang(udpclient_class, (t_method)udpclient_info);
 
   DEBUGMETHOD(udpclient_class);
 }
