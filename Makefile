@@ -32,8 +32,8 @@ datafiles = \
 	udpserver-help.pd \
 	udpsndrcv-help.pd \
 	udpsndrcv.pd \
-	LICENSE.txt \
-	README.txt \
+	LICENSE.md \
+	README.md \
 	$(empty)
 
 cflags = -DVERSION='"$(lib.version)"'
