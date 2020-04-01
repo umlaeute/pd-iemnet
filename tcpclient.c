@@ -205,12 +205,12 @@ static void tcpclient_disconnect(t_tcpclient *x)
       iemnet_log(x, IEMNET_ERROR, "not connected");
     }
   }
-  iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
-
   x->x_port=0;
   x->x_hostname=NULL;
   x->x_sender=NULL;
   x->x_receiver=NULL;
+
+  iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
 }
 
 /* sending/receiving */
