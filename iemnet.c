@@ -33,11 +33,11 @@
 /* close a socket properly */
 void iemnet__closesocket(int sockfd, int verbose)
 {
-  if(sockfd >=0) {
+  if(sockfd >= 0) {
 #ifndef SHUT_RDWR
 # define SHUT_RDWR 2
 #endif
-    int how=SHUT_RDWR;
+    int how = SHUT_RDWR;
      /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     int err = shutdown(sockfd, how);
     if(verbose && err) {
@@ -67,7 +67,7 @@ int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18
     uint8_t*ipaddr = addr->sin6_addr.s6_addr;
     unsigned int i;
     SETSYMBOL(alist+0, gensym("IPv6"));
-    for(i=0; i<16; i++)
+    for(i = 0; i<16; i++)
       SETFLOAT(alist+i+1, ipaddr[i]);
     SETFLOAT(alist+17, ntohs(addr->sin6_port));
     return 18;
@@ -110,14 +110,14 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
                      uint32_t address, uint16_t port)
 {
   static t_atom addr[5];
-  static int firsttime=1;
+  static int firsttime = 1;
 
   if(firsttime) {
-    int i=0;
-    for(i=0; i<5; i++) {
+    int i = 0;
+    for(i = 0; i<5; i++) {
       SETFLOAT(addr+i, 0);
     }
-    firsttime=0;
+    firsttime = 0;
   }
 
   addr[0].a_w.w_float = (address & 0xFF000000)>>24;
@@ -165,7 +165,7 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet,
 
 void iemnet__streamout(t_outlet*outlet, int argc, t_atom*argv, int stream)
 {
-  if(NULL==outlet) {
+  if(NULL == outlet) {
     return;
   }
 
@@ -183,29 +183,29 @@ typedef struct _names {
   t_symbol*name;
   struct _names*next;
 } t_iemnet_names;
-static t_iemnet_names*namelist=0;
+static t_iemnet_names*namelist = 0;
 static int iemnet__nametaken(const char*namestring)
 {
-  t_symbol*name=gensym(namestring);
-  t_iemnet_names*curname=namelist;
-  t_iemnet_names*lastname=curname;
+  t_symbol*name = gensym(namestring);
+  t_iemnet_names*curname = namelist;
+  t_iemnet_names*lastname = curname;
   while(curname) {
-    if(name==(curname->name)) {
+    if(name == (curname->name)) {
       return 1;
     }
-    lastname=curname;
-    curname=curname->next;
+    lastname = curname;
+    curname = curname->next;
   }
 
   /* new name! */
-  curname=(t_iemnet_names*)malloc(sizeof(t_iemnet_names));
-  curname->name=name;
-  curname->next=0;
+  curname = (t_iemnet_names*)malloc(sizeof(t_iemnet_names));
+  curname->name = name;
+  curname->next = 0;
 
   if(lastname) {
-    lastname->next=curname;
+    lastname->next = curname;
   } else {
-    namelist=curname;
+    namelist = curname;
   }
 
   return 0;
@@ -246,18 +246,18 @@ void udpserver_setup(void);
 #endif
 
 #ifdef IEMNET_HAVE_DEBUG
-static int iemnet_debuglevel_=0;
+static int iemnet_debuglevel_ = 0;
 static pthread_mutex_t debug_mtx = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 void iemnet_debuglevel(void*x, t_float f)
 {
-  static int firsttime=1;
+  static int firsttime = 1;
 #ifdef IEMNET_HAVE_DEBUG
-  int debuglevel=(int)f;
+  int debuglevel = (int)f;
 
   pthread_mutex_lock(&debug_mtx);
-  iemnet_debuglevel_=debuglevel;
+  iemnet_debuglevel_ = debuglevel;
   pthread_mutex_unlock(&debug_mtx);
 
   post("iemnet: setting debuglevel to %d", debuglevel);
@@ -270,16 +270,16 @@ void iemnet_debuglevel(void*x, t_float f)
     (void)x; /* ignore unused variable */
     (void)f; /* ignore unused variable */
   }
-  firsttime=0;
+  firsttime = 0;
 }
 
 int iemnet_debug(int debuglevel, const char*file, unsigned int line,
                  const char*function)
 {
 #ifdef IEMNET_HAVE_DEBUG
-  int debuglevel_=0;
+  int debuglevel_ = 0;
   pthread_mutex_lock(&debug_mtx);
-  debuglevel_=iemnet_debuglevel_;
+  debuglevel_ = iemnet_debuglevel_;
   pthread_mutex_unlock(&debug_mtx);
   if(debuglevel_ & debuglevel) {
     startpost("[%s[%d]:%s#%d] ", file, line, function, debuglevel);
@@ -316,8 +316,8 @@ IEMNET_EXTERN void iemnet_setup(void)
 
 void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *fmt, ...)
 {
-  t_pd*x=(t_pd*)object;
-  const char*name=(x && (*x) && ((*x)->c_name))?((*x)->c_name->s_name):"iemnet";
+  t_pd*x = (t_pd*)object;
+  const char*name = (x && (*x) && ((*x)->c_name))?((*x)->c_name->s_name):"iemnet";
   char buf[MAXPDSTRING];
   va_list ap;
   va_start(ap, fmt);

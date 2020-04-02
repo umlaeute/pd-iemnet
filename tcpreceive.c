@@ -24,7 +24,7 @@
 
 #define DEBUGLEVEL 1
 
-static const char*objName="tcpreceive";
+static const char*objName = "tcpreceive";
 
 #include "iemnet.h"
 #ifndef _WIN32
@@ -81,20 +81,20 @@ static int tcpreceive_find_socket(t_tcpreceive *x, int fd)
 
 static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 {
-  t_tcpconnection*y=(t_tcpconnection*)w;
-  t_tcpreceive*x=NULL;
-  int index=-1;
-  if(NULL==y || NULL==(x=y->owner)) {
+  t_tcpconnection*y = (t_tcpconnection*)w;
+  t_tcpreceive*x = NULL;
+  int index = -1;
+  if(NULL == y || NULL == (x = y->owner)) {
     return;
   }
 
-  index=tcpreceive_find_socket(x, y->socket);
-  if(index>=0) {
+  index = tcpreceive_find_socket(x, y->socket);
+  if(index >= 0) {
     if(c) {
       /* TODO?: outlet info about connection */
 
       /* gets destroyed in the dtor */
-      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
+      x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
       iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                         x->x_serialize);
     } else {
@@ -116,7 +116,7 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
       x->x_connection[i].addr = addr;
       x->x_connection[i].port = port;
       x->x_connection[i].owner = x;
-      x->x_connection[i].receiver=
+      x->x_connection[i].receiver = 
         iemnet__receiver_create(fd,
                                 x->x_connection+i,
                                 tcpreceive_read_callback,
@@ -162,9 +162,9 @@ static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id)
 {
-  if(id>=0 && id < MAX_CONNECTIONS && x->x_connection[id].port>0) {
+  if(id >= 0 && id < MAX_CONNECTIONS && x->x_connection[id].port>0) {
     iemnet__receiver_destroy(x->x_connection[id].receiver, 0);
-    x->x_connection[id].receiver=NULL;
+    x->x_connection[id].receiver = NULL;
 
     iemnet__closesocket(x->x_connection[id].socket, 1);
     x->x_connection[id].socket = -1;
@@ -208,7 +208,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   static t_atom ap[1];
   int portno = fportno;
   struct sockaddr_in server;
-  socklen_t serversize=sizeof(server);
+  socklen_t serversize = sizeof(server);
   int sockfd = x->x_connectsocket;
   int intarg;
   memset(&server, 0, sizeof(server));
@@ -219,11 +219,11 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
   }
 
   /* cleanup any open ports */
-  if(sockfd>=0) {
+  if(sockfd >= 0) {
     sys_rmpollfn(sockfd);
     iemnet__closesocket(sockfd, 1);
-    x->x_connectsocket=-1;
-    x->x_port=-1;
+    x->x_connectsocket = -1;
+    x->x_port = -1;
   }
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -295,7 +295,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 
   /* find out which port is actually used (useful when assigning "0") */
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
-    x->x_port=ntohs(server.sin_port);
+    x->x_port = ntohs(server.sin_port);
   }
 
   SETFLOAT(ap, x->x_port);
@@ -304,7 +304,7 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 
 static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
 {
-  x->x_serialize=doit;
+  x->x_serialize = doit;
 }
 
 static void tcpreceive_free(t_tcpreceive *x)
@@ -318,7 +318,7 @@ static void tcpreceive_free(t_tcpreceive *x)
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
   }
-  x->x_floatlist=NULL;
+  x->x_floatlist = NULL;
 }
 
 static void *tcpreceive_new(t_floatarg fportno)
@@ -333,11 +333,11 @@ static void *tcpreceive_new(t_floatarg fportno)
   x->x_connectout = outlet_new(&x->x_obj, gensym("float")); /* legacy */
   x->x_statusout = outlet_new(&x->x_obj, 0); /* outlet for everything else */
 
-  x->x_serialize=1;
+  x->x_serialize = 1;
 
-  x->x_connectsocket=-1;
-  x->x_port=-1;
-  x->x_nconnections=0;
+  x->x_connectsocket = -1;
+  x->x_port = -1;
+  x->x_nconnections = 0;
 
   /* clear the connection list */
   for (i = 0; i < MAX_CONNECTIONS; ++i) {
@@ -346,7 +346,7 @@ static void *tcpreceive_new(t_floatarg fportno)
     x->x_connection[i].port = 0;
   }
 
-  x->x_floatlist=iemnet__floatlist_create(1024);
+  x->x_floatlist = iemnet__floatlist_create(1024);
 
   tcpreceive_port(x, portno);
 

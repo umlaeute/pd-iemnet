@@ -46,7 +46,7 @@ static void tcpsend_disconnect(t_tcpsend *x)
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender, 0);
   }
-  x->x_sender=NULL;
+  x->x_sender = NULL;
   if (x->x_fd >= 0) {
     iemnet__closesocket(x->x_fd, 1);
     x->x_fd = -1;
@@ -110,15 +110,15 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   }
   x->x_fd = sockfd;
 
-  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  x->x_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
 
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
 static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
-  t_iemnet_sender*sender=x->x_sender;
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  t_iemnet_sender*sender = x->x_sender;
+  t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
   if(sender && chunk) {
     iemnet__sender_send(sender, chunk);

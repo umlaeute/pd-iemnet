@@ -45,7 +45,7 @@
 #include <pthread.h>
 
 #if IEMNET_HAVE_DEBUG
-static int debug_lockcount=0;
+static int debug_lockcount = 0;
 # define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++; if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
 # define UNLOCK(x) do {debug_lockcount--;if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  UNLOCK %p [%d]", x, debug_lockcount); pthread_mutex_unlock(x);}while(0)
 #else
@@ -79,13 +79,13 @@ struct _iemnet_sender {
 static int iemnet__sender_defaultsend(const void*x, int sockfd,
                                       t_iemnet_chunk*c)
 {
-  int result=-1;
+  int result = -1;
 
   struct sockaddr_in to;
   socklen_t tolen = sizeof(to);
 
-  unsigned char*data=c->data;
-  unsigned int size=c->size;
+  unsigned char*data = c->data;
+  unsigned int size = c->size;
 
   int flags = 0;
 #ifdef __linux__
@@ -102,13 +102,13 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
     to.sin_family = c->family;
     result = sendto(sockfd,
                     data, size, /* DATA */
-                    flags,      /* FLAGS */
+                    flags, /* FLAGS */
                     (struct sockaddr *)&to, tolen); /* DESTADDR */
   } else {
     DEBUG("sending %d bytes", size);
     result = send(sockfd,
                   data, size, /* DATA */
-                  flags);     /* FLAGS */
+                  flags); /* FLAGS */
   }
   if(result<0) {
     /* broken pipe */
@@ -122,27 +122,27 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 
 static void*iemnet__sender_sendthread(void*arg)
 {
-  t_iemnet_sender*sender=(t_iemnet_sender*)arg;
+  t_iemnet_sender*sender = (t_iemnet_sender*)arg;
 
-  int sockfd=-1;
-  t_iemnet_queue*q=NULL;
-  t_iemnet_chunk*c=NULL;
-  t_iemnet_sendfunction dosend=iemnet__sender_defaultsend;
-  const void*userdata=NULL;
+  int sockfd = -1;
+  t_iemnet_queue*q = NULL;
+  t_iemnet_chunk*c = NULL;
+  t_iemnet_sendfunction dosend = iemnet__sender_defaultsend;
+  const void*userdata = NULL;
 
   LOCK(&sender->mtx);
-  q=sender->queue;
-  userdata=sender->userdata;
-  if(NULL!=sender->sendfun) {
-    dosend=sender->sendfun;
+  q = sender->queue;
+  userdata = sender->userdata;
+  if(NULL != sender->sendfun) {
+    dosend = sender->sendfun;
   }
 
-  sockfd=sender->sockfd;
+  sockfd = sender->sockfd;
 
   while(sender->keepsending) {
     UNLOCK(&sender->mtx);
 
-    c=queue_pop_block(q);
+    c = queue_pop_block(q);
     if(c) {
       if(!dosend(userdata, sockfd, c)) {
         iemnet__chunk_destroy(c);
@@ -151,11 +151,11 @@ static void*iemnet__sender_sendthread(void*arg)
         break;
       }
       iemnet__chunk_destroy(c);
-      c=NULL;
+      c = NULL;
     }
     LOCK(&sender->mtx);
   }
-  sender->isrunning=0;
+  sender->isrunning = 0;
   UNLOCK(&sender->mtx);
   DEBUG("send thread terminated");
   return NULL;
@@ -163,17 +163,17 @@ static void*iemnet__sender_sendthread(void*arg)
 
 int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c)
 {
-  t_iemnet_queue*q=0;
-  int size=-1;
+  t_iemnet_queue*q = 0;
+  int size = -1;
   LOCK(&s->mtx);
-  q=s->queue;
+  q = s->queue;
   if(!s->isrunning) {
     UNLOCK(&s->mtx);
     return -1;
   }
   UNLOCK(&s->mtx);
   if(q) {
-    t_iemnet_chunk*chunk=iemnet__chunk_create_chunk(c);
+    t_iemnet_chunk*chunk = iemnet__chunk_create_chunk(c);
     size = queue_push(q, chunk);
   }
   return size;
@@ -193,10 +193,10 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
     UNLOCK(&s->mtx);
     return;
   }
-  s->keepsending=0;
+  s->keepsending = 0;
 
   while(s->isrunning) {
-    s->keepsending=0;
+    s->keepsending = 0;
     queue_finish(s->queue);
     UNLOCK(&s->mtx);
     LOCK(&s->mtx);
@@ -216,7 +216,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
   memset(s, 0, sizeof(t_iemnet_sender));
   s->sockfd = -1;
   free(s);
-  s=NULL;
+  s = NULL;
   DEBUG("destroyed sender");
 }
 
@@ -226,27 +226,27 @@ t_iemnet_sender*iemnet__sender_create(int sock,
                                       int subthread)
 {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-  t_iemnet_sender*result=(t_iemnet_sender*)calloc(1,
+  t_iemnet_sender*result = (t_iemnet_sender*)calloc(1,
                          sizeof(t_iemnet_sender));
-  int res=0;
+  int res = 0;
   DEBUG("create sender %x in%sthread", result,subthread?"sub":"main ");
-  if(NULL==result) {
+  if(NULL == result) {
     DEBUG("create sender failed");
     return NULL;
   }
 
   result->queue = queue_create();
   result->sockfd = sock;
-  result->keepsending =1;
-  result->isrunning=1;
-  result->sendfun=sendfun;
-  result->userdata=userdata;
-  DEBUG("create_sender queue=%x", result->queue);
+  result->keepsending = 1;
+  result->isrunning = 1;
+  result->sendfun = sendfun;
+  result->userdata = userdata;
+  DEBUG("create_sender queue = %x", result->queue);
 
   memcpy(&result->mtx , &mtx, sizeof(pthread_mutex_t));
-  res=pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
+  res = pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
 
-  if(0==res) {
+  if(0 == res) {
   } else {
     /* something went wrong */
     queue_destroy(result->queue);
@@ -272,8 +272,8 @@ int iemnet__sender_getlasterror(t_iemnet_sender*x)
 int iemnet__sender_getsockopt(t_iemnet_sender*s, int level, int optname,
                               void*optval, socklen_t*optlen)
 {
-  int result=getsockopt(s->sockfd, level, optname, optval, optlen);
-  if(result!=0) {
+  int result = getsockopt(s->sockfd, level, optname, optval, optlen);
+  if(result != 0) {
     error("iemnet::sender: getsockopt returned %d",
          iemnet__sender_getlasterror(s));
   }
@@ -282,8 +282,8 @@ int iemnet__sender_getsockopt(t_iemnet_sender*s, int level, int optname,
 int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname,
                               const void*optval, socklen_t optlen)
 {
-  int result=setsockopt(s->sockfd, level, optname, optval, optlen);
-  if(result!=0) {
+  int result = setsockopt(s->sockfd, level, optname, optval, optlen);
+  if(result != 0) {
     error("iemnet::sender: setsockopt returned %d",
          iemnet__sender_getlasterror(s));
   }
@@ -294,9 +294,9 @@ int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname,
 
 int iemnet__sender_getsize(t_iemnet_sender*x)
 {
-  int size=-1;
+  int size = -1;
   if(x && x->queue) {
-    size=queue_getsize(x->queue);
+    size = queue_getsize(x->queue);
   }
 
   return size;

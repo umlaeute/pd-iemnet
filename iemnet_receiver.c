@@ -41,31 +41,31 @@ struct _iemnet_receiver {
 static void pollfun(void*z, int fd)
 {
   /* read data from socket and call callback */
-  t_iemnet_receiver*rec=(t_iemnet_receiver*)z;
+  t_iemnet_receiver*rec = (t_iemnet_receiver*)z;
 
   unsigned char data[INBUFSIZE];
-  unsigned int size=INBUFSIZE;
-  t_iemnet_chunk*chunk=NULL;
+  unsigned int size = INBUFSIZE;
+  t_iemnet_chunk*chunk = NULL;
   int result = 0;
   int local_errno = 0;
 
   struct sockaddr_in from;
   socklen_t fromlen = sizeof(from);
 
-  int recv_flags=0;
+  int recv_flags = 0;
 #ifdef MSG_DONTWAIT
-  recv_flags|=MSG_DONTWAIT;
+  recv_flags |= MSG_DONTWAIT;
 #endif
-  errno=0;
+  errno = 0;
   if(fd != rec->sockfd)
     DEBUG("%s(%p, %d) receives from %d\n", __FUNCTION__, rec, fd, rec->sockfd);
 
   result = recvfrom(rec->sockfd, data, size, recv_flags,
                     (struct sockaddr *)&from, &fromlen);
-  local_errno=errno;
+  local_errno = errno;
   //fprintf(stderr, "read %d bytes...\n", result);
   DEBUG("recvfrom %d bytes: %d %p %d", result, rec->sockfd, data, size);
-  DEBUG("errno=%d", local_errno);
+  DEBUG("errno = %d", local_errno);
   chunk = iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
 
   /* call the callback with a NULL-chunk to signal a disconnect event. */
@@ -77,15 +77,15 @@ static void pollfun(void*z, int fd)
 t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata,
     t_iemnet_receivecallback callback, int subthread)
 {
-  t_iemnet_receiver*rec=(t_iemnet_receiver*)malloc(sizeof(
+  t_iemnet_receiver*rec = (t_iemnet_receiver*)malloc(sizeof(
                           t_iemnet_receiver));
 
   DEBUG("create new receiver for 0x%X:%d", userdata, sock);
   //fprintf(stderr, "new receiver for %d\t%x\t%x\n", sock, userdata, callback);
   if(rec) {
-    rec->sockfd=sock;
-    rec->userdata=userdata;
-    rec->callback=callback;
+    rec->sockfd = sock;
+    rec->userdata = userdata;
+    rec->callback = callback;
 
     if(subthread) {
       sys_lock();
@@ -103,11 +103,11 @@ t_iemnet_receiver*iemnet__receiver_create(int sock, void*userdata,
 void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread)
 {
   int sockfd;
-  if(NULL==rec) {
+  if(NULL == rec) {
     return;
   }
 
-  sockfd=rec->sockfd;
+  sockfd = rec->sockfd;
 
   if(subthread) {
     sys_lock();
@@ -123,12 +123,12 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread)
   DEBUG("[%p] really destroying receiver %d", sockfd);
   DEBUG("[%p] closed socket %d", rec, sockfd);
 
-  rec->sockfd=-1;
-  rec->userdata=NULL;
-  rec->callback=NULL;
+  rec->sockfd = -1;
+  rec->userdata = NULL;
+  rec->callback = NULL;
 
   free(rec);
-  rec=NULL;
+  rec = NULL;
 }
 
 

@@ -68,15 +68,15 @@ static void udpclient_info(t_udpclient *x)
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
-  if(sockfd>=0)
+  if(sockfd >= 0)
     iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   if(connected) {
     unsigned short port = x->x_port;
     const char*hostname = x->x_hostname;
 
-    int insize =iemnet__receiver_getsize(x->x_receiver);
-    int outsize=iemnet__sender_getsize(x->x_sender);
+    int insize = iemnet__receiver_getsize(x->x_receiver);
+    int outsize = iemnet__sender_getsize(x->x_sender);
 
     SETFLOAT(output_atom+0, sockfd);
     SETSYMBOL(output_atom+1, gensym(hostname));
@@ -155,8 +155,8 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
   x->x_fd = sockfd;
   x->x_addr = ntohl(*(long *)hp->h_addr);
 
-  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, subthread);
-  x->x_receiver=iemnet__receiver_create(sockfd, x,
+  x->x_sender = iemnet__sender_create(sockfd, NULL, NULL, subthread);
+  x->x_receiver = iemnet__receiver_create(sockfd, x,
                                         udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
@@ -170,11 +170,11 @@ static int udpclient_do_disconnect(t_udpclient *x)
   if(x->x_receiver) {
     iemnet__receiver_destroy(x->x_receiver, 0);
   }
-  x->x_receiver=NULL;
+  x->x_receiver = NULL;
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender, 0);
   }
-  x->x_sender=NULL;
+  x->x_sender = NULL;
 
   x->x_connectstate = 0;
   if (x->x_fd < 0) {
@@ -196,7 +196,7 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
                               t_floatarg fportno,
 			      t_floatarg fsndportno)
 {
-  if(x->x_fd>=0) {
+  if(x->x_fd >= 0) {
     udpclient_disconnect(x);
   }
   /* we get hostname and port and pass them on
@@ -212,14 +212,14 @@ static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
 static void udpclient_send(t_udpclient *x, t_symbol *s, int argc,
                            t_atom *argv)
 {
-  int size=0;
+  int size = 0;
   t_atom output_atom;
-  t_iemnet_sender*sender=x->x_sender;
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  t_iemnet_sender*sender = x->x_sender;
+  t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
 
   if(sender && chunk) {
-    size=iemnet__sender_send(sender, chunk);
+    size = iemnet__sender_send(sender, chunk);
   }
   iemnet__chunk_destroy(chunk);
 
@@ -230,11 +230,11 @@ static void udpclient_send(t_udpclient *x, t_symbol *s, int argc,
 
 static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
 {
-  t_udpclient *x=(t_udpclient*)y;
+  t_udpclient *x = (t_udpclient*)y;
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    x->x_floatlist=iemnet__chunk2list(c,
+    x->x_floatlist = iemnet__chunk2list(c,
                                       x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
                 x->x_floatlist->argv);
@@ -263,10 +263,10 @@ static void *udpclient_new(void)
   x->x_addr = 0L;
   x->x_port = 0;
 
-  x->x_sender=NULL;
-  x->x_receiver=NULL;
+  x->x_sender = NULL;
+  x->x_receiver = NULL;
 
-  x->x_floatlist=iemnet__floatlist_create(1024);
+  x->x_floatlist = iemnet__floatlist_create(1024);
 
   return (x);
 }
@@ -277,7 +277,7 @@ static void udpclient_free(t_udpclient *x)
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
   }
-  x->x_floatlist=NULL;
+  x->x_floatlist = NULL;
 }
 
 IEMNET_EXTERN void udpclient_setup(void)

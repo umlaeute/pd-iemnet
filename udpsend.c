@@ -93,7 +93,7 @@ static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
     iemnet__closesocket(sockfd, 1);
     return;
   }
-  x->x_sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
+  x->x_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   x->x_fd = sockfd;
   outlet_float(x->x_obj.ob_outlet, 1);
 }
@@ -103,10 +103,10 @@ static void udpsend_disconnect(t_udpsend *x)
   if(x->x_sender) {
     iemnet__sender_destroy(x->x_sender, 0);
   }
-  x->x_sender=NULL;
+  x->x_sender = NULL;
   if(x->x_fd >= 0) {
     iemnet__closesocket(x->x_fd, 1);
-    x->x_fd=-1;
+    x->x_fd = -1;
     outlet_float(x->x_obj.ob_outlet, 0);
   }
 }
@@ -115,7 +115,7 @@ static void udpsend_send(t_udpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
   (void)s; /* ignore unused variable */
   if(x->x_sender) {
-    t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+    t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
     int size = iemnet__sender_send(x->x_sender, chunk);
     iemnet__chunk_destroy(chunk);
     if(size < 1) {
@@ -136,8 +136,8 @@ static void *udpsend_new(void)
 {
   t_udpsend *x = (t_udpsend *)pd_new(udpsend_class);
   outlet_new(&x->x_obj, gensym("float"));
-  x->x_sender=NULL;
-  x->x_fd=-1;
+  x->x_sender = NULL;
+  x->x_fd = -1;
  return (x);
 }
 

@@ -66,15 +66,15 @@ static void tcpclient_info(t_tcpclient *x)
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
-  if(sockfd>=0)
+  if(sockfd >= 0)
     iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, connected);
   if(connected) {
     unsigned short port = x->x_port;
     const char*hostname = x->x_hostname;
 
-    int insize =iemnet__receiver_getsize(x->x_receiver);
-    int outsize=iemnet__sender_getsize(x->x_sender);
+    int insize = iemnet__receiver_getsize(x->x_receiver);
+    int outsize = iemnet__sender_getsize(x->x_sender);
 
     SETFLOAT(output_atom+0, sockfd);
     SETSYMBOL(output_atom+1, gensym(hostname));
@@ -94,11 +94,11 @@ static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender,
 {
   if(sender) {
     iemnet__sender_destroy(sender, 0);
-    sender=NULL;
+    sender = NULL;
   }
   if(receiver) {
     iemnet__receiver_destroy(receiver, 0);
-    receiver=NULL;
+    receiver = NULL;
   }
   if (fd >= 0) {
     iemnet__closesocket(fd, 1);
@@ -112,7 +112,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
 {
   struct sockaddr_in server;
   struct hostent*hp;
-  int sockfd=-1;
+  int sockfd = -1;
   t_iemnet_sender*sender;
   t_iemnet_receiver*receiver;
 
@@ -144,18 +144,18 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
     return (-1);
   }
 
-  sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
-  receiver=iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
+  sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
+  receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
                                    0);
 
   if(addrOUT) {
-    *addrOUT= ntohl(*(long *)hp->h_addr);
+    *addrOUT = ntohl(*(long *)hp->h_addr);
   }
   if(senderOUT) {
-    *senderOUT=sender;
+    *senderOUT = sender;
   }
   if(receiverOUT) {
-    *receiverOUT=receiver;
+    *receiverOUT = receiver;
   }
   return sockfd;
 }
@@ -175,10 +175,10 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
 
   /* first disconnect any active connection */
   if(x->x_hostname || x->x_port) {
-    state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
-    x->x_connectstate=0;
-    x->x_sender=NULL;
-    x->x_receiver=NULL;
+    state = tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
+    x->x_connectstate = 0;
+    x->x_sender = NULL;
+    x->x_receiver = NULL;
     if(state) {
       iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
     }
@@ -189,27 +189,27 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_hostname = hostname->s_name;
   x->x_port = fportno;
 
-  state=tcpclient_do_connect(x->x_hostname, x->x_port, x,
+  state = tcpclient_do_connect(x->x_hostname, x->x_port, x,
                              &x->x_sender, &x->x_receiver,
                              &x->x_addr);
-  x->x_connectstate=(state>0);
-  x->x_fd=state;
+  x->x_connectstate = (state>0);
+  x->x_fd = state;
   tcpclient_info(x);
 }
 
 static void tcpclient_disconnect(t_tcpclient *x)
 {
   if(x->x_hostname || x->x_port) {
-    int state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
+    int state = tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
 
     if(!state && !x->x_port) {
       iemnet_log(x, IEMNET_ERROR, "not connected");
     }
   }
-  x->x_port=0;
-  x->x_hostname=NULL;
-  x->x_sender=NULL;
-  x->x_receiver=NULL;
+  x->x_port = 0;
+  x->x_hostname = NULL;
+  x->x_sender = NULL;
+  x->x_receiver = NULL;
 
   iemnet__numconnout(x->x_statusout, x->x_connectout, 0);
 }
@@ -219,14 +219,14 @@ static void tcpclient_disconnect(t_tcpclient *x)
 static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc,
                            t_atom *argv)
 {
-  int size=0;
+  int size = 0;
   t_atom output_atom;
-  t_iemnet_sender*sender=x->x_sender;
-  t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
+  t_iemnet_sender*sender = x->x_sender;
+  t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
 
   if(sender && chunk) {
-    size=iemnet__sender_send(sender, chunk);
+    size = iemnet__sender_send(sender, chunk);
   }
   iemnet__chunk_destroy(chunk);
 
@@ -240,12 +240,12 @@ static void tcpclient_send(t_tcpclient *x, t_symbol *s, int argc,
 
 static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
 {
-  t_tcpclient *x=(t_tcpclient*)y;
+  t_tcpclient *x = (t_tcpclient*)y;
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
      /* get's destroyed in the dtor */
-    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
+    x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                       x->x_serialize);
   } else {
@@ -256,7 +256,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
 
 static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit)
 {
-  x->x_serialize=doit;
+  x->x_serialize = doit;
 }
 
 
@@ -266,11 +266,11 @@ static void tcpclient_free_simple(t_tcpclient *x)
   if(x->x_clock) {
     clock_free(x->x_clock);
   }
-  x->x_clock=NULL;
+  x->x_clock = NULL;
   if(x->x_floatlist) {
     iemnet__floatlist_destroy(x->x_floatlist);
   }
-  x->x_floatlist=NULL;
+  x->x_floatlist = NULL;
 
   if(x->x_msgout) {
     outlet_free(x->x_msgout);
@@ -296,18 +296,18 @@ static void *tcpclient_new(void)
   x->x_statusout = outlet_new(&x->x_obj,
                               0);/* last outlet for everything else */
 
-  x->x_serialize=1;
+  x->x_serialize = 1;
 
   x->x_fd = -1;
 
   x->x_addr = 0L;
   x->x_port = 0;
 
-  x->x_sender=NULL;
-  x->x_receiver=NULL;
+  x->x_sender = NULL;
+  x->x_receiver = NULL;
 
   x->x_clock = clock_new(x, (t_method)tcpclient_tick);
-  x->x_floatlist=iemnet__floatlist_create(1024);
+  x->x_floatlist = iemnet__floatlist_create(1024);
 
   return (x);
 }
