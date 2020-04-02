@@ -193,6 +193,16 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 void iemnet__closesocket(int fd, int verbose);
 
+/**
+ * convert a sockaddr to an atom-list, that can be output
+ *
+ * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
+ * \param alist an array of at least 18 t_atoms to write the address to in the form:
+ *              <s:family> {<f:IPitem>} {f:port}
+ *
+ * \return the number of atoms consumed
+ */
+int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]);
 
 /**
  * output the address  (IP, port)

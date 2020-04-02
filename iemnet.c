@@ -47,51 +47,60 @@ void iemnet__closesocket(int sockfd, int verbose)
   }
 }
 
-
-void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
-  struct sockaddr_storage address;
-  socklen_t addresssize = sizeof(address);
-  if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
-    error("unable to get address from socket:%d", sockfd);
-    return;
-  }
-  switch (address.ss_family) {
+int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]) {
+  post("%s", __FUNCTION__);
+  switch (address->ss_family) {
   case AF_INET: {
-    struct sockaddr_in*address4 = (struct sockaddr_in*)&address;
-    uint32_t addr4 = ntohl(address4->sin_addr.s_addr);
-    static t_atom addr[6];
-    SETSYMBOL(addr+0, gensym("IPv4"));
-    SETFLOAT(addr+1, (addr4 & 0xFF000000)>>24);
-    SETFLOAT(addr+2, (addr4 & 0x0FF0000)>>16);
-    SETFLOAT(addr+3, (addr4 & 0x0FF00)>>8);
-    SETFLOAT(addr+4, (addr4 & 0x0FF));
-    SETFLOAT(addr+5, ntohs(address4->sin_port));
-    outlet_anything(status_outlet, s, 6, addr);
+    struct sockaddr_in*addr = (struct sockaddr_in*)address;
+    uint32_t ipaddr = ntohl(addr->sin_addr.s_addr);
+    SETSYMBOL(alist+0, gensym("IPv4"));
+    SETFLOAT(alist+1, (ipaddr & 0xFF000000)>>24);
+    SETFLOAT(alist+2, (ipaddr & 0x0FF0000)>>16);
+    SETFLOAT(alist+3, (ipaddr & 0x0FF00)>>8);
+    SETFLOAT(alist+4, (ipaddr & 0x0FF));
+    SETFLOAT(alist+5, ntohs(addr->sin_port));
+    return 6;
   }
     break;
   case AF_INET6: {
-    struct sockaddr_in6*address6 = (struct sockaddr_in6*)&address;
-    uint8_t*addr6 = address6->sin6_addr.s6_addr;
-    static t_atom addr[18];
+    struct sockaddr_in6*addr = (struct sockaddr_in6*)address;
+    uint8_t*ipaddr = addr->sin6_addr.s6_addr;
     unsigned int i;
-    SETSYMBOL(addr+0, gensym("IPv6"));
+    SETSYMBOL(alist+0, gensym("IPv6"));
     for(i=0; i<16; i++)
-      SETFLOAT(addr+i+1, addr6[i]);
-    SETFLOAT(addr+17, ntohs(address6->sin6_port));
-    outlet_anything(status_outlet, s, 17, addr);
+      SETFLOAT(alist+i+1, ipaddr[i]);
+    SETFLOAT(alist+17, ntohs(addr->sin6_port));
+    return 18;
   }
     break;
 #ifdef __unix__
   case AF_UNIX: {
-    struct sockaddr_un*addressu = (struct sockaddr_un*)&address;
-    t_atom addr[2];
-    SETSYMBOL(addr+0, gensym("unix"));
-    SETSYMBOL(addr+1, gensym(addressu->sun_path));
-    outlet_anything(status_outlet, s, 2, addr);
+    struct sockaddr_un*addr = (struct sockaddr_un*)&address;
+    SETSYMBOL(alist+0, gensym("unix"));
+    SETSYMBOL(alist+1, gensym(addr->sun_path));
+    return 2;
   }
     break;
 #endif
   default:
+    break;
+  }
+  return 0;
+}
+
+
+void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
+  struct sockaddr_storage address;
+  socklen_t addresssize = sizeof(address);
+  t_atom alist[18];
+  int alen;
+  if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
+    error("unable to get address from socket:%d", sockfd);
+    return;
+  }
+  if ((alen = iemnet__sockaddr2list(&address, alist))) {
+    outlet_anything(status_outlet, s, alen, alist);
+  } else {
     error("unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
   }
 }
