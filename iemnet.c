@@ -1,7 +1,7 @@
 /* iemnet
  * this file provides core infrastructure for the iemnet-objects
  *
- *  copyright © 2010-2015 IOhannes m zmölnig, IEM
+ *  copyright © 2010-2020 IOhannes m zmölnig, IEM
  */
 
 /* This program is free software; you can redistribute it and/or                */
