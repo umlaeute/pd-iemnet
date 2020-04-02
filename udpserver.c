@@ -53,8 +53,8 @@ typedef struct _udpserver {
   t_object x_obj;
   t_outlet*x_msgout;
   t_outlet*x_connectout;
-  t_outlet*x_sockout; // legacy
-  t_outlet*x_addrout; // legacy
+  t_outlet*x_sockout; /* legacy */
+  t_outlet*x_addrout; /* legacy */
   t_outlet*x_statusout;
 
   t_udpserver_sender*x_sr[MAX_CONNECT]; /* socket per connection */
@@ -233,7 +233,7 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
       DEBUG("new sender[%d]= %x", id, x->x_sr[id]);
       x->x_nconnections++;
     } else {
-      // oops, no more senders!
+      /* oops, no more senders! */
       id=-1;
     }
 #endif
@@ -254,7 +254,7 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
     t_udpserver_sender* sdr=x->x_sr[id];
     udpserver_sender_free(sdr);
 
-    // close the gap by shifting the remaining connections to the left
+    /* close the gap by shifting the remaining connections to the left */
     for(i=id; i<x->x_nconnections; i++) {
       x->x_sr[id]=x->x_sr[id+1];
     }
@@ -267,8 +267,10 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
 /* ---------------- udpserver info ---------------------------- */
 static void udpserver_info_client(t_udpserver *x, int client)
 {
-  // "client <id> <socket> <IP> <port>"
-  // "bufsize <id> <insize> <outsize>"
+  /*
+     "client <id> <socket> <IP> <port>"
+     "bufsize <id> <insize> <outsize>"
+  */
   static t_atom output_atom[4];
   if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
@@ -310,7 +312,7 @@ static void udpserver_info(t_udpserver *x)
   int port=x->x_port;
 
   if(sockfd<0) {
-    // no open port
+    /* no open port */
     iemnet_log(x, IEMNET_ERROR, "no open socket");
   }
 
@@ -371,7 +373,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
     outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
-      // disconnected!
+      /* disconnected! */
       udpserver_disconnect_socket(x, sockfd);
     }
   }
@@ -496,7 +498,7 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
     return;
   }
 
-  // map the client to a persistant socket
+  /* map the client to a persistant socket */
   if(client>0) {
     sockfd=x->x_sr[client-1]->sr_fd;
   }
@@ -626,8 +628,8 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
     DEBUG("added new sender from %d", c->port);
     if(sdr) {
       udpserver_info_connection(x, sdr);
-      x->x_floatlist=iemnet__chunk2list(c,
-                                        x->x_floatlist); // gets destroyed in the dtor
+      /* gets destroyed in the dtor */
+      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
 
       /* here we might have a reentrancy problem */
       if(conns!=x->x_nconnections) {
@@ -637,13 +639,13 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
                   x->x_floatlist->argv);
     }
   } else {
-    // disconnection never happens with a connectionless protocol like UDP
+    /* disconnection never happens with a connectionless protocol like UDP */
     iemnet_log(x, IEMNET_ERROR, "received disconnection event");
   }
 }
 
 
-// this get's never called
+/* this get's never called */
 static void udpserver_connectpoll(t_udpserver *x)
 {
   struct sockaddr_in  incomer_address;
@@ -651,8 +653,10 @@ static void udpserver_connectpoll(t_udpserver *x)
   int                 fd = -1;
   int                 i;
 
-  // TODO: provide a way to not accept connection
-  // idea: add a message "accept $1" to turn off/on acceptance of new connections
+  /*
+    TODO: provide a way to not accept connection
+    idea: add a message "accept $1" to turn off/on acceptance of new connections
+  */
   fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address,
               &sockaddrl);
 
@@ -741,7 +745,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
   x->x_port = portno;
   x->x_ifaddr = ifaddr;
 
-  // find out which port is actually used (useful when assigning "0")
+  /* find out which port is actually used (useful when assigning "0") */
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
     x->x_port=ntohs(server.sin_port);
   }

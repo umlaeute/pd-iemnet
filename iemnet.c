@@ -197,7 +197,7 @@ static int iemnet__nametaken(const char*namestring)
     curname=curname->next;
   }
 
-  // new name!
+  /* new name! */
   curname=(t_iemnet_names*)malloc(sizeof(t_iemnet_names));
   curname->name=name;
   curname->next=0;

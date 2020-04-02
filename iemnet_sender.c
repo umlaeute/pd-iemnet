@@ -64,7 +64,7 @@ struct _iemnet_sender {
 
   int sockfd; /* owned outside; must call iemnet__sender_destroy() before freeing socket yourself */
   t_iemnet_queue*queue;
-  int keepsending; // indicates whether we want to thread to continue or to terminate
+  int keepsending; /* indicates whether we want to thread to continue or to terminate */
   int isrunning;
 
   const void*userdata; /* user provided data */
@@ -111,11 +111,11 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
                   flags);     /* FLAGS */
   }
   if(result<0) {
-    // broken pipe
+    /* broken pipe */
     return 0;
   }
 
-  // shouldn't we do something with the result here?
+  /* shouldn't we do something with the result here? */
   DEBUG("sent %d bytes", result);
   return 1;
 }
@@ -187,7 +187,7 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
    */
   DEBUG("destroy sender %x with queue %x (%d) in %sthread", s, s->queue, s->keepsending, subthread?"sub":"main ");
   LOCK (&s->mtx);
-  // check s->isrunning
+  /* check s->isrunning */
   DEBUG("keepsending %d\tisrunning %d", s->keepsending, s->isrunning);
   if(!s->keepsending) {
     UNLOCK (&s->mtx);
@@ -248,7 +248,7 @@ t_iemnet_sender*iemnet__sender_create(int sock,
 
   if(0==res) {
   } else {
-    // something went wrong
+    /* something went wrong */
     queue_destroy(result->queue);
     free(result);
     return NULL;

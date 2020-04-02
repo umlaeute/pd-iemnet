@@ -42,13 +42,13 @@ typedef struct _udpclient {
   t_iemnet_sender*x_sender;
   t_iemnet_receiver*x_receiver;
 
-  int             x_fd; // the socket
-  const char     *x_hostname; // address we want to connect to as text
-  int             x_connectstate; // 0 = not connected, 1 = connected
-  u_short         x_port; // port we're sending to
-  u_short         x_sendport; // port we're sending from
+  int             x_fd; /* the socket */
+  const char     *x_hostname; /* address we want to connect to as text */
+  int             x_connectstate; /* 0 = not connected, 1 = connected */
+  u_short         x_port; /* port we're sending to */
+  u_short         x_sendport; /* port we're sending from */
 
-  long            x_addr; // address we're connected to as 32bit int
+  long            x_addr; /* address we're connected to as 32bit int */
 
   t_iemnet_floatlist         *x_floatlist;
 } t_udpclient;
@@ -61,8 +61,10 @@ static void udpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 static void udpclient_info(t_udpclient *x)
 {
-  // "server <socket> <IP> <port>"
-  // "bufsize <insize> <outsize>"
+  /*
+    "server <socket> <IP> <port>"
+    "bufsize <insize> <outsize>"
+  */
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
@@ -237,7 +239,7 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
                 x->x_floatlist->argv);
   } else {
-    // disconnected
+    /* disconnected */
     DEBUG("disconnected");
     if(x->x_fd >= 0) {
       udpclient_disconnect(x);

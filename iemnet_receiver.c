@@ -40,7 +40,7 @@ struct _iemnet_receiver {
 
 static void pollfun(void*z, int fd)
 {
-  // read data from socket and call callback
+  /* read data from socket and call callback */
   t_iemnet_receiver*rec=(t_iemnet_receiver*)z;
 
   unsigned char data[INBUFSIZE];
@@ -68,7 +68,7 @@ static void pollfun(void*z, int fd)
   DEBUG("errno=%d", local_errno);
   chunk = iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
 
-  // call the callback with a NULL-chunk to signal a disconnect event.
+  /* call the callback with a NULL-chunk to signal a disconnect event. */
   (rec->callback)(rec->userdata, chunk);
 
   iemnet__chunk_destroy(chunk);
@@ -114,7 +114,7 @@ void iemnet__receiver_destroy(t_iemnet_receiver*rec, int subthread)
   }
   sys_rmpollfn(rec->sockfd);
 
-  // FIXXME: read any remaining bytes from the socket
+  /* FIXXME: read any remaining bytes from the socket */
 
   if(subthread) {
     sys_unlock();

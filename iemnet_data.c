@@ -273,12 +273,12 @@ struct _iemnet_queue {
   pthread_mutex_t mtx;
   pthread_cond_t cond;
 
-  int done; // in cleanup state
+  int done; /* in cleanup state */
   int size;
 
   pthread_mutex_t usedmtx;
   pthread_cond_t usedcond;
-  int used; // use counter, so queue_finish can wait for blocking accesses to finish
+  int used; /* use counter, so queue_finish can wait for blocking accesses to finish */
 };
 
 static void queue_use_increment(t_iemnet_queue* _this)
@@ -334,7 +334,7 @@ int queue_push(
   _this->size+=data->size;
   size=_this->size;
 
-  // added new chunk, so tell waiting threads that they can pop the data
+  /* added new chunk, so tell waiting threads that they can pop the data */
   pthread_cond_signal(&_this->cond);
   pthread_mutex_unlock(&_this->mtx);
 
@@ -413,7 +413,7 @@ t_iemnet_chunk* queue_pop_noblock(
   queue_use_increment(_this);
   pthread_mutex_lock(&_this->mtx);
   if (! (head = _this->head)) {
-    // empty head
+    /* empty head */
     pthread_mutex_unlock(&_this->mtx);
     queue_use_decrement(_this);
     return NULL;

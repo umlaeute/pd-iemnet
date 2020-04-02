@@ -52,8 +52,8 @@ static void udpreceive_read_callback(void*y, t_iemnet_chunk*c)
   t_udpreceive*x=(t_udpreceive*)y;
   if(c) {
     iemnet__addrout(x->x_statout, x->x_addrout, c->addr, c->port);
-    x->x_floatlist=iemnet__chunk2list(c,
-                                      x->x_floatlist); // gets destroyed in the dtor
+    /* gets destroyed in the dtor */
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
     outlet_list(x->x_msgout, gensym("list"), x->x_floatlist->argc,
                 x->x_floatlist->argv);
   } else {
@@ -132,7 +132,7 @@ static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
   x->x_fd = sockfd;
   x->x_port = portno;
 
-  // find out which port is actually used (useful when assigning "0")
+  /* find out which port is actually used (useful when assigning "0") */
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
     x->x_port=ntohs(server.sin_port);
   }

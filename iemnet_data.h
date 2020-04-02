@@ -38,7 +38,7 @@ typedef struct _iemnet_floatlist {
   t_atom*argv;
   size_t argc;
 
-  size_t size; // real size (might be bigger than argc)
+  size_t size; /* real size (might be bigger than argc) */
 } t_iemnet_floatlist;
 
 /**
@@ -66,7 +66,7 @@ typedef struct _iemnet_chunk {
 
   long addr;
   unsigned short port;
-  short family; // AF_INET, AF_INET6
+  short family; /* AF_INET, AF_INET6 */
 } t_iemnet_chunk;
 
 /**

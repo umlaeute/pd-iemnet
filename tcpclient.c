@@ -45,11 +45,11 @@ typedef struct _tcpclient {
 
   int              x_serialize;
 
-  int             x_fd; // the socket
-  const char     *x_hostname; // address we want to connect to as text
-  int             x_connectstate; // 0 = not connected, 1 = connected
-  int             x_port; // port we're connected to
-  long            x_addr; // address we're connected to as 32bit int
+  int             x_fd; /* the socket */
+  const char     *x_hostname; /* address we want to connect to as text */
+  int             x_connectstate; /* 0 = not connected, 1 = connected */
+  int             x_port; /* port we're connected to */
+  long            x_addr; /* address we're connected to as 32bit int */
 
 
   t_iemnet_floatlist         *x_floatlist;
@@ -60,8 +60,10 @@ static void tcpclient_receive_callback(void *x, t_iemnet_chunk*);
 
 static void tcpclient_info(t_tcpclient *x)
 {
-  // "server <socket> <IP> <port>"
-  // "bufsize <insize> <outsize>"
+  /*
+  "server <socket> <IP> <port>"
+  "bufsize <insize> <outsize>"
+  */
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
@@ -172,7 +174,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
 {
   int state;
 
-  // first disconnect any active connection
+  /* first disconnect any active connection */
   if(x->x_hostname || x->x_port) {
     state=tcpclient_do_disconnect(x->x_fd, x->x_sender, x->x_receiver);
     x->x_connectstate=0;
@@ -243,12 +245,12 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-    x->x_floatlist=iemnet__chunk2list(c,
-                                      x->x_floatlist); // get's destroyed in the dtor
+     /* get's destroyed in the dtor */
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                       x->x_serialize);
   } else {
-    // disconnected
+    /* disconnected */
     tcpclient_disconnect(x);
   }
 }

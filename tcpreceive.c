@@ -38,7 +38,7 @@ static const char*objName="tcpreceive";
 
 static t_class *tcpreceive_class;
 
-#define MAX_CONNECTIONS 128 // this is going to cause trouble down the line...:(
+#define MAX_CONNECTIONS 128 /* this is going to cause trouble down the line...:( */
 
 typedef struct _tcpconnection {
   long            addr;
@@ -91,13 +91,14 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
   index=tcpreceive_find_socket(x, y->socket);
   if(index>=0) {
     if(c) {
-      // TODO?: outlet info about connection
-      x->x_floatlist=iemnet__chunk2list(c,
-                                        x->x_floatlist); // gets destroyed in the dtor
+      /* TODO?: outlet info about connection */
+
+      /* gets destroyed in the dtor */
+      x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
       iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                         x->x_serialize);
     } else {
-      // disconnected
+      /* disconnected */
       tcpreceive_disconnect(x, index);
     }
   }
@@ -283,15 +284,16 @@ static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
     outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   } else {
+    /* wait for new connections */
     sys_addpollfn(sockfd,
                   (t_fdpollfn)tcpreceive_connectpoll,
-                  x); // wait for new connections
+                  x);
   }
 
   x->x_connectsocket = sockfd;
   x->x_port = portno;
 
-  // find out which port is actually used (useful when assigning "0")
+  /* find out which port is actually used (useful when assigning "0") */
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
     x->x_port=ntohs(server.sin_port);
   }

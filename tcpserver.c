@@ -53,8 +53,8 @@ typedef struct _tcpserver {
   t_object                    x_obj;
   t_outlet                    *x_msgout;
   t_outlet                    *x_connectout;
-  t_outlet                    *x_sockout; // legacy
-  t_outlet                    *x_addrout; // legacy
+  t_outlet                    *x_sockout; /* legacy */
+  t_outlet                    *x_addrout; /* legacy */
   t_outlet                    *x_statusout;
 
   int                          x_serialize;
@@ -158,8 +158,10 @@ static int tcpserver_fixindex(t_tcpserver*x, int client)
 /* ---------------- tcpserver info ---------------------------- */
 static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
 {
-  // "client <id> <socket> <IP> <port>"
-  // "bufsize <id> <insize> <outsize>"
+  /*
+    "client <id> <socket> <IP> <port>"
+    "bufsize <id> <insize> <outsize>"
+  */
   static t_atom output_atom[4];
   if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
@@ -251,7 +253,7 @@ static void tcpserver_send_bytes_client(t_tcpserver*x,
     outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
 
     if(size<0) {
-      // disconnected!
+      /* disconnected! */
       tcpserver_disconnect_socket(x, sockfd);
     }
   }
@@ -405,7 +407,7 @@ static void tcpserver_defaulttarget(t_tcpserver *x, t_floatarg f)
     return;
   }
 
-  // map the client to a persistant socket
+  /* map the client to a persistant socket */
   if(client>0) {
     sockfd=x->x_sr[client-1]->sr_fd;
   }
@@ -517,12 +519,12 @@ static void tcpserver_receive_callback(void *y0,
 
   if(c) {
     tcpserver_info_connection(x, y);
-    x->x_floatlist=iemnet__chunk2list(c,
-                                      x->x_floatlist); // get's destroyed in the dtor
+    /* get's destroyed in the dtor */
+    x->x_floatlist=iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                       x->x_serialize);
   } else {
-    // disconnected
+    /* disconnected */
     int sockfd=y->sr_fd;
     iemnet_log(x, IEMNET_VERBOSE, "got disconnection for socket:%d", sockfd);
     tcpserver_disconnect_socket(x, sockfd);
@@ -628,7 +630,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   x->x_connectsocket = sockfd;
   x->x_port = portno;
 
-  // find out which port is actually used (useful when assigning "0")
+  /* find out which port is actually used (useful when assigning "0") */
   if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
     x->x_port=ntohs(server.sin_port);
   }
