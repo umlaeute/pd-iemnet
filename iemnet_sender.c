@@ -93,7 +93,7 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 #endif
 
 
-  //    fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
+  //fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
   if(c->port) {
     DEBUG("%p sending %d bytes to %x:%d @%d", x, size, c->addr, c->port, c->family);
 

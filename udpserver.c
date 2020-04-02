@@ -340,7 +340,7 @@ static void udpserver_info(t_udpserver *x)
 static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 {
   iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
-  //  outlet_float(x->x_sockout, y->sr_fd);
+  //outlet_float(x->x_sockout, y->sr_fd);
 }
 
 /* ---------------- main udpserver (send) stuff --------------------- */
