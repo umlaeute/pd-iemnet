@@ -37,7 +37,7 @@ static t_class *tcpsend_class;
 
 typedef struct _tcpsend {
   t_object x_obj;
-  int      x_fd;
+  int x_fd;
   t_iemnet_sender*x_sender;
 } t_tcpsend;
 
@@ -57,11 +57,11 @@ static void tcpsend_disconnect(t_tcpsend *x)
 static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
 {
-  struct sockaddr_in  server;
-  struct hostent      *hp;
-  int                 sockfd;
-  int                 portno = fportno;
-  int                 intarg;
+  struct sockaddr_in server;
+  struct hostent*hp;
+  int sockfd;
+  int portno = fportno;
+  int intarg;
   memset(&server, 0, sizeof(server));
 
   if (x->x_fd >= 0) {

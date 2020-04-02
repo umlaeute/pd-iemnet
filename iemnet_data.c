@@ -263,13 +263,13 @@ t_iemnet_floatlist*iemnet__chunk2list(t_iemnet_chunk*c,
 # undef t_iemnet_queue
 #endif
 typedef struct _node {
-  struct _node* next;
+  struct _node*next;
   t_iemnet_chunk*data;
 } t_node;
 
 struct _iemnet_queue {
-  t_node* head; /* = 0 */
-  t_node* tail; /* = 0 */
+  t_node*head; /* = 0 */
+  t_node*tail; /* = 0 */
   pthread_mutex_t mtx;
   pthread_cond_t cond;
 

@@ -33,26 +33,25 @@ static char objName[] = "tcpclient";
 
 
 typedef struct _tcpclient {
-  t_object        x_obj;
-  t_clock         *x_clock;
-  t_outlet        *x_msgout;
-  t_outlet        *x_addrout;
-  t_outlet        *x_connectout;
-  t_outlet        *x_statusout;
+  t_object x_obj;
+  t_clock*x_clock;
+  t_outlet*x_msgout;
+  t_outlet*x_addrout;
+  t_outlet*x_connectout;
+  t_outlet*x_statusout;
 
-  t_iemnet_sender  *x_sender;
+  t_iemnet_sender*x_sender;
   t_iemnet_receiver*x_receiver;
 
-  int              x_serialize;
+  int x_serialize;
 
-  int             x_fd; /* the socket */
-  const char     *x_hostname; /* address we want to connect to as text */
-  int             x_connectstate; /* 0 = not connected, 1 = connected */
-  int             x_port; /* port we're connected to */
-  long            x_addr; /* address we're connected to as 32bit int */
+  int x_fd; /* the socket */
+  const char*x_hostname; /* address we want to connect to as text */
+  int x_connectstate; /* 0 = not connected, 1 = connected */
+  int x_port; /* port we're connected to */
+  long x_addr; /* address we're connected to as 32bit int */
 
-
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist*x_floatlist;
 } t_tcpclient;
 
 
@@ -71,20 +70,20 @@ static void tcpclient_info(t_tcpclient *x)
     iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, connected);
   if(connected) {
-    unsigned short port   = x->x_port;
-    const char*hostname=x->x_hostname;
+    unsigned short port = x->x_port;
+    const char*hostname = x->x_hostname;
 
     int insize =iemnet__receiver_getsize(x->x_receiver);
-    int outsize=iemnet__sender_getsize  (x->x_sender  );
+    int outsize=iemnet__sender_getsize(x->x_sender);
 
-    SETFLOAT (output_atom+0, sockfd);
+    SETFLOAT(output_atom+0, sockfd);
     SETSYMBOL(output_atom+1, gensym(hostname));
-    SETFLOAT (output_atom+2, port);
+    SETFLOAT(output_atom+2, port);
 
     outlet_anything(x->x_statusout, gensym("server"), 3, output_atom);
 
-    SETFLOAT (output_atom+0, insize);
-    SETFLOAT (output_atom+1, outsize);
+    SETFLOAT(output_atom+0, insize);
+    SETFLOAT(output_atom+1, outsize);
     outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
   }
 }
@@ -111,10 +110,10 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
                                 t_tcpclient*x,
                                 t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT)
 {
-  struct sockaddr_in  server;
-  struct hostent      *hp;
-  int                 sockfd=-1;
-  t_iemnet_sender*  sender;
+  struct sockaddr_in server;
+  struct hostent*hp;
+  int sockfd=-1;
+  t_iemnet_sender*sender;
   t_iemnet_receiver*receiver;
 
   /* connect socket using hostname provided in command line */
@@ -146,7 +145,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   }
 
   sender=iemnet__sender_create(sockfd, NULL, NULL, 0);
-  receiver=iemnet__receiver_create(sockfd, x,  tcpclient_receive_callback,
+  receiver=iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
                                    0);
 
   if(addrOUT) {

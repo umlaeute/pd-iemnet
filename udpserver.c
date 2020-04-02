@@ -43,9 +43,9 @@ static const char objName[] = "udpserver";
 typedef struct _udpserver_sender {
   struct _udpserver *sr_owner;
 
-  long           sr_host;
+  long sr_host;
   unsigned short sr_port;
-  int          sr_fd;
+  int sr_fd;
   t_iemnet_sender*sr_sender;
 } t_udpserver_sender;
 
@@ -58,12 +58,12 @@ typedef struct _udpserver {
   t_outlet*x_statusout;
 
   t_udpserver_sender*x_sr[MAX_CONNECT]; /* socket per connection */
-  unsigned int       x_nconnections;
+  unsigned int x_nconnections;
 
-  int x_connectsocket;    /* socket waiting for new connections */
+  int x_connectsocket; /* socket waiting for new connections */
   unsigned short x_port; /* port we are bound to */
-  t_symbol*      x_ifaddr; /* interface we are bound to */
-  unsigned char  x_accept; /* whether we accept new connections or not */
+  t_symbol*x_ifaddr; /* interface we are bound to */
+  unsigned char x_accept; /* whether we accept new connections or not */
 
   /* the default connection to send to;
      0=broadcast; >0 use this client; <0 exclude this client
@@ -176,7 +176,7 @@ static int equal_addr(unsigned long host1, unsigned short port1,
 }
 
 
-static int udpserver__find_sender(t_udpserver*x,  unsigned long host,
+static int udpserver__find_sender(t_udpserver*x, unsigned long host,
                                   unsigned short port)
 {
   unsigned int i=0;
@@ -274,12 +274,12 @@ static void udpserver_info_client(t_udpserver *x, int client)
   static t_atom output_atom[4];
   if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
-    unsigned short port   = x->x_sr[client]->sr_port;
+    unsigned short port = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
     char hostname[MAXPDSTRING];
 
     int insize =iemnet__receiver_getsize(x->x_receiver);
-    int outsize=iemnet__sender_getsize  (x->x_sr[client]->sr_sender  );
+    int outsize=iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
     snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
              (unsigned char)((address & 0xFF000000)>>24),
@@ -289,16 +289,16 @@ static void udpserver_info_client(t_udpserver *x, int client)
             );
     hostname[MAXPDSTRING-1]=0;
 
-    SETFLOAT (output_atom+0, client+1);
-    SETFLOAT (output_atom+1, sockfd);
+    SETFLOAT(output_atom+0, client+1);
+    SETFLOAT(output_atom+1, sockfd);
     SETSYMBOL(output_atom+2, gensym(hostname));
-    SETFLOAT (output_atom+3, port);
+    SETFLOAT(output_atom+3, port);
 
     outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
 
-    SETFLOAT (output_atom+0, client+1);
-    SETFLOAT (output_atom+1, insize);
-    SETFLOAT (output_atom+2, outsize);
+    SETFLOAT(output_atom+0, client+1);
+    SETFLOAT(output_atom+1, insize);
+    SETFLOAT(output_atom+2, outsize);
     outlet_anything( x->x_statusout, gensym("bufsize"), 3, output_atom);
   }
 }
@@ -317,8 +317,8 @@ static void udpserver_info(t_udpserver *x)
   }
 
   if(x->x_port<=0) {
-    struct sockaddr_in  server;
-    socklen_t           serversize=sizeof(server);
+    struct sockaddr_in server;
+    socklen_t serversize=sizeof(server);
     memset(&server, 0, sizeof(server));
 
     if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
@@ -332,7 +332,7 @@ static void udpserver_info(t_udpserver *x)
 
   iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
 
-  SETFLOAT (output_atom+0, port);
+  SETFLOAT(output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
 }
 
@@ -354,7 +354,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
     DEBUG("client %X", x->x_sr[client]);
   }
   if(x && client<MAX_CONNECT && x->x_sr[client]) {
-    t_atom                  output_atom[3];
+    t_atom output_atom[3];
     int size=0;
 
     t_iemnet_sender*sender=x->x_sr[client]->sr_sender;
@@ -438,7 +438,7 @@ static void udpserver_send_client(t_udpserver *x, t_symbol *s, int argc,
 static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
                                 t_atom *argv)
 {
-  unsigned int   client;
+  unsigned int client;
   t_iemnet_chunk*chunk=iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
 
@@ -520,7 +520,7 @@ static void udpserver_targetsocket(t_udpserver *x, t_floatarg f)
 static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc,
                                   t_atom *argv)
 {
-  int     client = -1;
+  int client = -1;
   t_iemnet_chunk*chunk=NULL;
   (void)s; /* ignore unused variable */
   if(argc) {
@@ -648,10 +648,10 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
 /* this get's never called */
 static void udpserver_connectpoll(t_udpserver *x)
 {
-  struct sockaddr_in  incomer_address;
-  socklen_t           sockaddrl = sizeof( struct sockaddr );
-  int                 fd = -1;
-  int                 i;
+  struct sockaddr_in incomer_address;
+  socklen_t sockaddrl = sizeof( struct sockaddr );
+  int fd = -1;
+  int i;
 
   /*
     TODO: provide a way to not accept connection
@@ -665,7 +665,7 @@ static void udpserver_connectpoll(t_udpserver *x)
   if (fd < 0) {
     error("[%s] accept failed", objName);
   } else {
-    unsigned long host  = ntohl(incomer_address.sin_addr.s_addr);
+    unsigned long host = ntohl(incomer_address.sin_addr.s_addr);
     unsigned short port = ntohs(incomer_address.sin_port);
 
     t_udpserver_sender *y = udpserver_sender_new(x, host, port);
@@ -685,8 +685,8 @@ static void udpserver_connectpoll(t_udpserver *x)
 static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short portno)
 {
   static t_atom ap[1];
-  struct sockaddr_in  server;
-  socklen_t           serversize=sizeof(server);
+  struct sockaddr_in server;
+  socklen_t serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   memset(&server, 0, sizeof(server));
 
@@ -790,8 +790,8 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
 
 static void *udpserver_new(t_floatarg fportno)
 {
-  t_udpserver         *x;
-  int                 i;
+  t_udpserver*x;
+  int i;
 
   x = (t_udpserver *)pd_new(udpserver_class);
 
@@ -823,7 +823,7 @@ static void *udpserver_new(t_floatarg fportno)
 
 static void udpserver_free(t_udpserver *x)
 {
-  int     i;
+  int i;
   for(i = 0; i < MAX_CONNECT; i++) {
     if (NULL!=x->x_sr[i]) {
       DEBUG("[%s] free %x", objName, x);
@@ -877,13 +877,13 @@ IEMNET_EXTERN void udpserver_setup(void)
                   gensym("target"), A_DEFFLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_targetsocket,
                   gensym("targetsocket"), A_DEFFLOAT, 0);
-  class_addlist  (udpserver_class, (t_method)udpserver_defaultsend);
+  class_addlist(udpserver_class, (t_method)udpserver_defaultsend);
 
   class_addmethod(udpserver_class, (t_method)udpserver_bind, gensym("bind"),
                   A_GIMME, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_port, gensym("port"),
                   A_DEFFLOAT, 0);
-  class_addbang  (udpserver_class, (t_method)udpserver_info);
+  class_addbang(udpserver_class, (t_method)udpserver_info);
 
   DEBUGMETHOD(udpserver_class);
 }

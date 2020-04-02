@@ -41,28 +41,28 @@ static t_class *tcpreceive_class;
 #define MAX_CONNECTIONS 128 /* this is going to cause trouble down the line...:( */
 
 typedef struct _tcpconnection {
-  long            addr;
-  unsigned short  port;
-  int             socket;
+  long addr;
+  unsigned short port;
+  int socket;
   struct _tcpreceive*owner;
   t_iemnet_receiver*receiver;
 } t_tcpconnection;
 
 typedef struct _tcpreceive {
-  t_object        x_obj;
-  t_outlet        *x_msgout;
-  t_outlet        *x_addrout;
-  t_outlet        *x_connectout;
-  t_outlet        *x_statusout;
-  int             x_connectsocket;
-  int             x_port;
+  t_object x_obj;
+  t_outlet*x_msgout;
+  t_outlet*x_addrout;
+  t_outlet*x_connectout;
+  t_outlet*x_statusout;
+  int x_connectsocket;
+  int x_port;
 
-  int             x_serialize;
+  int x_serialize;
 
-  int             x_nconnections;
+  int x_nconnections;
   t_tcpconnection x_connection[MAX_CONNECTIONS];
 
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist*x_floatlist;
 } t_tcpreceive;
 
 /* forward declarations */
@@ -132,10 +132,10 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
 /* a new socket is assigned  */
 static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 {
-  struct sockaddr_in  from;
-  socklen_t           fromlen = sizeof(from);
-  long                addr;
-  unsigned short      port;
+  struct sockaddr_in from;
+  socklen_t fromlen = sizeof(from);
+  long addr;
+  unsigned short port;
   if(fd != x->x_connectsocket) {
     iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
     return;
@@ -206,9 +206,9 @@ static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
 static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 {
   static t_atom ap[1];
-  int                 portno = fportno;
-  struct sockaddr_in  server;
-  socklen_t           serversize=sizeof(server);
+  int portno = fportno;
+  struct sockaddr_in server;
+  socklen_t serversize=sizeof(server);
   int sockfd = x->x_connectsocket;
   int intarg;
   memset(&server, 0, sizeof(server));
@@ -323,9 +323,9 @@ static void tcpreceive_free(t_tcpreceive *x)
 
 static void *tcpreceive_new(t_floatarg fportno)
 {
-  t_tcpreceive       *x;
-  int                portno = fportno;
-  int                i;
+  t_tcpreceive*x;
+  int portno = fportno;
+  int i;
 
   x = (t_tcpreceive *)pd_new(tcpreceive_class);
   x->x_msgout = outlet_new(&x->x_obj, 0);

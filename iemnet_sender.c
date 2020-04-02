@@ -46,7 +46,7 @@
 
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount=0;
-# define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++;  if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
+# define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++; if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
 # define UNLOCK(x) do {debug_lockcount--;if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  UNLOCK %p [%d]", x, debug_lockcount); pthread_mutex_unlock(x);}while(0)
 #else
 # define LOCK(x) pthread_mutex_lock(x)
@@ -81,8 +81,8 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 {
   int result=-1;
 
-  struct sockaddr_in  to;
-  socklen_t           tolen = sizeof(to);
+  struct sockaddr_in to;
+  socklen_t tolen = sizeof(to);
 
   unsigned char*data=c->data;
   unsigned int size=c->size;
@@ -97,9 +97,9 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
   if(c->port) {
     DEBUG("%p sending %d bytes to %x:%d @%d", x, size, c->addr, c->port, c->family);
 
-    to.sin_addr.s_addr=htonl(c->addr);
-    to.sin_port       =htons(c->port);
-    to.sin_family     =c->family;
+    to.sin_addr.s_addr = htonl(c->addr);
+    to.sin_port = htons(c->port);
+    to.sin_family = c->family;
     result = sendto(sockfd,
                     data, size, /* DATA */
                     flags,      /* FLAGS */
@@ -156,7 +156,7 @@ static void*iemnet__sender_sendthread(void*arg)
     LOCK(&sender->mtx);
   }
   sender->isrunning=0;
-  UNLOCK (&sender->mtx);
+  UNLOCK(&sender->mtx);
   DEBUG("send thread terminated");
   return NULL;
 }
@@ -165,13 +165,13 @@ int iemnet__sender_send(t_iemnet_sender*s, t_iemnet_chunk*c)
 {
   t_iemnet_queue*q=0;
   int size=-1;
-  LOCK (&s->mtx);
+  LOCK(&s->mtx);
   q=s->queue;
   if(!s->isrunning) {
-    UNLOCK (&s->mtx);
+    UNLOCK(&s->mtx);
     return -1;
   }
-  UNLOCK (&s->mtx);
+  UNLOCK(&s->mtx);
   if(q) {
     t_iemnet_chunk*chunk=iemnet__chunk_create_chunk(c);
     size = queue_push(q, chunk);
@@ -186,11 +186,11 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
    * so if it is false, we know that we are already being called
    */
   DEBUG("destroy sender %x with queue %x (%d) in %sthread", s, s->queue, s->keepsending, subthread?"sub":"main ");
-  LOCK (&s->mtx);
+  LOCK(&s->mtx);
   /* check s->isrunning */
   DEBUG("keepsending %d\tisrunning %d", s->keepsending, s->isrunning);
   if(!s->keepsending) {
-    UNLOCK (&s->mtx);
+    UNLOCK(&s->mtx);
     return;
   }
   s->keepsending=0;
@@ -198,11 +198,11 @@ void iemnet__sender_destroy(t_iemnet_sender*s, int subthread)
   while(s->isrunning) {
     s->keepsending=0;
     queue_finish(s->queue);
-    UNLOCK (&s->mtx);
-    LOCK (&s->mtx);
+    UNLOCK(&s->mtx);
+    LOCK(&s->mtx);
   }
 
-  UNLOCK (&s->mtx);
+  UNLOCK(&s->mtx);
 
   queue_finish(s->queue);
   DEBUG("queue finished");
@@ -270,7 +270,7 @@ int iemnet__sender_getlasterror(t_iemnet_sender*x)
 
 
 int iemnet__sender_getsockopt(t_iemnet_sender*s, int level, int optname,
-                              void      *optval, socklen_t*optlen)
+                              void*optval, socklen_t*optlen)
 {
   int result=getsockopt(s->sockfd, level, optname, optval, optlen);
   if(result!=0) {

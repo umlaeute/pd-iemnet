@@ -33,24 +33,24 @@ static t_class *udpclient_class;
 static const char objName[] = "udpclient";
 
 typedef struct _udpclient {
-  t_object        x_obj;
-  t_outlet        *x_msgout;
-  t_outlet        *x_addrout;
-  t_outlet        *x_connectout;
-  t_outlet        *x_statusout;
+  t_object x_obj;
+  t_outlet*x_msgout;
+  t_outlet*x_addrout;
+  t_outlet*x_connectout;
+  t_outlet*x_statusout;
 
   t_iemnet_sender*x_sender;
   t_iemnet_receiver*x_receiver;
 
-  int             x_fd; /* the socket */
-  const char     *x_hostname; /* address we want to connect to as text */
-  int             x_connectstate; /* 0 = not connected, 1 = connected */
-  u_short         x_port; /* port we're sending to */
-  u_short         x_sendport; /* port we're sending from */
+  int x_fd; /* the socket */
+  const char*x_hostname; /* address we want to connect to as text */
+  int x_connectstate; /* 0 = not connected, 1 = connected */
+  u_short x_port; /* port we're sending to */
+  u_short x_sendport; /* port we're sending from */
 
-  long            x_addr; /* address we're connected to as 32bit int */
+  long x_addr; /* address we're connected to as 32bit int */
 
-  t_iemnet_floatlist         *x_floatlist;
+  t_iemnet_floatlist*x_floatlist;
 } t_udpclient;
 
 
@@ -72,19 +72,19 @@ static void udpclient_info(t_udpclient *x)
     iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   if(connected) {
-    unsigned short port   = x->x_port;
-    const char*hostname=x->x_hostname;
+    unsigned short port = x->x_port;
+    const char*hostname = x->x_hostname;
 
     int insize =iemnet__receiver_getsize(x->x_receiver);
-    int outsize=iemnet__sender_getsize  (x->x_sender  );
+    int outsize=iemnet__sender_getsize(x->x_sender);
 
-    SETFLOAT (output_atom+0, sockfd);
+    SETFLOAT(output_atom+0, sockfd);
     SETSYMBOL(output_atom+1, gensym(hostname));
-    SETFLOAT (output_atom+2, port);
+    SETFLOAT(output_atom+2, port);
     outlet_anything(x->x_statusout, gensym("server"), 3, output_atom);
 
-    SETFLOAT (output_atom+0, insize);
-    SETFLOAT (output_atom+1, outsize);
+    SETFLOAT(output_atom+0, insize);
+    SETFLOAT(output_atom+1, outsize);
     outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
   }
 }
@@ -92,10 +92,10 @@ static void udpclient_info(t_udpclient *x)
 /* connection handling */
 static void *udpclient_doconnect(t_udpclient*x, int subthread)
 {
-  struct sockaddr_in  server;
-  struct hostent      *hp;
-  int                 sockfd;
-  int                 broadcast = 1;/* nonzero is true */
+  struct sockaddr_in server;
+  struct hostent*hp;
+  int sockfd;
+  int broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
   if (x->x_sender) {

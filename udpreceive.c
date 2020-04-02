@@ -33,14 +33,14 @@ static const char objName[] = "udpreceive";
 static t_class *udpreceive_class;
 
 typedef struct _udpreceive {
-  t_object  x_obj;
-  t_outlet  *x_msgout;
-  t_outlet  *x_addrout;
-  t_outlet  *x_statout;
+  t_object x_obj;
+  t_outlet*x_msgout;
+  t_outlet*x_addrout;
+  t_outlet*x_statout;
 
-  int       x_fd;
-  int       x_port;
-  t_iemnet_receiver *x_receiver;
+  int x_fd;
+  int x_port;
+  t_iemnet_receiver*x_receiver;
   t_iemnet_floatlist*x_floatlist;
 
   int x_reuseport, x_reuseaddr;
@@ -63,8 +63,8 @@ static void udpreceive_read_callback(void*y, t_iemnet_chunk*c)
 
 static int udpreceive_setport(t_udpreceive*x, unsigned short portno)
 {
-  struct sockaddr_in  server;
-  socklen_t           serversize=sizeof(server);
+  struct sockaddr_in server;
+  socklen_t serversize=sizeof(server);
   int sockfd = x->x_fd;
   int intarg;
   memset(&server, 0, sizeof(server));

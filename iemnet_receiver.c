@@ -49,8 +49,8 @@ static void pollfun(void*z, int fd)
   int result = 0;
   int local_errno = 0;
 
-  struct sockaddr_in  from;
-  socklen_t           fromlen = sizeof(from);
+  struct sockaddr_in from;
+  socklen_t fromlen = sizeof(from);
 
   int recv_flags=0;
 #ifdef MSG_DONTWAIT

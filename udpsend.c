@@ -40,11 +40,11 @@ typedef struct _udpsend {
 static void udpsend_connect(t_udpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
 {
-  struct sockaddr_in  server;
-  struct hostent      *hp = NULL;
-  int                 sockfd;
-  int                 portno = fportno;
-  int                 broadcast = 1;/* nonzero is true */
+  struct sockaddr_in server;
+  struct hostent*hp = NULL;
+  int sockfd;
+  int portno = fportno;
+  int broadcast = 1;/* nonzero is true */
   memset(&server, 0, sizeof(server));
 
   if (x->x_sender) {
