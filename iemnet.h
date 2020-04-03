@@ -198,6 +198,7 @@ void iemnet__closesocket(int fd, int verbose);
  * calculate the length of an address based on it's type
  * (some OSs require the exact size of the address, e,g, when calling sendto())
  *
+ * https://github.com/SIPp/sipp/pull/251/files
  */
 static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) {
   if (ss->ss_family == AF_INET) {
