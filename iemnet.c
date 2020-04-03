@@ -30,6 +30,10 @@
 # include <sys/un.h>
 #endif
 
+#ifndef _WIN32
+# define HAVE_INET_NTOP
+#endif
+
 /* close a socket properly */
 void iemnet__closesocket(int sockfd, int verbose)
 {
@@ -58,6 +62,39 @@ static void*getaddr(const struct sockaddr_storage*address) {
   }
   return 0;
 }
+
+#ifndef HAVE_INET_NTOP
+static const char *rpl_inet_ntop(int af, const void *src, char *dst, socklen_t size) {
+  switch (af) {
+  case AF_INET: {
+    struct sockaddr_in*addr = (struct sockaddr_in*)src;
+    uint32_t ipaddr = ntohl(addr->sin_addr.s_addr);
+    snprintf(dst, size, "%d.%d.%d.%d"
+             , (ipaddr & 0xFF000000)>>24
+             , (ipaddr & 0x0FF0000)>>16
+             , (ipaddr & 0x0FF00)>>8
+             , (ipaddr & 0x0FF)
+      );
+    return dst;
+  }
+  case AF_INET6: {
+    struct sockaddr_in6*addr = (struct sockaddr_in6*)src;
+    uint8_t*ipaddr = addr->sin6_addr.s6_addr;
+    snprintf(dst, size, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d"
+             , ipaddr[ 0], ipaddr[ 1], ipaddr[ 2], ipaddr[ 3]
+             , ipaddr[ 4], ipaddr[ 5], ipaddr[ 6], ipaddr[ 7]
+             , ipaddr[ 8], ipaddr[ 9], ipaddr[10], ipaddr[11]
+             , ipaddr[12], ipaddr[13], ipaddr[14], ipaddr[15]
+      );
+    return dst;
+  }
+  default:
+    break;
+  }
+  return NULL;
+}
+# define inet_ntop rpl_inet_ntop
+#endif
 
 char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len) {
   switch (address->ss_family) {
