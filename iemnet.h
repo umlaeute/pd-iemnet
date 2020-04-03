@@ -206,6 +206,10 @@ static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) 
     return sizeof(struct sockaddr_in);
   case AF_INET6:
     return sizeof(struct sockaddr_in6);
+#if 0 && (defined __unix__)
+  case AF_UNIX:
+    return sizeof(struct sockaddr_un);
+#endif
   default:
     break;
   }
