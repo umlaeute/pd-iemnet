@@ -47,28 +47,30 @@ void iemnet__closesocket(int sockfd, int verbose)
   }
 }
 
+static void*getaddr(const struct sockaddr_storage*address) {
+  switch (address->ss_family) {
+  case AF_INET:
+    return &((struct sockaddr_in*)address)->sin_addr;
+  case AF_INET6:
+    return &((struct sockaddr_in6*)address)->sin6_addr;
+  default:
+    break;
+  }
+  return 0;
+}
+
 char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len) {
   switch (address->ss_family) {
-  case AF_INET: {
-    struct sockaddr_in*addr = (struct sockaddr_in*)address;
-    uint32_t ipaddr = ntohl(addr->sin_addr.s_addr);
-    snprintf(str, len, "%d.%d.%d.%d:%d"
-             , (ipaddr & 0xFF000000)>>24
-             , (ipaddr & 0x0FF0000)>>16
-             , (ipaddr & 0x0FF00)>>8
-             , (ipaddr & 0x0FF)
-             , ntohs(addr->sin_port));
-  }
-    break;
-  case AF_INET6: {
-    struct sockaddr_in6*addr = (struct sockaddr_in6*)address;
-    uint8_t*ipaddr = addr->sin6_addr.s6_addr;
-    snprintf(str, len, "[%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d]:%d",
-             ipaddr[ 0], ipaddr[ 1], ipaddr[ 2], ipaddr[ 3],
-             ipaddr[ 4], ipaddr[ 5], ipaddr[ 6], ipaddr[ 7],
-             ipaddr[ 8], ipaddr[ 9], ipaddr[10], ipaddr[11],
-             ipaddr[12], ipaddr[13], ipaddr[14], ipaddr[15],
-             addr->sin6_port);
+  case AF_INET: case AF_INET6: {
+    char s[MAXPDSTRING];
+    size_t l=MAXPDSTRING;
+    if (inet_ntop(address->ss_family, getaddr(address), s, l) == NULL)
+      snprintf(s, l, "<IPv%d>", (AF_INET==address->ss_family)?4:6);
+
+    if (AF_INET==address->ss_family)
+      snprintf(str, len, "%s:%d", s, ntohs(((struct sockaddr_in*)address)->sin_port));
+    else
+      snprintf(str, len, "[%s]:%d", s, ntohs(((struct sockaddr_in6*)address)->sin6_port));
   }
     break;
 #ifdef __unix__
@@ -88,30 +90,17 @@ char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_
 t_symbol*iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port) {
   char str[MAXPDSTRING];
   size_t len=MAXPDSTRING;
+  error("sockaddr2sym");
   switch (address->ss_family) {
-  case AF_INET: {
-    struct sockaddr_in*addr = (struct sockaddr_in*)address;
-    uint32_t ipaddr = ntohl(addr->sin_addr.s_addr);
-    snprintf(str, len, "%d.%d.%d.%d"
-             , (ipaddr & 0xFF000000)>>24
-             , (ipaddr & 0x0FF0000)>>16
-             , (ipaddr & 0x0FF00)>>8
-             , (ipaddr & 0x0FF));
-    if(port)
-      *port = ntohs(addr->sin_port);
-  }
-    break;
-  case AF_INET6: {
-    struct sockaddr_in6*addr = (struct sockaddr_in6*)address;
-    uint8_t*ipaddr = addr->sin6_addr.s6_addr;
-    snprintf(str, len, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
-             ipaddr[ 0], ipaddr[ 1], ipaddr[ 2], ipaddr[ 3],
-             ipaddr[ 4], ipaddr[ 5], ipaddr[ 6], ipaddr[ 7],
-             ipaddr[ 8], ipaddr[ 9], ipaddr[10], ipaddr[11],
-             ipaddr[12], ipaddr[13], ipaddr[14], ipaddr[15]);
-    if(port)
-      *port = ntohs(addr->sin6_port);
-  }
+  case AF_INET: case AF_INET6:
+    if(port) {
+      if (AF_INET==address->ss_family)
+        *port=ntohs(((struct sockaddr_in*)address)->sin_port);
+      else
+        *port=ntohs(((struct sockaddr_in6*)address)->sin6_port);
+    }
+    if (inet_ntop(address->ss_family, getaddr(address), str, len) == NULL)
+      snprintf(str, len, "<IPv%d>", (AF_INET==address->ss_family)?4:6);
     break;
 #ifdef __unix__
   case AF_UNIX: {
