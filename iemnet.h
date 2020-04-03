@@ -201,13 +201,15 @@ void iemnet__closesocket(int fd, int verbose);
  * https://github.com/SIPp/sipp/pull/251/files
  */
 static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) {
-  if (ss->ss_family == AF_INET) {
+  switch(ss->ss_family) {
+  case AF_INET:
     return sizeof(struct sockaddr_in);
-  } else if (ss->ss_family == AF_INET6) {
+  case AF_INET6:
     return sizeof(struct sockaddr_in6);
-  } else {
-    return 0;
+  default:
+    break;
   }
+  return 0;
 }
 
 /**
