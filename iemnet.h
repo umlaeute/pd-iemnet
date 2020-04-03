@@ -193,6 +193,43 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 void iemnet__closesocket(int fd, int verbose);
 
+
+/**
+ * calculate the length of an address based on it's type
+ * (some OSs require the exact size of the address, e,g, when calling sendto())
+ *
+ */
+static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) {
+  if (ss->ss_family == AF_INET) {
+    return sizeof(struct sockaddr_in);
+  } else if (ss->ss_family == AF_INET6) {
+    return sizeof(struct sockaddr_in6);
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * convert a sockaddr to string (e.g. for printing)
+ *
+ * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
+ * \param str string to output data into
+ * \param len length of <str> in bytes
+ *
+ * \return pointer to str
+ */
+char* iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len);
+
+/**
+ * convert a sockaddr to string (e.g. for printing)
+ *
+ * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
+ * \param port if non-NULL and address has a port, sets the port
+ *
+ * \return symbol holding e.g. the IP address
+ */
+t_symbol* iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port);
+
 /**
  * convert a sockaddr to an atom-list, that can be output
  *
