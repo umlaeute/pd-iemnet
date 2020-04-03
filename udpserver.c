@@ -35,6 +35,9 @@
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
+#ifndef PERTHREAD
+# define PERTHREAD
+#endif
 static PERTHREAD char s_addrstr[MAXPDSTRING];
 #define addr2str(x) iemnet__sockaddr2str(x, s_addrstr, MAXPDSTRING)
 
