@@ -342,7 +342,7 @@ static void MAYBE_UNUSED_FUNCTION(debug_dummy)(const char *format, ...)
 {
   (void)format; /* ignore unused variable */
 }
-# define DEBUG debug_dummy
+# define DEBUG if(0)debug_dummy
 #endif
 #define MARK() post("%s:%d [%s]",  __FILE__, __LINE__, __FUNCTION__)
 
