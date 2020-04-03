@@ -48,7 +48,6 @@ void iemnet__closesocket(int sockfd, int verbose)
 }
 
 int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]) {
-  post("%s", __FUNCTION__);
   switch (address->ss_family) {
   case AF_INET: {
     struct sockaddr_in*addr = (struct sockaddr_in*)address;
