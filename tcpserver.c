@@ -162,26 +162,18 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
   static t_atom output_atom[4];
   if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
-    unsigned short port = x->x_sr[client]->sr_port;
-    long address = x->x_sr[client]->sr_host;
-    char hostname[MAXPDSTRING];
-
+    int port=-1;
+    t_symbol*hostname = iemnet__sockaddr2sym(&x->x_sr[client]->sr_address, &port);;
     int insize = iemnet__receiver_getsize(x->x_sr[client]->sr_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
-    snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
-             (unsigned char)((address & 0xFF000000)>>24),
-             (unsigned char)((address & 0x0FF0000)>>16),
-             (unsigned char)((address & 0x0FF00)>>8),
-             (unsigned char)((address & 0x0FF)));
-    hostname[MAXPDSTRING-1] = 0;
-
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, sockfd);
-    SETSYMBOL(output_atom+2, gensym(hostname));
-    SETFLOAT(output_atom+3, port);
+    SETSYMBOL(output_atom+2, hostname);
+    if(port>=0)
+      SETFLOAT(output_atom+3, port);
 
-    outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
+    outlet_anything( x->x_statusout, gensym("client"), 3+(port>=0), output_atom);
 
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, insize);
@@ -223,7 +215,7 @@ static void tcpserver_info(t_tcpserver *x)
 static void tcpserver_info_connection(t_tcpserver *x,
                                       t_tcpserver_socketreceiver*y)
 {
-  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_address);
+  iemnet__addrout(x->x_statusout, x->x_addrout, &y->sr_address);
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
@@ -530,8 +522,8 @@ static void tcpserver_receive_callback(void *y0,
 
 static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 {
-  struct sockaddr_in incomer_address;
-  socklen_t sockaddrl = sizeof( struct sockaddr );
+  struct sockaddr_storage incomer_address;
+  socklen_t sockaddrl = sizeof( incomer_address );
   int i;
   if(fd != x->x_connectsocket) {
     iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
