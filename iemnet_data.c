@@ -169,11 +169,7 @@ t_iemnet_chunk* iemnet__chunk_create_empty(int size)
     }
 
     memset(result->data, 0, result->size);
-
-    result->addr = 0L;
-    result->port = 0;
-    result->family = AF_INET;
-
+    memset(&result->address, 0, sizeof(result->address));
   }
   return result;
 }
@@ -183,19 +179,19 @@ t_iemnet_chunk* iemnet__chunk_create_data(int size, unsigned char*data)
   t_iemnet_chunk*result = iemnet__chunk_create_empty(size);
   if(result) {
     memcpy(result->data, data, result->size);
+    memset(&result->address, 0, sizeof(result->address));
   }
   return result;
 }
 
-t_iemnet_chunk* iemnet__chunk_create_dataaddr(int size,
-    unsigned char*data,
-    struct sockaddr_in*addr)
+t_iemnet_chunk* iemnet__chunk_create_dataaddr(
+  int size, unsigned char*data,
+  struct sockaddr_storage*addr, socklen_t addrlen)
 {
   t_iemnet_chunk*result = iemnet__chunk_create_data(size, data);
-  if(result && addr) {
-    result->addr = ntohl(addr->sin_addr.s_addr);
-    result->port = ntohs(addr->sin_port);
-    result->family = addr->sin_family;
+  if(result) {
+    if (addr && addrlen)
+      memcpy(&result->address, addr, addrlen);
   }
   return result;
 }
@@ -225,8 +221,7 @@ t_iemnet_chunk*iemnet__chunk_create_chunk(t_iemnet_chunk*c)
   }
   result = iemnet__chunk_create_data(c->size, c->data);
   if(result) {
-    result->addr = c->addr;
-    result->port = c->port;
+    memcpy(&result->address, &c->address, sizeof(result->address));
   }
   return result;
 }

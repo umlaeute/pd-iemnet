@@ -44,6 +44,10 @@
 
 #include <pthread.h>
 
+static PERTHREAD char s_addrstr[MAXPDSTRING];
+#define addr2str(x) iemnet__sockaddr2str(x, s_addrstr, MAXPDSTRING)
+
+
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount = 0;
 # define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++; if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
@@ -81,8 +85,7 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 {
   int result = -1;
 
-  struct sockaddr_in to;
-  socklen_t tolen = sizeof(to);
+  struct sockaddr_storage to;
 
   unsigned char*data = c->data;
   unsigned int size = c->size;
@@ -94,16 +97,12 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 
 
   //fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
-  if(c->port) {
-    DEBUG("%p sending %d bytes to %x:%d @%d", x, size, c->addr, c->port, c->family);
-
-    to.sin_addr.s_addr = htonl(c->addr);
-    to.sin_port = htons(c->port);
-    to.sin_family = c->family;
+  if(c->address.ss_family) {
+    DEBUG("%p sending %d bytes to %s", x, size, sock2addr(&c->address));
     result = sendto(sockfd,
                     data, size, /* DATA */
                     flags, /* FLAGS */
-                    (struct sockaddr *)&to, tolen); /* DESTADDR */
+                    (struct sockaddr *)&c->address, iemnet__socklen4addr(&c->address)); /* DESTADDR */
   } else {
     DEBUG("sending %d bytes", size);
     result = send(sockfd,

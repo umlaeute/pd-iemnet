@@ -188,30 +188,24 @@ void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
 
 /* various functions to send data to output in a uniform way */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
-                     uint32_t address, uint16_t port)
+                      const struct sockaddr_storage*address)
 {
-  static t_atom addr[5];
-  static int firsttime = 1;
+  t_atom alist[18];
+  int alen = iemnet__sockaddr2list(address, alist);
+  if(!alen)
+    return;
 
-  if(firsttime) {
-    int i = 0;
-    for(i = 0; i<5; i++) {
-      SETFLOAT(addr+i, 0);
+  if(AF_INET == address->ss_family) {
+    if(status_outlet ) {
+      outlet_anything(status_outlet, gensym("address"), alen-1, alist+1);
     }
-    firsttime = 0;
-  }
-
-  addr[0].a_w.w_float = (address & 0xFF000000)>>24;
-  addr[1].a_w.w_float = (address & 0x0FF0000)>>16;
-  addr[2].a_w.w_float = (address & 0x0FF00)>>8;
-  addr[3].a_w.w_float = (address & 0x0FF);
-  addr[4].a_w.w_float = port;
-
-  if(status_outlet ) {
-    outlet_anything(status_outlet , gensym("address"), 5, addr);
-  }
-  if(address_outlet) {
-    outlet_list(address_outlet, gensym("list"   ), 5, addr);
+    if(address_outlet) {
+      outlet_list(address_outlet, gensym("list"   ), alen-1, alist+1);
+    }
+  } else {
+    if(status_outlet ) {
+      outlet_anything(status_outlet, gensym("remote_address"), alen, alist);
+    }
   }
 }
 

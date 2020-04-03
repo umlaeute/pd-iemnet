@@ -268,14 +268,14 @@ void iemnet__socket2addressout(int sockfd,
  * and then as a list through the address_outlet
  *
  * \param status_outlet outlet for general status messages
- * \param address_outlet outlet for addresses only
- * \param address the host ip
- * \param port the host port
+ * \param address_outlet outlet for (IPv4) addresses only
+ * \param address the host address
  *
- * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
+ * \note for IPv4 the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
+ * \note non-IPv4 addresses will only be output on the status_outlet
  */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
-                     uint32_t address, uint16_t port);
+                     const struct sockaddr_storage*address);
 
 /**
  * output the socket we received data from

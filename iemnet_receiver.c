@@ -49,7 +49,7 @@ static void pollfun(void*z, int fd)
   int result = 0;
   int local_errno = 0;
 
-  struct sockaddr_in from;
+  struct sockaddr_storage from;
   socklen_t fromlen = sizeof(from);
 
   int recv_flags = 0;
@@ -66,7 +66,7 @@ static void pollfun(void*z, int fd)
   //fprintf(stderr, "read %d bytes...\n", result);
   DEBUG("recvfrom %d bytes: %d %p %d", result, rec->sockfd, data, size);
   DEBUG("errno = %d", local_errno);
-  chunk = iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from);
+  chunk = iemnet__chunk_create_dataaddr(result, (result>0)?data:NULL, &from, fromlen);
 
   /* call the callback with a NULL-chunk to signal a disconnect event. */
   (rec->callback)(rec->userdata, chunk);

@@ -243,7 +243,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
   t_tcpclient *x = (t_tcpclient*)y;
 
   if(c) {
-    iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
+    iemnet__addrout(x->x_statusout, x->x_addrout, &c->address);
      /* get's destroyed in the dtor */
     x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,

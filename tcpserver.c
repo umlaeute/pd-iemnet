@@ -42,8 +42,7 @@ static const char objName[] = "tcpserver";
 typedef struct _tcpserver_socketreceiver {
   struct _tcpserver *sr_owner;
 
-  long sr_host;
-  unsigned short sr_port;
+  struct sockaddr_storage sr_address;
   int sr_fd;
   t_iemnet_sender*sr_sender;
   t_iemnet_receiver*sr_receiver;
@@ -74,7 +73,7 @@ typedef struct _tcpserver {
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
-  t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
+  t_tcpserver *owner, int sockfd, struct sockaddr_storage*addr)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(
                                     sizeof(*x));
@@ -86,8 +85,7 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
 
   x->sr_fd = sockfd;
 
-  x->sr_host = ntohl(addr->sin_addr.s_addr);
-  x->sr_port = ntohs(addr->sin_port);
+  memcpy(&x->sr_address, addr, sizeof(*addr));
 
   x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   x->sr_receiver = iemnet__receiver_create(sockfd, x,
@@ -225,7 +223,7 @@ static void tcpserver_info(t_tcpserver *x)
 static void tcpserver_info_connection(t_tcpserver *x,
                                       t_tcpserver_socketreceiver*y)
 {
-  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
+  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_address);
   outlet_float(x->x_sockout, y->sr_fd);
 }
 

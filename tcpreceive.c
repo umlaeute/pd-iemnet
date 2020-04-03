@@ -41,8 +41,7 @@ static t_class *tcpreceive_class;
 #define MAX_CONNECTIONS 128 /* this is going to cause trouble down the line...:( */
 
 typedef struct _tcpconnection {
-  long addr;
-  unsigned short port;
+  struct sockaddr_storage address;
   int socket;
   struct _tcpreceive*owner;
   t_iemnet_receiver*receiver;
@@ -106,15 +105,13 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 
 /* tcpreceive_addconnection tries to add the socket fd to the list */
 /* returns 1 on success, else 0 */
-static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
-                                    unsigned short port)
+static int tcpreceive_addconnection(t_tcpreceive *x, int fd, const struct sockaddr_storage*address)
 {
   int i;
   for (i = 0; i < MAX_CONNECTIONS; ++i) {
     if (x->x_connection[i].socket == -1) {
       x->x_connection[i].socket = fd;
-      x->x_connection[i].addr = addr;
-      x->x_connection[i].port = port;
+      memcpy(&x->x_connection[i].address, address, sizeof(*address));
       x->x_connection[i].owner = x;
       x->x_connection[i].receiver = 
         iemnet__receiver_create(fd,
@@ -132,10 +129,8 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
 /* a new socket is assigned  */
 static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 {
-  struct sockaddr_in from;
+  struct sockaddr_storage from;
   socklen_t fromlen = sizeof(from);
-  long addr;
-  unsigned short port;
   if(fd != x->x_connectsocket) {
     iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
     return;
@@ -147,12 +142,10 @@ static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
     sys_sockerror("accept");
   } else {
     /* get the sender's ip */
-    addr = ntohl(from.sin_addr.s_addr);
-    port = ntohs(from.sin_port);
-    if (tcpreceive_addconnection(x, fd, addr, port)) {
+    if (tcpreceive_addconnection(x, fd, &from)) {
       x->x_nconnections++;
       iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
-      iemnet__addrout(x->x_statusout, x->x_addrout, addr, port);
+      iemnet__addrout(x->x_statusout, x->x_addrout, &from);
     } else {
       iemnet_log(x, IEMNET_ERROR, "too many connections");
       iemnet__closesocket(fd, 1);
@@ -162,15 +155,13 @@ static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id)
 {
-  if(id >= 0 && id < MAX_CONNECTIONS && x->x_connection[id].port>0) {
+  if(id >= 0 && id < MAX_CONNECTIONS && x->x_connection[id].address.ss_family>0) {
     iemnet__receiver_destroy(x->x_connection[id].receiver, 0);
     x->x_connection[id].receiver = NULL;
 
     iemnet__closesocket(x->x_connection[id].socket, 1);
     x->x_connection[id].socket = -1;
-
-    x->x_connection[id].addr = 0L;
-    x->x_connection[id].port = 0;
+    memset(&x->x_connection[id].address, 0, sizeof(x->x_connection[id].address));
     x->x_nconnections--;
     iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
     return 1;
@@ -342,8 +333,7 @@ static void *tcpreceive_new(t_floatarg fportno)
   /* clear the connection list */
   for (i = 0; i < MAX_CONNECTIONS; ++i) {
     x->x_connection[i].socket = -1;
-    x->x_connection[i].addr = 0L;
-    x->x_connection[i].port = 0;
+    memset(&x->x_connection[i].address, 0, sizeof(x->x_connection[i].address));
   }
 
   x->x_floatlist = iemnet__floatlist_create(1024);
