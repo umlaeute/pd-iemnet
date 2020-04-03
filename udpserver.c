@@ -629,7 +629,7 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
 static void udpserver_connectpoll(t_udpserver *x)
 {
   struct sockaddr_storage incomer_address;
-  socklen_t sockaddrl = sizeof( struct sockaddr );
+  socklen_t sockaddrl = sizeof( incomer_address );
   int fd = -1;
   int i;
 
