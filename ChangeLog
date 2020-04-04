@@ -1,3 +1,12 @@
+2015-09-04 22:22  zmoelnig
+
+	* iemnet-v0.2.1
+
+	  CI-setup
+	    - travis-ci: initial setup
+	    - coverity-scan: initial setup
+	  fix issues detected by coverity scan
+
 2015-09-01 12:00  zmoelnig
 
 	* iemnet-v0.2
