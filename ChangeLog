@@ -11,7 +11,7 @@
 
 	* iemnet-v0.2
 
-	  got rid of threaded receiver
+	  get rid of threaded receiver
 	   - simplifies code
 	   - fixes a couple of stability bugs
 	   - compiles again on W32
