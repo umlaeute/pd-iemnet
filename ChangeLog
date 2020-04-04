@@ -1,3 +1,18 @@
+2020-04-04 21:12  zmoelnig
+
+	* iemnet-v0.2.3
+
+	  properly handle multiple clients in [udpserver] (thanks: miller puckette)
+	  fix disconnect issues with [tcpclient]
+	  make more objects output info when [bang(ed
+	  more consistent var-names and output across objects
+
+	  update pd-lib-builder to v0.6.0
+	  convert documentation to markdown
+	  formatting updates
+	  CI-setup
+	    - iem-ci: use central CI-configuration
+
 2019-01-31 16:44  zmoelnig
 
 	* iemnet-v0.2.2
