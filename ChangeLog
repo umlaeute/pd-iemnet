@@ -1,3 +1,14 @@
+2019-01-31 16:44  zmoelnig
+
+	* iemnet-v0.2.2
+
+	  switch build-system to pd-lib-builder (thanks: roman haefeli)
+	  Pd-0.49 compatibility (t_symbol now has a const-char*)
+	  CI-setup
+	    - iem-ci: initial setup
+	    - travis-ci: container-based builds
+	    - coverity-scan: run on master
+
 2015-09-04 22:22  zmoelnig
 
 	* iemnet-v0.2.1
