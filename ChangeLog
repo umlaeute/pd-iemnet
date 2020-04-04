@@ -1,8 +1,43 @@
+2020-04-04 21:12  zmoelnig
+
+	* iemnet-v0.2.3
+
+	  properly handle multiple clients in [udpserver] (thanks: miller puckette)
+	  fix disconnect issues with [tcpclient]
+	  make more objects output info when [bang(ed
+	  more consistent var-names and output across objects
+
+	  update pd-lib-builder to v0.6.0
+	  convert documentation to markdown
+	  formatting updates
+	  CI-setup
+	    - iem-ci: use central CI-configuration
+
+2019-01-31 16:44  zmoelnig
+
+	* iemnet-v0.2.2
+
+	  switch build-system to pd-lib-builder (thanks: roman haefeli)
+	  Pd-0.49 compatibility (t_symbol now has a const-char*)
+	  CI-setup
+	    - iem-ci: initial setup
+	    - travis-ci: container-based builds
+	    - coverity-scan: run on master
+
+2015-09-04 22:22  zmoelnig
+
+	* iemnet-v0.2.1
+
+	  CI-setup
+	    - travis-ci: initial setup
+	    - coverity-scan: initial setup
+	  fix issues detected by coverity scan
+
 2015-09-01 12:00  zmoelnig
 
 	* iemnet-v0.2
 
-	  got rid of threaded receiver
+	  get rid of threaded receiver
 	   - simplifies code
 	   - fixes a couple of stability bugs
 	   - compiles again on W32
