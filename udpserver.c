@@ -699,6 +699,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
     struct hostent *hp = gethostbyname(ifaddr->s_name);
     if(!hp) {
       iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", ifaddr->s_name);
+      iemnet__closesocket(sockfd, 0);
       return;
     }
     memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
