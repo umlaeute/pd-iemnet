@@ -36,7 +36,11 @@ datafiles = \
 	README.md \
 	$(empty)
 
-cflags = -DVERSION='"$(lib.version)"'
+iemnet.version := $(shell sed -n \
+    's|^\#X text [0-9][0-9]* [0-9][0-9]* VERSION \(.*\);|\1|p' \
+    iemnet-meta.pd)
+
+cflags = -DVERSION='"$(iemnet.version)"'
 
 define forWindows
   ldlibs = -lwsock32 -lpthread
