@@ -1,25 +1,25 @@
-#N canvas 3 45 858 382 12;
-#X floatatom 78 159 5 0 0 0 - - -;
-#X floatatom 102 189 5 0 0 0 - - -;
-#X floatatom 126 239 3 0 0 0 - - -;
-#X floatatom 153 239 3 0 0 0 - - -;
-#X floatatom 180 239 3 0 0 0 - - -;
-#X floatatom 207 239 3 0 0 0 - - -;
-#X text 89 238 from;
-#X text -6 159 connections;
-#X msg 55 61 broadcast 1 2 3;
-#X text 173 62 send to all clients;
-#X text 32 189 on socket;
-#X text 162 125 argument is port number;
-#X text 52 350 ***WARNING*** Attempting to print long messages can
+#N canvas 6 61 858 382 12;
+#X floatatom 88 159 5 0 0 0 - - -;
+#X floatatom 112 189 5 0 0 0 - - -;
+#X floatatom 136 239 3 0 0 0 - - -;
+#X floatatom 163 239 3 0 0 0 - - -;
+#X floatatom 190 239 3 0 0 0 - - -;
+#X floatatom 217 239 3 0 0 0 - - -;
+#X text 99 238 from;
+#X text 4 159 connections;
+#X msg 65 31 broadcast 1 2 3;
+#X text 183 32 send to all clients;
+#X text 42 189 on socket;
+#X text 172 125 argument is port number;
+#X text 62 350 ***WARNING*** Attempting to print long messages can
 hang pd!;
-#X obj 55 290 spigot;
-#X obj 94 270 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
+#X obj 65 290 spigot;
+#X obj 104 270 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
 -45076 0 1;
-#X text 54 333 Received messages are output as stream of bytes;
-#X msg 70 94 11 216 43;
-#X obj 304 288 spigot;
-#X obj 343 268 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
+#X text 64 333 Received messages are output as stream of bytes;
+#X msg 80 64 11 216 43;
+#X obj 314 288 spigot;
+#X obj 353 268 tgl 15 0 empty empty enable_print 17 7 0 10 -24198 -258699
 -45076 0 1;
 #N canvas 3 45 768 526 getting.info 0;
 #X floatatom 99 162 5 0 0 0 - - -;
@@ -88,23 +88,25 @@ well;
 #X connect 38 0 19 0;
 #X connect 39 0 23 0;
 #X connect 40 0 10 0;
-#X restore 530 236 pd getting.info;
-#X text 523 306 copyright (c) 2009 Martin Peach;
-#X text 523 323 copyright (c) 2010 Roman Haefeli;
-#X text 523 340 copyright (c) 2010 IOhannes m zmoelnig;
-#X text 510 74 check also:;
-#X text 21 6 [udpserver] waits for clients to connect to its port.
+#X restore 540 236 pd getting.info;
+#X text 533 306 copyright (c) 2009 Martin Peach;
+#X text 533 323 copyright (c) 2010 Roman Haefeli;
+#X text 533 340 copyright (c) 2010 IOhannes m zmoelnig;
+#X text 520 74 check also:;
+#X text 31 6 [udpserver] waits for clients to connect to its port.
 ;
-#X obj 55 126 udpserver 9997;
-#X obj 513 96 udpreceive;
-#X obj 513 121 udpclient;
-#X obj 150 153 s \$0.udpserver.o5;
-#X obj 304 243 r \$0.udpserver.o5;
-#X obj 126 216 unpack f f f f f;
-#X floatatom 235 240 6 0 0 0 - - -;
-#X obj 55 313 print udpserver:received;
-#X obj 304 314 print udpserver:status;
-#X text 145 94 or without 'broadcast' selector;
+#X obj 65 126 udpserver 9997;
+#X obj 523 96 udpreceive;
+#X obj 523 121 udpclient;
+#X obj 160 153 s \$0.udpserver.o5;
+#X obj 314 243 r \$0.udpserver.o5;
+#X obj 136 216 unpack f f f f f;
+#X floatatom 245 240 6 0 0 0 - - -;
+#X obj 65 313 print udpserver:received;
+#X obj 314 314 print udpserver:status;
+#X text 155 64 or without 'broadcast' selector;
+#X msg 100 99 port 10000;
+#X text 182 98 reset port number;
 #X connect 8 0 25 0;
 #X connect 13 0 32 0;
 #X connect 14 0 13 1;
@@ -122,3 +124,4 @@ well;
 #X connect 30 2 4 0;
 #X connect 30 3 5 0;
 #X connect 30 4 31 0;
+#X connect 35 0 25 0;
