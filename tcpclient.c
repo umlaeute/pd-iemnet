@@ -51,6 +51,8 @@ typedef struct _tcpclient {
   int x_port; /* port we're connected to */
   long x_addr; /* address we're connected to as 32bit int */
 
+  t_float x_timeout;
+
   t_iemnet_floatlist*x_floatlist;
 } t_tcpclient;
 
@@ -137,7 +139,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   server.sin_port = htons((u_short)port);
 
   /* try to connect */
-  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+  if (iemnet__connect(sockfd, (struct sockaddr *) &server, sizeof (server), x->x_timeout) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
     sys_sockerror("connect");
     iemnet__closesocket(sockfd, 1);
@@ -147,7 +149,6 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
                                    0);
-
   if(addrOUT) {
     *addrOUT = ntohl(*(long *)hp->h_addr);
   }
@@ -258,6 +259,10 @@ static void tcpclient_serialize(t_tcpclient *x, t_floatarg doit)
 {
   x->x_serialize = doit;
 }
+static void tcpclient_timeout(t_tcpclient *x, t_floatarg timeout)
+{
+  x->x_timeout = timeout;
+}
 
 
 /* constructor/destructor */
@@ -297,6 +302,7 @@ static void *tcpclient_new(void)
                               0);/* last outlet for everything else */
 
   x->x_serialize = 1;
+  x->x_timeout = -1;
 
   x->x_fd = -1;
 
@@ -334,6 +340,9 @@ IEMNET_EXTERN void tcpclient_setup(void)
 
   class_addmethod(tcpclient_class, (t_method)tcpclient_serialize,
                   gensym("serialize"), A_FLOAT, 0);
+
+  class_addmethod(tcpclient_class, (t_method)tcpclient_timeout,
+                  gensym("timeout"), A_FLOAT, 0);
 
   class_addmethod(tcpclient_class, (t_method)tcpclient_send, gensym("send"),
                   A_GIMME, 0);
