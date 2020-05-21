@@ -1,40 +1,40 @@
-#N canvas 3 62 1018 535 12;
-#X msg 134 135 disconnect;
-#X obj 255 328 unpack 0 0 0 0;
-#X floatatom 255 351 3 0 0 0 - - -;
-#X floatatom 286 351 3 0 0 0 - - -;
-#X floatatom 318 351 3 0 0 0 - - -;
-#X floatatom 350 351 3 0 0 0 - - -;
-#X text 219 351 from;
-#X msg 71 72 connect 132.205.142.12 80;
-#X obj 235 256 tcpclient;
-#X obj 275 307 tgl 15 0 empty empty connected 18 7 0 8 -24198 -241291
+#N canvas 6 62 1018 535 12;
+#X msg 164 165 disconnect;
+#X obj 305 378 unpack 0 0 0 0;
+#X floatatom 305 401 3 0 0 0 - - -;
+#X floatatom 336 401 3 0 0 0 - - -;
+#X floatatom 368 401 3 0 0 0 - - -;
+#X floatatom 400 401 3 0 0 0 - - -;
+#X text 269 401 from;
+#X msg 101 102 connect 132.205.142.12 80;
+#X obj 285 306 tcpclient;
+#X obj 325 357 tgl 15 0 empty empty connected 18 7 0 8 -24198 -241291
 -1 0 1;
-#X text 187 21 connect with an IP address and port number;
-#X msg 46 47 connect www.concordia.ca 80;
-#X text 306 255 tcpclient opens a tcp socket to send and receive bytes
+#X text 217 51 connect with an IP address and port number;
+#X msg 76 77 connect www.concordia.ca 80;
+#X text 356 305 tcpclient opens a tcp socket to send and receive bytes
 on;
-#X text 44 257 See also:;
-#X msg 21 22 connect 127.0.0.1 9997;
-#X obj 45 279 tcpreceive;
-#X text 320 158 semicolon-terminated string for netserver or netreceive
+#X text 94 307 See also:;
+#X msg 51 52 connect 127.0.0.1 9997;
+#X obj 95 329 tcpreceive;
+#X text 350 188 semicolon-terminated string for netserver or netreceive
 ;
-#X msg 159 160 send 49 127 128 51 59;
-#X obj 45 302 tcpserver;
+#X msg 189 190 send 49 127 128 51 59;
+#X obj 95 352 tcpserver;
 #X text 593 24 tcpclient can connect to a server and send and receive
 messages as lists of bytes. Any integer value between 0 and 255 can
 be transmitted or received.;
-#X msg 199 184 71 69 84 32 104 116 116 112 58 47 47 47 105 110 100
+#X msg 229 214 71 69 84 32 104 116 116 112 58 47 47 47 105 110 100
 101 120 46 104 116 109 108 13 10;
-#X text 226 220 'send' prefix is optional;
-#X obj 235 402 spigot;
-#X obj 274 379 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
+#X text 256 250 'send' prefix is optional;
+#X obj 285 452 spigot;
+#X obj 324 429 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
 -1 0 1;
 #X floatatom 797 190 9 0 0 0 - - -;
-#X msg 110 95 send 71 69 84 32 104 116 116 112 58 47 47 47 105 110
+#X msg 140 125 send 71 69 84 32 104 116 116 112 58 47 47 47 105 110
 100 101 120 46 112 104 112 13 10 13 10;
-#X text 40 399 2010/03/01 Martin Peach;
-#X text 418 430 Attempting to print long messages can hang Pd!;
+#X text 90 449 2010/03/01 Martin Peach;
+#X text 468 480 Attempting to print long messages can hang Pd!;
 #X obj 797 166 route sent;
 #X text 869 190 sent bytes;
 #X floatatom 797 347 3 0 0 0 - - -;
@@ -46,20 +46,22 @@ be transmitted or received.;
 #X floatatom 906 321 6 0 0 0 - - -;
 #X text 904 347 ip;
 #X text 952 320 port;
-#X obj 235 431 print tcpclient:received;
-#X obj 520 344 spigot;
-#X obj 559 321 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
+#X obj 285 481 print tcpclient:received;
+#X obj 570 394 spigot;
+#X obj 609 371 tgl 15 0 empty empty enable_print 18 7 0 8 -24198 -241291
 -1 0 1;
-#X obj 520 373 print tcpclient:status;
-#X text 286 401 Received messages are output as a stream of bytes;
-#X text 515 103 GET http://index.phpCRLF;
-#X text 45 477 NOTE: outlet's #2 & #3 are for compatibility with mrpeach's
+#X obj 570 423 print tcpclient:status;
+#X text 336 451 Received messages are output as a stream of bytes;
+#X text 545 103 GET http://index.phpCRLF;
+#X text 95 527 NOTE: outlet's #2 & #3 are for compatibility with mrpeach's
 net objects. all information is available via outlet#4 as well!;
-#X text 41 414 2010/10/08 Roman Haefeli;
-#X obj 295 281 s \$0.tcpclient.o4;
-#X obj 520 298 r \$0.tcpclient.o4;
+#X text 91 464 2010/10/08 Roman Haefeli;
+#X obj 345 331 s \$0.tcpclient.o4;
+#X obj 570 348 r \$0.tcpclient.o4;
 #X obj 797 242 r \$0.tcpclient.o4;
 #X obj 797 142 r \$0.tcpclient.o4;
+#X msg 21 22 timeout 5000;
+#X text 133 19 set connection timeout in ms;
 #X connect 0 0 8 0;
 #X connect 1 0 2 0;
 #X connect 1 1 3 0;
@@ -89,3 +91,4 @@ net objects. all information is available via outlet#4 as well!;
 #X connect 48 0 40 0;
 #X connect 49 0 33 0;
 #X connect 50 0 28 0;
+#X connect 51 0 8 0;
