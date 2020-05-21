@@ -40,6 +40,8 @@
 # include <ws2tcpip.h> /* for socklen_t */
 #else
 # include <sys/socket.h>
+# include <unistd.h>
+# include <fcntl.h>
 #endif
 
 #include <pthread.h>
@@ -300,4 +302,88 @@ int iemnet__sender_getsize(t_iemnet_sender*x)
   }
 
   return size;
+}
+
+
+
+static int sock_set_nonblocking(int socket, int nonblocking)
+{
+#ifdef _WIN32
+    u_long modearg = nonblocking;
+    if (ioctlsocket(socket, FIONBIO, &modearg) != NO_ERROR)
+        return -1;
+#else
+    int sockflags = fcntl(socket, F_GETFL, 0);
+    if (nonblocking)
+        sockflags |= O_NONBLOCK;
+    else
+        sockflags &= ~O_NONBLOCK;
+    if (fcntl(socket, F_SETFL, sockflags) < 0)
+        return -1;
+#endif
+    return 0;
+}
+
+static int conn_in_progress() {
+#ifdef _WIN32
+  return (WSAGetLastError() == WSAEWOULDBLOCK);
+#else
+  return (EINPROGRESS == errno);
+#endif
+}
+
+
+int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, float timeout) {
+  if(timeout<0) {
+    return connect(sockfd, addr, addrlen);
+  }
+  sock_set_nonblocking(sockfd, 1);
+  if ((connect(sockfd, addr, addrlen)) < 0) {
+    int status;
+    struct timeval timeoutval;
+    fd_set writefds, errfds;
+    if (!conn_in_progress())
+        return -1; // break on "real" error
+
+    // block with select using timeout
+    if (timeout < 0) timeout = 0;
+    timeout *= 0.001; /* seconds -> ms */
+    timeoutval.tv_sec = (int)timeout;
+    timeoutval.tv_usec = (timeout - timeoutval.tv_sec) * 1000000;
+    FD_ZERO(&writefds);
+    FD_SET(sockfd, &writefds); // socket is connected when writable
+    FD_ZERO(&errfds);
+    FD_SET(sockfd, &errfds); // catch exceptions
+
+    status = select(sockfd+1, NULL, &writefds, &errfds, &timeoutval);
+    if (status < 0) // select failed
+    {
+      fprintf(stderr, "socket_connect: select failed");
+      return -1;
+    }
+    else if (status == 0) // connection timed out
+    {
+#ifdef _WIN32
+      WSASetLastError(WSAETIMEDOUT);
+#else
+      errno = ETIMEDOUT;
+#endif
+      return -1;
+    }
+
+    if (FD_ISSET(sockfd, &errfds)) // connection failed
+    {
+      int err; socklen_t len = sizeof(err);
+      getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (void *)&err, &len);
+#ifdef _WIN32
+      WSASetLastError(err);
+#else
+      errno = err;
+#endif
+      return -1;
+    }
+  }
+  // done, set blocking again
+  sock_set_nonblocking(sockfd, 0);
+  return 0;
 }
