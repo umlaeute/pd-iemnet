@@ -38,6 +38,7 @@ static t_class *tcpsend_class;
 typedef struct _tcpsend {
   t_object x_obj;
   int x_fd;
+  t_float x_timeout;
   t_iemnet_sender*x_sender;
 } t_tcpsend;
 
@@ -102,7 +103,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
 
   iemnet_log(x, IEMNET_VERBOSE, "connecting to port %d", portno);
   /* try to connect. */
-  if (connect(sockfd, (struct sockaddr *) &server, sizeof (server)) < 0) {
+  if (iemnet__connect(sockfd, (struct sockaddr *) &server, sizeof (server), x->x_timeout) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to initiate connection on socket %d", sockfd);
     sys_sockerror("connect");
     iemnet__closesocket(sockfd, 1);
@@ -115,6 +116,10 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
   outlet_float(x->x_obj.ob_outlet, 1);
 }
 
+static void tcpsend_timeout(t_tcpsend *x, t_float timeout)
+{
+  x->x_timeout = timeout;
+}
 static void tcpsend_send(t_tcpsend *x, t_symbol *s, int argc, t_atom *argv)
 {
   t_iemnet_sender*sender = x->x_sender;
@@ -136,6 +141,7 @@ static void *tcpsend_new(void)
   t_tcpsend *x = (t_tcpsend *)pd_new(tcpsend_class);
   outlet_new(&x->x_obj, gensym("float"));
   x->x_fd = -1;
+  x->x_timeout = -1;
   return (x);
 }
 
@@ -156,6 +162,8 @@ IEMNET_EXTERN void tcpsend_setup(void)
   class_addmethod(tcpsend_class, (t_method)tcpsend_send, gensym("send"),
                   A_GIMME, 0);
   class_addlist(tcpsend_class, (t_method)tcpsend_send);
+  class_addmethod(tcpsend_class, (t_method)tcpsend_timeout, gensym("timeout"),
+                  A_FLOAT, 0);
 
   DEBUGMETHOD(tcpsend_class);
 }
