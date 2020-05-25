@@ -360,8 +360,8 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   outlet_anything(x->x_statusout, gensym("port"), 2, ap);
 }
 static void tcpreceive_listen(t_tcpreceive*x, t_symbol*s, int argc, t_atom*argv) {
-  const char*host=NULL;
-  t_symbol*s_host=NULL;
+  const char*host=0;
+  t_symbol*shost=0;
   int port = x->x_port;
   switch(argc) {
   default:
@@ -371,11 +371,11 @@ static void tcpreceive_listen(t_tcpreceive*x, t_symbol*s, int argc, t_atom*argv)
     port = atom_getfloat(argv+1);
     /* fallthrough */
   case 1:
-    s_host = atom_getsymbol(argv+0);
+    shost = atom_getsymbol(argv+0);
     break;
   }
-  if(s_host && gensym("") != s_host)
-    host = s_host->s_name;
+  if(shost && gensym("") != shost)
+    host = shost->s_name;
   tcpreceive_do_listen(x, host, port);
 }
 static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
