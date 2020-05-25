@@ -393,14 +393,24 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
 
 int iemnet__getaddrinfo(struct addrinfo **ailist,
                         const char *hostname, int port,
-                        int protocol) {
+                        int family, int protocol) {
   struct addrinfo hints;
   char portstr[10]; // largest port is 65535
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
-  hints.ai_flags = AI_ALL |        // both IPv4 and IPv6 addrs
-    AI_V4MAPPED |   // fallback to IPv4-mapped IPv6 addrs
-    AI_PASSIVE;     // listen to any addr if hostname is NULL
+  hints.ai_flags = AI_PASSIVE; // listen to any addr if hostname is NULL
+  hints.ai_flags |= 0
+    | AI_ALL        // both IPv4 and IPv6 addrs
+    | AI_V4MAPPED   // fallback to IPv4-mapped IPv6 addrs
+    | 0;
+
+  switch(family) {
+  default:
+    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6, we don't care
+    break;
+  case AF_INET:
+  case AF_INET6:
+    hints.ai_family = family;
+  }
 
   hints.ai_socktype = protocol;
   switch(protocol) {

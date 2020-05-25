@@ -148,11 +148,13 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
  * \param ailist (OUT) addrinfo-list
  * \param hostname address-string you want to look up
  * \param port port used for the lookup
- * \param protocol either SOCK_STREAM or SOCK_DGRAM
+ * \param family either AF_INET or AF_INET6 (or 0, if you don't care)
+ * \param protocol either SOCK_STREAM or SOCK_DGRAM (or 0, if you don't care)
  * \return success
  */
-int iemnet__getaddrinfo(struct addrinfo **ailist, const char *hostname,
-                        int port, int protocol);
+int iemnet__getaddrinfo(struct addrinfo **ailist,
+                        const char *hostname, int port,
+                        int family, int protocol);
 
 
 
