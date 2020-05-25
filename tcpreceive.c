@@ -343,7 +343,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   /* wait for new connections */
   for (i=0; i<2; i++) {
     SETFLOAT(ap+i, 0);
-    if(sockfd<0)
+    if(sockfd[i]<0)
       continue;
     
     sys_addpollfn(sockfd[i],
