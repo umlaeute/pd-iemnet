@@ -80,6 +80,7 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
 
   /* try each addr until we find one that works */
   for (ai = ailist; ai != NULL; ai = ai->ai_next) {
+    char buf[MAXPDSTRING];
     int intarg;
 
     /* create a socket */
@@ -102,7 +103,9 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
       /* post("netreceive: setsockopt (IPV6_V6ONLY) failed"); */
     }
 
-    iemnet_log(x, IEMNET_VERBOSE, "connecting to port %d", portno);
+    iemnet_log(x, IEMNET_VERBOSE, "connecting to %s:%d",
+               iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
+               portno);
     /* try to connect. */
     if (iemnet__connect(sockfd, ai->ai_addr, ai->ai_addrlen, x->x_timeout) < 0) {
       iemnet_log(x, IEMNET_VERBOSE, "unable to initiate connection on socket %d", sockfd);
