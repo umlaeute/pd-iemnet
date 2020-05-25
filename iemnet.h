@@ -217,6 +217,14 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
  */
 void iemnet__closesocket(int fd, int verbose);
 
+/**
+ * set socket option (integer)
+ *
+ * wrapper around setsockopt(2) for setting a single integer value
+ *
+ * \return success
+ */
+int iemnet__setsockopti(int sockfd, int level, int optname, int ival);
 
 /**
  * calculate the length of an address based on it's type

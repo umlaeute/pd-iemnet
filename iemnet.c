@@ -51,6 +51,11 @@ void iemnet__closesocket(int sockfd, int verbose)
   }
 }
 
+int iemnet__setsockopti(int sockfd, int level, int optname, int ival)
+{
+  return setsockopt(sockfd, level, optname, (char*)&ival, sizeof(ival));
+}
+
 static void*getaddr(const struct sockaddr_storage*address) {
   switch (address->ss_family) {
   case AF_INET:
