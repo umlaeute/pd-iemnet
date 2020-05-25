@@ -43,7 +43,7 @@ iemnet.version := $(shell sed -n \
 cflags = -DVERSION='"$(iemnet.version)"'
 
 define forWindows
-  ldlibs = -lwsock32 -lpthread
+  ldlibs = -lws2_32 -lpthread
 endef
 
 -include Makefile.local
