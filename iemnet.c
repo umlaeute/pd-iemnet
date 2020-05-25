@@ -440,3 +440,28 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
   }
 #endif
 }
+
+static char* bnprintf(char *str, size_t size, const char *format, ...) {
+  int isize;
+  va_list ap;
+  va_start(ap, format);
+  isize = vsnprintf(str, size, format, ap);
+  va_end(ap);
+  if(isize < 0)
+    return NULL;
+
+  return str;
+}
+
+void iemnet__post_addrinfo(struct addrinfo *ai) {
+  char buf[MAXPDSTRING];
+  post("address info @ %p", ai);
+  if(!ai)
+    return;
+  if(ai->ai_canonname)post("\tname: %s", ai->ai_canonname);
+  post("\tfamily: %s", (AF_INET==ai->ai_family)?"IPv4":(AF_INET6==ai->ai_family)?"IPv6":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_family));
+  post("\tsocktype: %s", (SOCK_STREAM==ai->ai_socktype)?"STREAM":(SOCK_DGRAM==ai->ai_socktype)?"DGRAM":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_socktype));
+  post("\tprotocol: %s", (IPPROTO_TCP==ai->ai_protocol)?"TCP/IP":(IPPROTO_UDP==ai->ai_protocol)?"UDP":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_protocol));
+  post("\taddress: %s", iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING));
+  post("\tflags: 0x%08X", ai->ai_flags);
+}

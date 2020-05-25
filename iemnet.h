@@ -249,6 +249,11 @@ static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) 
 }
 
 /**
+ * print an addrinfo struct (for debugging)
+ */
+void iemnet__post_addrinfo(struct addrinfo *ai);
+
+/**
  * convert a sockaddr to string (e.g. for printing)
  *
  * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
