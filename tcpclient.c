@@ -331,7 +331,8 @@ IEMNET_EXTERN void tcpclient_setup(void)
   }
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
-                              sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
+                              sizeof(t_tcpclient), 0,
+                              0);
   class_addmethod(tcpclient_class, (t_method)tcpclient_connect,
                   gensym("connect")
                   , A_SYMBOL, A_FLOAT, 0);
