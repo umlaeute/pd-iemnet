@@ -236,6 +236,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
     int multicast = 0;
     char buf[MAXPDSTRING];
     /* create a socket */
+    iemnet__post_addrinfo(ai);
     sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
     if (sockfd < 0)
       continue;
