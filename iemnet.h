@@ -143,6 +143,18 @@ int iemnet__sender_getsize(t_iemnet_sender*);
  */
 int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, float timeout);
 
+/**
+ * resolve network addresses (wraps 'getaddrinfo')
+ * \param ailist (OUT) addrinfo-list
+ * \param hostname address-string you want to look up
+ * \param port port used for the lookup
+ * \param protocol either SOCK_STREAM or SOCK_DGRAM
+ * \return success
+ */
+int iemnet__getaddrinfo(struct addrinfo **ailist, const char *hostname,
+                        int port, int protocol);
+
+
 
 /* iemnet_receiver.c */
 

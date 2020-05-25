@@ -389,3 +389,32 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
   sock_set_nonblocking(sockfd, 0);
   return 0;
 }
+
+
+int iemnet__getaddrinfo(struct addrinfo **ailist,
+                        const char *hostname, int port,
+                        int protocol) {
+  struct addrinfo hints;
+  char portstr[10]; // largest port is 65535
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
+  hints.ai_flags = AI_ALL |        // both IPv4 and IPv6 addrs
+    AI_V4MAPPED |   // fallback to IPv4-mapped IPv6 addrs
+    AI_PASSIVE;     // listen to any addr if hostname is NULL
+
+  hints.ai_socktype = protocol;
+  switch(protocol) {
+  case SOCK_STREAM:
+    hints.ai_protocol = IPPROTO_TCP;
+    break;
+  case SOCK_DGRAM:
+    hints.ai_protocol = IPPROTO_UDP;
+    break;
+  default:
+    hints.ai_protocol = 0;
+  }
+
+  portstr[0] = '\0';
+  sprintf(portstr, "%d", port);
+  return getaddrinfo(hostname, portstr, &hints, ailist);
+}
