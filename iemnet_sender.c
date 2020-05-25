@@ -90,8 +90,6 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 {
   int result = -1;
 
-  struct sockaddr_storage to;
-
   unsigned char*data = c->data;
   unsigned int size = c->size;
 
