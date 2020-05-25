@@ -105,13 +105,13 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
   if(c->address.ss_family) {
     DEBUG("%p sending %d bytes to %s", x, size, sock2addr(&c->address));
     result = sendto(sockfd,
-                    data, size, /* DATA */
+                    (const void*)data, size, /* DATA */
                     flags, /* FLAGS */
                     (struct sockaddr *)&c->address, iemnet__socklen4addr(&c->address)); /* DESTADDR */
   } else {
     DEBUG("sending %d bytes", size);
     result = send(sockfd,
-                  data, size, /* DATA */
+                  (const void*)data, size, /* DATA */
                   flags); /* FLAGS */
   }
   if(result<0) {
