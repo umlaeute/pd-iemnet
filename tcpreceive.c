@@ -331,6 +331,25 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   SETFLOAT(ap, x->x_port);
   outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
+static void tcpreceive_listen(t_tcpreceive*x, t_symbol*s, int argc, t_atom*argv) {
+  const char*host=NULL;
+  t_symbol*s_host=NULL;
+  int port = x->x_port;
+  switch(argc) {
+  default:
+    pd_error(x, "invalid arguments: use '%s <hostname> [<port>]'", s->s_name);
+    return;
+  case 2:
+    port = atom_getfloat(argv+1);
+    /* fallthrough */
+  case 1:
+    s_host = atom_getsymbol(argv+0);
+    break;
+  }
+  if(s_host && gensym("") != s_host)
+    host = s_host->s_name;
+  tcpreceive_do_listen(x, host, port);
+}
 static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 {
   int portno = fportno;
@@ -405,6 +424,8 @@ IEMNET_EXTERN void tcpreceive_setup(void)
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port,
                   gensym("port"), A_DEFFLOAT, 0);
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_listen,
+                  gensym("listen"), A_GIMME, 0);
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize,
                   gensym("serialize"), A_FLOAT, 0);
