@@ -49,7 +49,6 @@ typedef struct _tcpclient {
   const char*x_hostname; /* address we want to connect to as text */
   int x_connectstate; /* 0 = not connected, 1 = connected */
   int x_port; /* port we're connected to */
-  long x_addr; /* address we're connected to as 32bit int */
 
   t_float x_timeout;
 
@@ -110,7 +109,7 @@ static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender,
 }
 static int tcpclient_do_connect(const char*host, unsigned short port,
                                 t_tcpclient*x,
-                                t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT)
+                                t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT)
 {
   struct sockaddr_in server;
   struct hostent*hp;
@@ -149,9 +148,6 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
   sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
                                    0);
-  if(addrOUT) {
-    *addrOUT = ntohl(*(long *)hp->h_addr);
-  }
   if(senderOUT) {
     *senderOUT = sender;
   }
@@ -191,8 +187,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_port = fportno;
 
   state = tcpclient_do_connect(x->x_hostname, x->x_port, x,
-                             &x->x_sender, &x->x_receiver,
-                             &x->x_addr);
+                             &x->x_sender, &x->x_receiver);
   x->x_connectstate = (state>0);
   x->x_fd = state;
   tcpclient_info(x);
@@ -306,7 +301,6 @@ static void *tcpclient_new(void)
 
   x->x_fd = -1;
 
-  x->x_addr = 0L;
   x->x_port = 0;
 
   x->x_sender = NULL;
