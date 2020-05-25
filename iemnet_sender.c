@@ -399,8 +399,16 @@ int iemnet__getaddrinfo(struct addrinfo **ailist,
   memset(&hints, 0, sizeof hints);
   hints.ai_flags = AI_PASSIVE; // listen to any addr if hostname is NULL
   hints.ai_flags |= 0
+#ifdef AI_ALL
     | AI_ALL        // both IPv4 and IPv6 addrs
+#else
+# warning AI_ALL not supported
+#endif
+#ifdef AI_V4MAPPED
     | AI_V4MAPPED   // fallback to IPv4-mapped IPv6 addrs
+#else
+# warning AI_V4MAPPED not supported
+#endif
     | 0;
 
   switch(family) {
