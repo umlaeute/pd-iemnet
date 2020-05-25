@@ -59,12 +59,9 @@ static void tcpsend_connect(t_tcpsend *x, t_symbol *hostname,
                             t_floatarg fportno)
 {
   int err;
-  struct sockaddr_in server;
   struct addrinfo *ailist = NULL, *ai;
   int sockfd = -1;
   int portno = fportno;
-
-  memset(&server, 0, sizeof(server));
 
   if (x->x_fd >= 0) {
     iemnet_log(x, IEMNET_ERROR, "already connected");
