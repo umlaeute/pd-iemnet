@@ -134,6 +134,16 @@ int iemnet__sender_send(t_iemnet_sender*, t_iemnet_chunk*);
 int iemnet__sender_getsize(t_iemnet_sender*);
 
 
+/**
+ * calls connect(2) with a timeout.
+ * if "timeout" is <0, then the original blocking behaviour is preserved.
+ *
+ * \param timeout timeout in ms
+ * \return success
+ */
+int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, float timeout);
+
+
 /* iemnet_receiver.c */
 
 /**

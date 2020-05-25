@@ -1,6 +1,6 @@
 ---
-variables:
-  IEM_CI_PKGLIBDIR: "multiarch"
+#variables:
+#  IEM_CI_PKGLIBDIR: "multiarch"
 
 include:
   - https://git.iem.at/pd/iem-ci/raw/master/pd-lib-builder/gitlab-iem.yml
