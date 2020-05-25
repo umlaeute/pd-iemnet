@@ -27,6 +27,11 @@
 
 #include "iemnet.h"
 #include <string.h>
+#ifndef _WIN32
+/* needed for TCP_NODELAY */
+# include <netinet/tcp.h>
+#endif
+
 
 static t_class *tcpclient_class;
 static char objName[] = "tcpclient";
@@ -111,43 +116,74 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
                                 t_tcpclient*x,
                                 t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT)
 {
-  struct sockaddr_in server;
-  struct hostent*hp;
+  /* connect socket using hostname provided in command line */
+
+  int err;
+  struct addrinfo *ailist = NULL, *ai;
   int sockfd = -1;
   t_iemnet_sender*sender;
   t_iemnet_receiver*receiver;
 
-  /* connect socket using hostname provided in command line */
-  memset(&server, 0, sizeof(server));
-  server.sin_family = AF_INET;
-  hp = gethostbyname(host);
-  if (hp == 0) {
-    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", host);
-    return (-1);
+  /* resolve hostname provided as argument */
+  err = iemnet__getaddrinfo(&ailist, host, port, 0, SOCK_STREAM);
+  if (err) {
+    iemnet_log(x, IEMNET_ERROR, "%s (%d)\n\tbad host ('%s') or port (%d)?",
+               gai_strerror(err), err,
+               host, port);
+    return -1;
   }
-  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+  /* try each addr until we find one that works */
+  for (ai = ailist; ai != NULL; ai = ai->ai_next) {
+    char buf[MAXPDSTRING];
+    int intarg;
+
+    /* create a socket */
+    sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    DEBUG("send socket %d\n", sockfd);
+    if (sockfd < 0)
+      continue;
+
+    /* for stream (TCP) sockets, specify "nodelay" */
+    intarg = 1;
+    if (setsockopt(sockfd, ai->ai_protocol, TCP_NODELAY,
+                   (char *)&intarg, sizeof(intarg)) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+      sys_sockerror("setsockopt");
+    }
+    intarg = 0;
+    if (ai->ai_family == AF_INET6 &&
+        setsockopt(sockfd, ai->ai_protocol, IPV6_V6ONLY,
+                   (char *)&intarg, sizeof(intarg)) < 0) {
+      /* post("netreceive: setsockopt (IPV6_V6ONLY) failed"); */
+    }
+
+    iemnet_log(x, IEMNET_VERBOSE, "connecting to %s:%d",
+               iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
+               port);
+    /* try to connect. */
+    if (iemnet__connect(sockfd, ai->ai_addr, ai->ai_addrlen, x->x_timeout) < 0) {
+      iemnet_log(x, IEMNET_VERBOSE, "unable to initiate connection on socket %d", sockfd);
+      sys_sockerror("connect");
+      iemnet__closesocket(sockfd, 1);
+      sockfd=-1;
+      continue;
+    } else {
+      break;
+    }
+  }
+  freeaddrinfo(ailist);
+
   if (sockfd < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to open socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to %s : %d", host, port);
     sys_sockerror("socket");
-    return (sockfd);
-  }
-
-  /* assign client port number */
-  server.sin_port = htons((u_short)port);
-
-  /* try to connect */
-  if (iemnet__connect(sockfd, (struct sockaddr *) &server, sizeof (server), x->x_timeout) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
-    sys_sockerror("connect");
-    iemnet__closesocket(sockfd, 1);
-    return (-1);
+    return -1;
   }
 
   sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
-  receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
-                                   0);
+  receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback, 0);
+
   if(senderOUT) {
     *senderOUT = sender;
   }
