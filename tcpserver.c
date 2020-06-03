@@ -575,6 +575,7 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   struct sockaddr_in server;
   socklen_t serversize = sizeof(server);
   int sockfd = x->x_connectsocket;
+  int intarg;
   memset(&server, 0, sizeof(server));
 
   SETFLOAT(ap, -1);
@@ -595,6 +596,34 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
     iemnet_log(x, IEMNET_ERROR, "unable to create TCP/IP socket");
     sys_sockerror("socket");
     return;
+  }
+
+  /* ask OS to allow another Pd to reopen this port after we close it. */
+#ifdef SO_REUSEADDR
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+                 (char *)&intarg, sizeof(intarg))
+      < 0) {
+    iemnet_log(x, IEMNET_ERROR, "unable to enable address re-using");
+    sys_sockerror("setsockopt:SO_REUSEADDR");
+  }
+#endif /* SO_REUSEADDR */
+#ifdef SO_REUSEPORT
+  intarg = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+                 (char *)&intarg, sizeof(intarg))
+      < 0) {
+    iemnet_log(x, IEMNET_ERROR, "unable to enable port re-using");
+    sys_sockerror("setsockopt:SO_REUSEPORT");
+  }
+#endif /* SO_REUSEPORT */
+
+  /* Stream (TCP) sockets are set NODELAY */
+  intarg = 1;
+  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+                 (char *)&intarg, sizeof(intarg)) < 0) {
+    iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+    sys_sockerror("setsockopt:TCP_NODELAY");
   }
 
   server.sin_family = AF_INET;
