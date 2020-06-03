@@ -31,6 +31,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+/* needed for TCP_NODELAY */
+# include <netinet/tcp.h>
+#endif
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
