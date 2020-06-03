@@ -103,13 +103,13 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
     to.sin_port = htons(c->port);
     to.sin_family = c->family;
     result = sendto(sockfd,
-                    data, size, /* DATA */
+                    (void *)data, size, /* DATA */
                     flags, /* FLAGS */
                     (struct sockaddr *)&to, tolen); /* DESTADDR */
   } else {
     DEBUG("sending %d bytes", size);
     result = send(sockfd,
-                  data, size, /* DATA */
+                  (void *)data, size, /* DATA */
                   flags); /* FLAGS */
   }
   if(result<0) {
