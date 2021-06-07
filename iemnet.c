@@ -155,7 +155,6 @@ char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_
 t_symbol*iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port) {
   char str[MAXPDSTRING];
   size_t len=MAXPDSTRING;
-  error("sockaddr2sym");
   switch (address->ss_family) {
   case AF_INET: case AF_INET6:
     if(port) {

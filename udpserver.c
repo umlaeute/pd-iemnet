@@ -182,8 +182,6 @@ static int udpserver_fixindex(t_udpserver*x, int client_)
 static int udpserver__find_sender(t_udpserver*x, const struct sockaddr_storage*address)
 {
   unsigned int i = 0;
-  char buf[MAXPDSTRING];
-  post("find sender: %s", iemnet__sockaddr2str(address, buf, MAXPDSTRING));
   for(i = 0; i<x->x_nconnections; i++) {
     if(NULL == x->x_sr[i]) {
       return -1;
