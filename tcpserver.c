@@ -49,8 +49,10 @@ typedef struct _tcpserver_socketreceiver {
   long sr_host;
   unsigned short sr_port;
   int sr_fd;
+  unsigned int sr_client;
   t_iemnet_sender*sr_sender;
   t_iemnet_receiver*sr_receiver;
+  t_symbol*sr_hostname;
 } t_tcpserver_socketreceiver;
 
 typedef struct _tcpserver {
@@ -78,10 +80,12 @@ typedef struct _tcpserver {
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
-  t_tcpserver *owner, int sockfd, struct sockaddr_in*addr)
+    t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(
                                     sizeof(*x));
+  long address;
+  char hostname[MAXPDSTRING];
   if(NULL == x) {
     iemnet_log(x, IEMNET_FATAL, "unable to allocate %d bytes", (int)sizeof(*x));
     return NULL;
@@ -89,9 +93,20 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
   x->sr_owner = owner;
 
   x->sr_fd = sockfd;
+  x->sr_client = client;
 
   x->sr_host = ntohl(addr->sin_addr.s_addr);
   x->sr_port = ntohs(addr->sin_port);
+
+  /* yikes; IPv4 only... :-( */
+  address = x->sr_host;
+  snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
+      (unsigned char)((address & 0xFF000000)>>24),
+      (unsigned char)((address & 0x0FF0000)>>16),
+      (unsigned char)((address & 0x0FF00)>>8),
+      (unsigned char)((address & 0x0FF)));
+  hostname[MAXPDSTRING-1] = 0;
+  x->sr_hostname = gensym(hostname);
 
   x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   x->sr_receiver = iemnet__receiver_create(sockfd, x,
@@ -558,7 +573,7 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
       return;
     }
 
-    y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address);
+    y = tcpserver_socketreceiver_new((void *)x, fd, &incomer_address, x->x_nconnections);
     if (!y) {
       iemnet__closesocket(fd, 1);
       return;
