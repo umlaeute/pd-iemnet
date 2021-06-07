@@ -101,29 +101,9 @@ static void udpsocket_send(t_udpsocket *x, t_symbol *s, int argc,
   t_iemnet_sender*sender = x->x_sender;
   t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
-
   if(sender && chunk) {
     for (rp = x->x_addrinfo; rp != NULL; rp = rp->ai_next) {
-      chunk->port = 0;
-      chunk->addr = 0;
-      switch (rp->ai_addr->sa_family) {
-      case AF_INET: {
-        struct sockaddr_in*addr = (struct sockaddr_in*)rp->ai_addr;
-        chunk->addr = ntohl(addr->sin_addr.s_addr);
-        chunk->port = ntohs(addr->sin_port);
-      }
-        break;
-      case AF_INET6: {
-        struct sockaddr_in6*addr = (struct sockaddr_in6*)rp->ai_addr;
-        //chunk->addr = addr->sin6_addr.s_addr;
-        //chunk->port = addr->sin6_port;
-      }
-        break;
-      default:
-        continue;
-      }
-      if (!chunk->port || !chunk->addr)
-        continue;
+      memcpy(&chunk->address, rp->ai_addr, sizeof(&rp->ai_addr));
       size = iemnet__sender_send(sender, chunk);
       break;
     }
@@ -140,7 +120,7 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
   t_udpsocket *x = (t_udpsocket*)y;
 
   if(c) {
-    iemnet__addrout(x->x_statusout, 0, c->addr, c->port);
+    iemnet__addrout(x->x_statusout, 0, &c->address);
     x->x_floatlist = iemnet__chunk2list(c,
                                       x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
