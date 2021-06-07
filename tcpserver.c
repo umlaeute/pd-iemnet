@@ -277,6 +277,8 @@ static void tcpserver_info(t_tcpserver *x)
   iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   SETFLOAT(output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
+  SETFLOAT(output_atom+0, x->maxconnections);
+  outlet_anything( x->x_statusout, gensym("maxconnections"), 1, output_atom);
 }
 
 static void tcpserver_info_connection(t_tcpserver *x
