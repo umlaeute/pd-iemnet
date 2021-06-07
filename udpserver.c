@@ -48,6 +48,8 @@ typedef struct _udpserver_sender {
   t_symbol*sr_hostname;
   int sr_fd;
   t_iemnet_sender*sr_sender;
+
+  double sr_lastseen;
 } t_udpserver_sender;
 
 typedef struct _udpserver {
@@ -110,6 +112,8 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
     x->sr_hostname = gensym(hostname);
 
     x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
+
+    x->sr_lastseen = clock_getlogicaltime();
   }
   return (x);
 }
@@ -260,6 +264,8 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
       id = -1;
     }
 #endif
+  } else {
+    x->x_sr[id]->sr_lastseen = clock_getlogicaltime();
   }
   DEBUG("sender_add: %d", id);
   if(id >= 0) {
