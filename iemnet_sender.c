@@ -99,7 +99,7 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 #endif
 
 
-  //fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
+  //fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, c->address.ss_family);
   if(c->address.ss_family) {
     DEBUG("%p sending %d bytes to %s", x, size, addr2str(&c->address));
     result = sendto(sockfd,
