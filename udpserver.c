@@ -144,11 +144,6 @@ static void udpserver_sender_free(t_udpserver_sender *x)
   DEBUG("freed %x", x);
 }
 
-static t_udpserver_sender* udpserver_sender_copy(t_udpserver_sender*x)
-{
-  return udpserver_sender_new(x->sr_owner,x->sr_host, x->sr_port);
-}
-
 static int udpserver_socket2index(t_udpserver*x, int sockfd)
 {
   unsigned int i = 0;
@@ -673,42 +668,6 @@ static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
 }
 
 
-/* this get's never called */
-static void udpserver_connectpoll(t_udpserver *x)
-{
-  struct sockaddr_in incomer_address;
-  socklen_t sockaddrl = sizeof( struct sockaddr );
-  int fd = -1;
-  int i;
-
-  /*
-    TODO: provide a way to not accept connection
-    idea: add a message "accept $1" to turn off/on acceptance of new connections
-  */
-  fd = accept(x->x_connectsocket, (struct sockaddr*)&incomer_address,
-              &sockaddrl);
-
-  bug("connectpoll");
-
-  if (fd < 0) {
-    error("[%s] accept failed", objName);
-  } else {
-    unsigned long host = ntohl(incomer_address.sin_addr.s_addr);
-    unsigned short port = ntohs(incomer_address.sin_port);
-
-    t_udpserver_sender *y = udpserver_sender_new(x, host, port);
-    if (!y) {
-      iemnet__closesocket(fd, 1);
-      return;
-    }
-    x->x_nconnections++;
-    i = x->x_nconnections - 1;
-    x->x_sr[i] = y;
-
-    udpserver_info_connection(x, y);
-  }
-  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
-}
 
 static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short portno)
 {
