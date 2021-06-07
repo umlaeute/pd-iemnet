@@ -231,7 +231,7 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
   id = udpserver__find_sender(x, host, port);
   DEBUG("%X:%d -> %d", host, port, id);
   if(id<0) {
-#if 1
+#if 0
     /* since udp is a connection-less protocol we have no way of knowing the currently connected clients
      * the following 3 lines assume, that there is only one client connected (the last we got data from
      */
