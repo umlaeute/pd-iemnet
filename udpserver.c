@@ -68,6 +68,8 @@ typedef struct _udpserver {
   unsigned short x_port; /* port we are bound to */
   t_symbol*x_ifaddr; /* interface we are bound to */
   unsigned char x_accept; /* whether we accept new connections or not */
+  double x_timeout; /* timeout after which clients expire */
+  double x_lastchecked; /* when the last timeout check was performed */
 
   /* the default connection to send to;
      0 = broadcast; >0 use this client; <0 exclude this client
@@ -293,6 +295,40 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
   }
 }
 
+static void udpserver_sender_autoremove(t_udpserver*x) {
+  /* remove all clients that have timedout */
+  unsigned int id;
+  t_udpserver_sender**sr=x->x_sr;
+  if(x->x_timeout<=0.) {
+    return;
+  }
+  if(clock_gettimesince(x->x_lastchecked) <= 0.) {
+    return;
+  }
+  x->x_lastchecked = clock_getlogicaltime();
+  for(id=0; id<x->x_nconnections;id++) {
+    if(!x->x_sr[id]) {
+      continue;
+    }
+    if (clock_gettimesince(x->x_sr[id]->sr_lastseen) > x->x_timeout) {
+      udpserver_sender_free(x->x_sr[id]);
+      x->x_sr[id] = NULL;
+      continue;
+    }
+    *sr++ = x->x_sr[id];
+  }
+  while(sr < (x->x_sr+x->x_maxconnections)) {
+    *sr++=NULL;
+  }
+  x->x_nconnections = 0;
+  for(id=0; id<x->x_maxconnections; id++) {
+    if(!x->x_sr[id])
+      break;
+    x->x_nconnections++;
+  }
+}
+
+
 /* ---------------- udpserver info ---------------------------- */
 static void udpserver_info_client(t_udpserver *x, unsigned int client)
 {
@@ -336,6 +372,8 @@ static void udpserver_info(t_udpserver *x)
     iemnet_log(x, IEMNET_ERROR, "no open socket");
   }
 
+  udpserver_sender_autoremove(x);
+
   if(x->x_port <= 0) {
     struct sockaddr_in server;
     socklen_t serversize = sizeof(server);
@@ -349,6 +387,7 @@ static void udpserver_info(t_udpserver *x)
       sys_sockerror("getsockname");
     }
   }
+
 
   iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
 
@@ -464,6 +503,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
   unsigned int client;
   t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
+  udpserver_sender_autoremove(x);
 
   DEBUG("broadcasting to %d clients", x->x_nconnections);
 
@@ -591,6 +631,7 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
   }
 
   udpserver_sender_remove(x, client);
+  udpserver_sender_autoremove(x);
   conns = x->x_nconnections;
 
   if(sdr) {
@@ -633,6 +674,11 @@ static void udpserver_disconnect_all(t_udpserver *x)
 static void udpserver_accept(t_udpserver *x, t_float f)
 {
   x->x_accept = (unsigned char)f;
+}
+/* set the client timeout (in ms) */
+static void udpserver_timeout(t_udpserver *x, t_float f)
+{
+  x->x_timeout = f;
 }
 
 /* ---------------- main udpserver (receive) stuff --------------------- */
@@ -924,6 +970,8 @@ IEMNET_EXTERN void udpserver_setup(void)
                   gensym("accept"), A_FLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_maxconnections,
                   gensym("maxconnections"), A_FLOAT, 0);
+  class_addmethod(udpserver_class, (t_method)udpserver_timeout,
+                  gensym("timeout"), A_FLOAT, 0);
 
   class_addmethod(udpserver_class, (t_method)udpserver_send_socket,
                   gensym("send"), A_GIMME, 0);
