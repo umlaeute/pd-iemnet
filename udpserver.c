@@ -300,7 +300,7 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
      "client <id> <socket> <IP> <port>"
      "bufsize <id> <insize> <outsize>"
   */
-  static t_atom output_atom[4];
+  static t_atom output_atom[5];
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port = x->x_sr[client]->sr_port;
@@ -312,8 +312,9 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
     SETFLOAT(output_atom+1, sockfd);
     SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
     SETFLOAT(output_atom+3, port);
+    SETFLOAT(output_atom+4, clock_gettimesince(x->x_sr[client]->sr_lastseen));
 
-    outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
+    outlet_anything( x->x_statusout, gensym("client"), 5, output_atom);
 
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, insize);
