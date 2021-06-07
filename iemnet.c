@@ -115,6 +115,15 @@ int iemnet__equaladdr(const struct sockaddr_storage*address1,
   case AF_INET6:
     len = sizeof(struct sockaddr_in6);
     break;
+#ifdef __unix__
+  case AF_UNIX: {
+    const struct sockaddr_un*addr1 = (const struct sockaddr_un*)&address1;
+    const struct sockaddr_un*addr2 = (const struct sockaddr_un*)&address2;
+    return(!strncmp(addr1->sun_path, addr2->sun_path, sizeof(addr1->sun_path)));
+  }
+    break;
+#endif
+
   default:
     len = sizeof(*address1);
     break;
