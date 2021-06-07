@@ -46,7 +46,7 @@ typedef struct _udpserver_sender {
   long sr_host;
   unsigned short sr_port;
   t_symbol*sr_hostname;
-  int sr_fd;
+  int sr_uniq;
   t_iemnet_sender*sr_sender;
 
   double sr_lastseen;
@@ -89,12 +89,12 @@ typedef struct _udpserver {
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
     unsigned long host, unsigned short port)
 {
+  static int uniq=1000;
   t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(*x));
   if(NULL == x) {
     iemnet_log(owner, IEMNET_FATAL, "unable to allocate %d bytes to create sender", (int)sizeof(*x));
     return NULL;
   } else {
-    int sockfd = owner->x_connectsocket;
     char hostname[MAXPDSTRING];
     /* yikes: IPv4 only for now */
     snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
@@ -107,13 +107,13 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
 
     x->sr_owner = owner;
 
-    x->sr_fd = sockfd;
+    x->sr_uniq = uniq++;
 
     x->sr_host = host; //ntohl(addr->sin_addr.s_addr);
     x->sr_port = port; //ntohs(addr->sin_port);
     x->sr_hostname = gensym(hostname);
 
-    x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
+    x->sr_sender = iemnet__sender_create(owner->x_connectsocket, NULL, NULL, 0);
 
     x->sr_lastseen = clock_getlogicaltime();
   }
@@ -124,12 +124,12 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 {
   DEBUG("freeing %x", x);
   if (x != NULL) {
-    int sockfd = x->sr_fd;
+    int sockfd = x->sr_uniq;
     t_iemnet_sender*sender = x->sr_sender;
 
     x->sr_owner = NULL;
     x->sr_sender = NULL;
-    x->sr_fd = -1;
+    x->sr_uniq = -1;
 
     free(x);
 
@@ -148,7 +148,7 @@ static int udpserver_socket2index(t_udpserver*x, int sockfd)
 {
   unsigned int i = 0;
   for(i = 0; i < x->x_nconnections; i++) { /* check if connection exists */
-    if(x->x_sr[i]->sr_fd == sockfd) {
+    if(x->x_sr[i]->sr_uniq == sockfd) {
       return i;
     }
   }
@@ -333,7 +333,7 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
   */
   static t_atom output_atom[5];
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
-    int sockfd = x->x_sr[client]->sr_fd;
+    int sockfd = x->x_sr[client]->sr_uniq;
     unsigned short port = x->x_sr[client]->sr_port;
 
     int insize = iemnet__receiver_getsize(x->x_receiver);
@@ -397,7 +397,7 @@ static void udpserver_info(t_udpserver *x)
 static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 {
   iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
-  //outlet_float(x->x_sockout, y->sr_fd);
+  //outlet_float(x->x_sockout, y->sr_uniq);
 }
 
 /* ---------------- main udpserver (send) stuff --------------------- */
@@ -414,7 +414,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
     int size = 0;
 
     t_iemnet_sender*sender = x->x_sr[client]->sr_sender;
-    int sockfd = x->x_sr[client]->sr_fd;
+    int sockfd = x->x_sr[client]->sr_uniq;
 
     chunk->addr = x->x_sr[client]->sr_host;
     chunk->port = x->x_sr[client]->sr_port;
@@ -563,7 +563,7 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 
   /* map the client to a persistant socket */
   if(client>0) {
-    sockfd = x->x_sr[client-1]->sr_fd;
+    sockfd = x->x_sr[client-1]->sr_uniq;
   }
 
   if(rawclient<0) {
