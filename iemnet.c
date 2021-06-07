@@ -101,6 +101,29 @@ static const char *rpl_inet_ntop(int af, const void *src, char *dst, socklen_t s
 # define inet_ntop rpl_inet_ntop
 #endif
 
+/* returns 1 if addr1 == addr2, 0 otherwise */
+int iemnet__equaladdr(const struct sockaddr_storage*address1,
+                             const struct sockaddr_storage*address2)
+{
+  int len=0;
+  if(address1->ss_family!=address2->ss_family)
+    return 0;
+  switch (address1->ss_family) {
+  case AF_INET:
+    len = sizeof(struct sockaddr_in);
+    break;
+  case AF_INET6:
+    len = sizeof(struct sockaddr_in6);
+    break;
+  default:
+    len = sizeof(*address1);
+    break;
+  }
+  return (!(memcmp(address1, address2, len)));
+}
+
+
+
 char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len) {
   switch (address->ss_family) {
   case AF_INET: case AF_INET6: {

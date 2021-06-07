@@ -176,28 +176,6 @@ static int udpserver_fixindex(t_udpserver*x, int client_)
   return (client-1);
 }
 
-
-/* returns 1 if addr1 == addr2, 0 otherwise */
-static int equal_addr(const struct sockaddr_storage*address1,
-                      const struct sockaddr_storage*address2)
-{
-  int len=0;
-  if(address1->ss_family!=address2->ss_family)
-    return 0;
-  switch (address1->ss_family) {
-  case AF_INET:
-    len = sizeof(struct sockaddr_in);
-    break;
-  case AF_INET6:
-    len = sizeof(struct sockaddr_in6);
-    break;
-  default:
-    len = sizeof(*address1);
-    break;
-  }
-  return (!(memcmp(address1, address2, len)));
-}
-
 /* called from:
  * - udpserver_sender_add()
  */
@@ -210,7 +188,7 @@ static int udpserver__find_sender(t_udpserver*x, const struct sockaddr_storage*a
     if(NULL == x->x_sr[i]) {
       return -1;
     }
-    if(equal_addr(address, &x->x_sr[i]->sr_address)) {
+    if(iemnet__equaladdr(address, &x->x_sr[i]->sr_address)) {
       return i;
     }
   }

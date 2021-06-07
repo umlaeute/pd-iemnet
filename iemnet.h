@@ -253,6 +253,19 @@ static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) 
  */
 void iemnet__post_addrinfo(struct addrinfo *ai);
 
+
+/**
+ * compare to sockaddresses
+ *
+ * \param address1 a pointer to sockaddr_in/sockaddr_in6/... that holds an address
+ * \param address2 a pointer to sockaddr_in/sockaddr_in6/... that holds another address
+ *
+ * \return 1 if the two addresses are the same, 0 if they differ
+ */
+int iemnet__equaladdr(const struct sockaddr_storage*address1,
+                      const struct sockaddr_storage*address2);
+
+
 /**
  * convert a sockaddr to string (e.g. for printing)
  *
