@@ -501,6 +501,7 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
                                 t_atom *argv)
 {
   unsigned int client;
+  unsigned int oldconnections = x->x_nconnections;
   t_iemnet_chunk*chunk = iemnet__chunk_create_list(argc, argv);
   (void)s; /* ignore unused variable */
   udpserver_sender_autoremove(x);
@@ -514,6 +515,11 @@ static void udpserver_broadcast(t_udpserver *x, t_symbol *s, int argc,
     udpserver_send_bytes(x, client, chunk);
   }
   iemnet__chunk_destroy(chunk);
+  if(oldconnections != x->x_nconnections) {
+    t_atom a[1];
+    SETFLOAT(a+0, x->x_nconnections);
+    outlet_anything( x->x_statusout, gensym("connections"), 1, a);
+  }
 }
 
 static void udpserver_defaultsend(t_udpserver *x, t_symbol *s, int argc,
