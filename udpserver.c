@@ -333,14 +333,14 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
   */
   static t_atom output_atom[5];
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
-    int sockfd = x->x_sr[client]->sr_uniq;
     unsigned short port = x->x_sr[client]->sr_port;
 
     int insize = iemnet__receiver_getsize(x->x_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
     SETFLOAT(output_atom+0, client+1);
-    SETFLOAT(output_atom+1, sockfd);
+    SETSYMBOL(output_atom+1, gensym("address"));
+
     SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
     SETFLOAT(output_atom+3, port);
     SETFLOAT(output_atom+4, clock_gettimesince(x->x_sr[client]->sr_lastseen));
@@ -572,6 +572,28 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 
   x->x_defaulttarget = sockfd;
 }
+static void udpserver_add_client(t_udpserver *x, t_symbol*s, t_float f) {
+  struct hostent*hp;
+  struct sockaddr_in server;
+  unsigned int port = (unsigned int)f;
+  if((int)f<1 || (int)f>=0xFFFF) {
+    iemnet_log(x, IEMNET_ERROR, "bad port '%d'?", (int)f);
+    return;
+  }
+  hp = gethostbyname(s->s_name);
+  if (hp == 0) {
+    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", s->s_name);
+    return;
+  }
+
+  server.sin_family = AF_INET;
+  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+  if (!udpserver_sender_add(x, ntohl(server.sin_addr.s_addr), port)) {
+    iemnet_log(x, IEMNET_ERROR, "unable to add client %s:%d", s->s_name, port);
+  }
+}
+
+
 
 /* disconnect client */
 static void udpserver_disconnect(t_udpserver *x, unsigned int client)
@@ -896,6 +918,8 @@ IEMNET_EXTERN void udpserver_setup(void)
 
   class_addmethod(udpserver_class, (t_method)udpserver_defaulttarget,
                   gensym("target"), A_DEFFLOAT, 0);
+  class_addmethod(udpserver_class, (t_method)udpserver_add_client,
+                  gensym("addclient"), A_SYMBOL, A_FLOAT, 0);
 
   class_addmethod(udpserver_class, (t_method)udpserver_bind, gensym("bind"),
                   A_GIMME, 0);
