@@ -184,22 +184,13 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
   if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port = x->x_sr[client]->sr_port;
-    long address = x->x_sr[client]->sr_host;
-    char hostname[MAXPDSTRING];
 
     int insize = iemnet__receiver_getsize(x->x_sr[client]->sr_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
-    snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
-             (unsigned char)((address & 0xFF000000)>>24),
-             (unsigned char)((address & 0x0FF0000)>>16),
-             (unsigned char)((address & 0x0FF00)>>8),
-             (unsigned char)((address & 0x0FF)));
-    hostname[MAXPDSTRING-1] = 0;
-
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, sockfd);
-    SETSYMBOL(output_atom+2, gensym(hostname));
+    SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
     SETFLOAT(output_atom+3, port);
 
     outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
