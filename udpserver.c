@@ -406,8 +406,7 @@ static void udpserver_info_connection(t_udpserver *x, t_udpserver_sender*y)
 }
 
 /* ---------------- main udpserver (send) stuff --------------------- */
-static void udpserver_disconnect_socket(t_udpserver *x,
-                                        t_floatarg fsocket);
+static void udpserver_disconnect(t_udpserver *x, unsigned int client);
 static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
                                  t_iemnet_chunk*chunk)
 {
@@ -436,7 +435,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
 
     if(size<0) {
       /* disconnected! */
-      udpserver_disconnect_socket(x, sockfd);
+      udpserver_disconnect(x, client);
     }
   }
 }
@@ -578,48 +577,8 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 
   x->x_defaulttarget = sockfd;
 }
-static void udpserver_targetsocket(t_udpserver *x, t_floatarg f)
-{
-  int sockfd = f;
-  x->x_defaulttarget = sockfd;
-}
 
-
-/* send message to client using socket number */
-static void udpserver_send_socket(t_udpserver *x, t_symbol *s, int argc,
-                                  t_atom *argv)
-{
-  int client = -1;
-  t_iemnet_chunk*chunk = NULL;
-  (void)s; /* ignore unused variable */
-  if(argc) {
-    client = udpserver_socket2index(x, atom_getint(argv));
-    if(client<0) {
-      return;
-    }
-  } else {
-    iemnet_log(x, IEMNET_ERROR, "no socket specified");
-    return;
-  }
-
-  /* get socket number of connection (first element in list) */
-  if(argc && argv->a_type == A_FLOAT) {
-    int sockfd = atom_getint(argv);
-    client = udpserver_socket2index(x, sockfd);
-    if(client < 0) {
-      iemnet_log(x, IEMNET_ERROR, "no connection on socket:%d", sockfd);
-      return;
-    }
-  } else {
-    iemnet_log(x, IEMNET_ERROR, "no socket specified");
-    return;
-  }
-
-  chunk = iemnet__chunk_create_list(argc-1, argv+1);
-  udpserver_send_bytes(x, client, chunk);
-  iemnet__chunk_destroy(chunk);
-}
-
+/* disconnect client */
 static void udpserver_disconnect(t_udpserver *x, unsigned int client)
 {
   t_udpserver_sender*sdr = NULL;
@@ -656,15 +615,6 @@ static void udpserver_disconnect_client(t_udpserver *x, t_floatarg fclient)
     return;
   }
   udpserver_disconnect(x, client);
-}
-
-/* disconnect a client by socket */
-static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
-{
-  int id = udpserver_socket2index(x, (int)fsocket);
-  if(id >= 0) {
-    udpserver_disconnect_client(x, id+1);
-  }
 }
 
 /* disconnect all clients */
@@ -967,8 +917,6 @@ IEMNET_EXTERN void udpserver_setup(void)
                               sizeof(t_udpserver), 0, A_DEFFLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_disconnect_client,
                   gensym("disconnectclient"), A_DEFFLOAT, 0);
-  class_addmethod(udpserver_class, (t_method)udpserver_disconnect_socket,
-                  gensym("disconnectsocket"), A_DEFFLOAT, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_disconnect_all,
                   gensym("disconnect"), 0);
 
@@ -979,7 +927,7 @@ IEMNET_EXTERN void udpserver_setup(void)
   class_addmethod(udpserver_class, (t_method)udpserver_timeout,
                   gensym("timeout"), A_FLOAT, 0);
 
-  class_addmethod(udpserver_class, (t_method)udpserver_send_socket,
+  class_addmethod(udpserver_class, (t_method)udpserver_defaultsend,
                   gensym("send"), A_GIMME, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_send_client,
                   gensym("client"), A_GIMME, 0);
@@ -989,8 +937,6 @@ IEMNET_EXTERN void udpserver_setup(void)
 
   class_addmethod(udpserver_class, (t_method)udpserver_defaulttarget,
                   gensym("target"), A_DEFFLOAT, 0);
-  class_addmethod(udpserver_class, (t_method)udpserver_targetsocket,
-                  gensym("targetsocket"), A_DEFFLOAT, 0);
   class_addlist(udpserver_class, (t_method)udpserver_defaultsend);
 
   class_addmethod(udpserver_class, (t_method)udpserver_bind, gensym("bind"),
