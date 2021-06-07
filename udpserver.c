@@ -577,7 +577,7 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
     return;
   }
 
-  sdr = (t_udpserver_sender *)calloc(1, sizeof(t_udpserver_sender));
+  sdr = (t_udpserver_sender *)calloc(1, sizeof(*sdr));
   if(sdr) {
     sdr->sr_host = x->x_sr[client]->sr_host;
     sdr->sr_port = x->x_sr[client]->sr_port;
