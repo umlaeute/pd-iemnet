@@ -305,23 +305,45 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
      "bufsize <id> <insize> <outsize>"
   */
   static t_atom output_atom[5];
+  PERTHREAD t_symbol*s_client=0;
+  PERTHREAD t_symbol*s_id=0;
+  PERTHREAD t_symbol*s_address=0;
+  PERTHREAD t_symbol*s_last_seen=0;
+  PERTHREAD t_symbol*s_bufsize=0;
+  if(!s_client)s_client = gensym("client");
+  if(!s_id)s_id = gensym("id");
+  if(!s_address)s_address = gensym("address");
+  if(!s_last_seen)s_last_seen = gensym("last_seen");
+  if(!s_bufsize)s_bufsize = gensym("bufsize");
+
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int insize = iemnet__receiver_getsize(x->x_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
     SETFLOAT(output_atom+0, client+1);
-    SETSYMBOL(output_atom+1, gensym("address"));
 
+    SETSYMBOL(output_atom+1, s_id);
+    SETFLOAT(output_atom+2, x->x_sr[client]->sr_uniq);
+    outlet_anything( x->x_statusout, s_client, 3, output_atom);
+
+
+    SETSYMBOL(output_atom+1, s_address);
     SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
     SETFLOAT(output_atom+3, x->x_sr[client]->sr_port);
-    SETFLOAT(output_atom+4, clock_gettimesince(x->x_sr[client]->sr_lastseen));
 
-    outlet_anything( x->x_statusout, gensym("client"), 5, output_atom);
+    outlet_anything( x->x_statusout, s_client, 4, output_atom);
+
+    SETSYMBOL(output_atom+1, s_last_seen);
+    SETFLOAT(output_atom+2, clock_gettimesince(x->x_sr[client]->sr_lastseen));
+    outlet_anything( x->x_statusout, s_client, 3, output_atom);
+
 
     SETFLOAT(output_atom+0, client+1);
-    SETFLOAT(output_atom+1, insize);
-    SETFLOAT(output_atom+2, outsize);
-    outlet_anything( x->x_statusout, gensym("bufsize"), 3, output_atom);
+    SETSYMBOL(output_atom+1, s_bufsize);
+
+    SETFLOAT(output_atom+2, insize);
+    SETFLOAT(output_atom+3, outsize);
+    outlet_anything( x->x_statusout, s_client, 4, output_atom);
   }
 }
 
