@@ -891,7 +891,6 @@ IEMNET_EXTERN void udpserver_setup(void)
   if(!iemnet__register(objName)) {
     return;
   }
-  error("[%s] does not work yet", objName);
 
   udpserver_class = class_new(gensym(objName),(t_newmethod)udpserver_new,
                               (t_method)udpserver_free,
