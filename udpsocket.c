@@ -57,16 +57,34 @@ static void udpsocket_info(t_udpsocket *x)
     "server <socket> <IP> <port>"
     "bufsize <insize> <outsize>"
   */
-  static t_atom output_atom[3];
+  static t_atom ap[3];
   int sockfd = x->x_fd;
   int insize = x->x_receiver?iemnet__receiver_getsize(x->x_receiver):-1;
   int outsize = x->x_sender?iemnet__sender_getsize(x->x_sender):-1;
-  if(sockfd >= 0)
-    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
+  PERTHREAD t_symbol*s_info=0;
+  PERTHREAD t_symbol*s_local_address=0;
+  PERTHREAD t_symbol*s_bufsize=0;
+  if(!s_info)s_info = gensym("info");
+  if(!s_local_address)s_local_address = gensym("local_address");
+  if(!s_bufsize)s_bufsize = gensym("bufsize");
 
-  SETFLOAT(output_atom+0, insize);
-  SETFLOAT(output_atom+1, outsize);
-  outlet_anything(x->x_statusout, gensym("bufsize"), 2, output_atom);
+
+  if(sockfd >= 0) {
+    struct sockaddr_storage address;
+    socklen_t addresssize = sizeof(address);
+    if (!getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
+      int port=0;
+      SETSYMBOL(ap+0, s_local_address);
+      SETSYMBOL(ap+1, iemnet__sockaddr2sym(&address, &port));
+      SETFLOAT(ap+2, port);
+      outlet_anything(x->x_statusout, s_info, 3, ap);
+    }
+  }
+
+  SETSYMBOL(ap+0, s_bufsize);
+  SETFLOAT(ap+1, insize);
+  SETFLOAT(ap+2, outsize);
+  outlet_anything(x->x_statusout, s_info, 3, ap);
 }
 
 
@@ -120,7 +138,13 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
   t_udpsocket *x = (t_udpsocket*)y;
 
   if(c) {
-    iemnet__addrout(x->x_statusout, 0, &c->address);
+    t_atom a[2];
+    int port;
+    SETSYMBOL(a+0, iemnet__sockaddr2sym(&c->address, &port));
+    SETFLOAT(a+1, port);
+    outlet_anything(x->x_statusout, gensym("address"), 2, a);
+
+    //iemnet__addrout(x->x_statusout, 0, &c->address);
     x->x_floatlist = iemnet__chunk2list(c,
                                       x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
