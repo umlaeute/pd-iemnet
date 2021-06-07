@@ -117,7 +117,6 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 {
   DEBUG("freeing %x", x);
   if (x != NULL) {
-    int sockfd = x->sr_uniq;
     t_iemnet_sender*sender = x->sr_sender;
 
     x->sr_owner = NULL;
@@ -128,9 +127,6 @@ static void udpserver_sender_free(t_udpserver_sender *x)
 
     if(sender) {
       iemnet__sender_destroy(sender, 0);
-    }
-    if(sockfd >= 0) {
-      iemnet__closesocket(sockfd, 1);
     }
   }
   /* coverity[pass_freed_arg]: this is merely for debugging printout */
