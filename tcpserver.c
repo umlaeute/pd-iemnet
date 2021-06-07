@@ -38,6 +38,12 @@
 
 #define MAX_CONNECT 32 /* maximum number of connections */
 
+typedef enum {
+  DISCONNECT = 0,
+  CONNECT,
+  RECEIVE
+} t_tcpserver_event;
+
 /* ----------------------------- tcpserver ------------------------- */
 
 static t_class *tcpserver_class;
@@ -234,14 +240,34 @@ static void tcpserver_info(t_tcpserver *x)
 
 static void tcpserver_info_connection(t_tcpserver *x
     , t_tcpserver_socketreceiver*y
+    , t_tcpserver_event event
     )
 {
   t_atom a[4];
+  switch(event) {
+  case CONNECT:
+    SETSYMBOL(a, gensym("connect"));
+    break;
+  case RECEIVE:
+    SETSYMBOL(a, gensym("receive"));
+    break;
+  case DISCONNECT:
+    SETSYMBOL(a, gensym("disconnect"));
+    break;
+  default:
+    SETFLOAT(a, 0);
+    break;
+  }
+  if(A_SYMBOL==a->a_type) {
+    outlet_anything(x->x_statusout, gensym("type"), 1, a);
+  }
   SETFLOAT(a+0, y->sr_client + 1);
   SETFLOAT(a+1, y->sr_fd);
   SETSYMBOL(a+2, y->sr_hostname);
   SETFLOAT(a+3, y->sr_port);
   outlet_anything(x->x_statusout, gensym("client"), 4, a);
+  SETFLOAT(a, y->sr_fd);
+  outlet_anything(x->x_statusout, gensym("socket"), 1, a);
 
   iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
   outlet_float(x->x_sockout, y->sr_fd);
@@ -480,7 +506,7 @@ static void tcpserver_disconnect(t_tcpserver *x, unsigned int client)
 {
   unsigned int k;
   DEBUG("disconnect %x %d", x, client);
-  tcpserver_info_connection(x, x->x_sr[client]);
+  tcpserver_info_connection(x, x->x_sr[client], DISCONNECT);
 
   tcpserver_socketreceiver_free(x->x_sr[client]);
   x->x_sr[client] = NULL;
@@ -535,7 +561,7 @@ static void tcpserver_receive_callback(void *y0,
   }
 
   if(c) {
-    tcpserver_info_connection(x, y);
+    tcpserver_info_connection(x, y, RECEIVE);
     /* get's destroyed in the dtor */
     x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
@@ -580,7 +606,7 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
     x->x_sr[x->x_nconnections] = y;
     x->x_nconnections++;
 
-    tcpserver_info_connection(x, y);
+    tcpserver_info_connection(x, y, CONNECT);
   }
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
