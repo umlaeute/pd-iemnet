@@ -401,6 +401,7 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
     if(size<0) {
       /* disconnected! */
       udpserver_disconnect(x, client);
+      iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
     }
   }
 }
@@ -583,14 +584,12 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
   }
 
   udpserver_sender_remove(x, client);
-  udpserver_sender_autoremove(x);
   conns = x->x_nconnections;
 
   if(sdr) {
     udpserver_info_connection(x, sdr);
     free(sdr);
   }
-  iemnet__numconnout(x->x_statusout, x->x_connectout, conns);
 }
 
 /* disconnect a client by number */
@@ -602,15 +601,19 @@ static void udpserver_disconnect_client(t_udpserver *x, t_floatarg fclient)
     return;
   }
   udpserver_disconnect(x, client);
+  udpserver_sender_autoremove(x);
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
 /* disconnect all clients */
 static void udpserver_disconnect_all(t_udpserver *x)
 {
   unsigned int id;
+  udpserver_sender_autoremove(x);
   for(id = 0; id<x->x_nconnections; id++) {
     udpserver_disconnect(x, id);
   }
+  iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
 
 /* whether we should accept new connections */
