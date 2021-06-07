@@ -571,7 +571,6 @@ static void udpserver_add_client(t_udpserver *x, t_symbol*s, t_float f) {
 static void udpserver_disconnect(t_udpserver *x, unsigned int client)
 {
   t_udpserver_sender*sdr = NULL;
-  int conns;
   DEBUG("disconnect %x %d", x, client);
 
   if(client >= x->x_nconnections) {
@@ -584,7 +583,6 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client)
   }
 
   udpserver_sender_remove(x, client);
-  conns = x->x_nconnections;
 
   if(sdr) {
     udpserver_info_connection(x, sdr);
