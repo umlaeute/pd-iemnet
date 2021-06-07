@@ -11,6 +11,7 @@ class.sources = \
         udpsend.c \
         udpclient.c \
         udpserver.c \
+	udpsocket.c \
 	$(empty)
 
 shared.sources = \
@@ -32,6 +33,7 @@ datafiles = \
 	udpserver-help.pd \
 	udpsndrcv-help.pd \
 	udpsndrcv.pd \
+	udpsocket-help.pd \
 	LICENSE.md \
 	README.md \
 	$(empty)
