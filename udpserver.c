@@ -667,7 +667,7 @@ static void udpserver_disconnect_socket(t_udpserver *x, t_floatarg fsocket)
   }
 }
 
-/* disconnect a client by socket */
+/* disconnect all clients */
 static void udpserver_disconnect_all(t_udpserver *x)
 {
   unsigned int id;
