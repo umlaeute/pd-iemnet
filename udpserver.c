@@ -74,6 +74,12 @@ typedef struct _udpserver {
   t_iemnet_floatlist*x_floatlist;
 } t_udpserver;
 
+/* called from:
+   - udpserver_sender_copy().
+   - udpserver_sender_add()
+     - udpserver_receive_callback()
+   - udpserver_connectpoll().
+*/
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
     unsigned long host, unsigned short port)
 {
@@ -175,7 +181,9 @@ static int equal_addr(unsigned long host1, unsigned short port1,
          );
 }
 
-
+/* called from:
+ * - udpserver_sender_add()
+ */
 static int udpserver__find_sender(t_udpserver*x, unsigned long host,
                                   unsigned short port)
 {
@@ -194,6 +202,9 @@ static int udpserver__find_sender(t_udpserver*x, unsigned long host,
 /**
  * check whether the sender is already registered
  * if not, add it to the list of registered senders
+ */
+/* called from:
+ * - udpserver_receive_callback()
  */
 static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
     unsigned long host, unsigned short port )
@@ -613,6 +624,9 @@ static void udpserver_accept(t_udpserver *x, t_float f)
 }
 
 /* ---------------- main udpserver (receive) stuff --------------------- */
+/* called from:
+   - iemnet_receiver (calling context: main thread)
+*/
 static void udpserver_receive_callback(void *y, t_iemnet_chunk*c)
 {
   t_udpserver*x = (t_udpserver*)y;
