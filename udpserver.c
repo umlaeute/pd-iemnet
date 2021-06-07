@@ -886,17 +886,16 @@ IEMNET_EXTERN void udpserver_setup(void)
   class_addmethod(udpserver_class, (t_method)udpserver_timeout,
                   gensym("timeout"), A_FLOAT, 0);
 
-  class_addmethod(udpserver_class, (t_method)udpserver_defaultsend,
-                  gensym("send"), A_GIMME, 0);
   class_addmethod(udpserver_class, (t_method)udpserver_send_client,
                   gensym("client"), A_GIMME, 0);
-
   class_addmethod(udpserver_class, (t_method)udpserver_broadcast,
                   gensym("broadcast"), A_GIMME, 0);
+  class_addmethod(udpserver_class, (t_method)udpserver_defaultsend,
+                  gensym("send"), A_GIMME, 0);
+  class_addlist(udpserver_class, (t_method)udpserver_defaultsend);
 
   class_addmethod(udpserver_class, (t_method)udpserver_defaulttarget,
                   gensym("target"), A_DEFFLOAT, 0);
-  class_addlist(udpserver_class, (t_method)udpserver_defaultsend);
 
   class_addmethod(udpserver_class, (t_method)udpserver_bind, gensym("bind"),
                   A_GIMME, 0);
