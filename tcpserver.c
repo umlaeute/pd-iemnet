@@ -226,8 +226,9 @@ static void tcpserver_info(t_tcpserver *x)
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
 }
 
-static void tcpserver_info_connection(t_tcpserver *x,
-                                      t_tcpserver_socketreceiver*y)
+static void tcpserver_info_connection(t_tcpserver *x
+    , t_tcpserver_socketreceiver*y
+    )
 {
   iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
   outlet_float(x->x_sockout, y->sr_fd);
