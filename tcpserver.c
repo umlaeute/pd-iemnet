@@ -125,8 +125,7 @@ static t_tcpserver_event tcpserver_info_event(t_tcpserver *x, t_tcpserver_event 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
     t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
 {
-  t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(
-                                    sizeof(*x));
+  t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   long address;
   char hostname[MAXPDSTRING];
   if(NULL == x) {
@@ -363,8 +362,7 @@ static void tcpserver_send_butclient(t_tcpserver *x, unsigned int but,
   }
 
   chunk = iemnet__chunk_create_list(argc, argv);
-  sr = (t_tcpserver_socketreceiver**)calloc(x->x_nconnections,
-                                          sizeof(t_tcpserver_socketreceiver*));
+  sr = (t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(*sr));
 
   for(client = 0; client<x->x_nconnections; client++) {
     sr[client] = x->x_sr[client];
@@ -427,8 +425,7 @@ static void tcpserver_broadcast(t_tcpserver *x, t_symbol *s, int argc,
   }
 
   chunk = iemnet__chunk_create_list(argc, argv);
-  sr = (t_tcpserver_socketreceiver**)calloc(x->x_nconnections,
-                                          sizeof(t_tcpserver_socketreceiver*));
+  sr = (t_tcpserver_socketreceiver**)calloc(x->x_nconnections, sizeof(*sr));
 
   for(client = 0; client<x->x_nconnections; client++) {
     sr[client] = x->x_sr[client];
@@ -769,8 +766,8 @@ static void tcpserver_maxconnections(t_tcpserver *x, t_floatarg maxconnf)
     return;
 
   sr = resizebytes(x->x_sr
-      , sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections
-      , sizeof(t_tcpserver_socketreceiver) * maxconn
+      , sizeof(*sr) * x->x_maxconnections
+      , sizeof(*sr) * maxconn
       );
   if(sr) {
     x->x_sr = sr;
@@ -784,7 +781,6 @@ static void *tcpserver_new(t_floatarg fportno)
 {
   t_tcpserver*x;
   unsigned int i;
-
   x = (t_tcpserver *)pd_new(tcpserver_class);
 
   x->x_msgout = outlet_new(&x->x_obj, 0); /* 1st outlet for received data */
@@ -803,7 +799,7 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_nconnections = 0;
   x->x_maxconnections = MAX_CONNECT;
 
-  x->x_sr = (t_tcpserver_socketreceiver**)getbytes(sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections);
+  x->x_sr = (t_tcpserver_socketreceiver**)getbytes(sizeof(*x->x_sr) * x->x_maxconnections);
 
   for(i = 0; i < x->x_maxconnections; i++) {
     x->x_sr[i] = NULL;
@@ -828,7 +824,7 @@ static void tcpserver_free(t_tcpserver *x)
       x->x_sr[i] = NULL;
     }
   }
-  freebytes(x->x_sr, sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections);
+  freebytes(x->x_sr, sizeof(*x->x_sr) * x->x_maxconnections);
 
   if (x->x_connectsocket >= 0) {
     sys_rmpollfn(x->x_connectsocket);
