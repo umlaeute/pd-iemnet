@@ -122,8 +122,6 @@ static void udpsocket_send(t_udpsocket *x, t_symbol *s, int argc,
       default:
         continue;
       }
-      post("target port:%d", chunk->port);
-      post("target addr:%lu", chunk->addr);
       if (!chunk->port || !chunk->addr)
         continue;
       size = iemnet__sender_send(sender, chunk);
