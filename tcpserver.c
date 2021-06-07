@@ -39,9 +39,13 @@
 #define MAX_CONNECT 32 /* maximum number of connections */
 
 typedef enum {
-  DISCONNECT = 0,
+  ILLEGAL=-1,
+  SERVER_INFO = 0,
+  CLIENT_INFO,
+  DISCONNECT,
   CONNECT,
-  RECEIVE
+  RECEIVE,
+  SEND
 } t_tcpserver_event;
 
 /* ----------------------------- tcpserver ------------------------- */
@@ -86,6 +90,37 @@ typedef struct _tcpserver {
 
 /* forward declarations */
 static void tcpserver_receive_callback(void*x, t_iemnet_chunk*);
+
+
+static t_tcpserver_event tcpserver_info_event(t_tcpserver *x, t_tcpserver_event event)
+{
+  t_atom a[1];
+  switch(event) {
+  case SERVER_INFO:
+    SETSYMBOL(a, gensym("server"));
+    break;
+  case CLIENT_INFO:
+    SETSYMBOL(a, gensym("client"));
+    break;
+  case CONNECT:
+    SETSYMBOL(a, gensym("connect"));
+    break;
+  case DISCONNECT:
+    SETSYMBOL(a, gensym("disconnect"));
+    break;
+  case SEND:
+    SETSYMBOL(a, gensym("send"));
+    break;
+  case RECEIVE:
+    SETSYMBOL(a, gensym("receive"));
+    break;
+  default:
+    return ILLEGAL;
+  }
+  outlet_anything(x->x_statusout, gensym("type"), 1, a);
+  return event;
+}
+
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
     t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
@@ -196,6 +231,9 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
     int insize = iemnet__receiver_getsize(x->x_sr[client]->sr_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
+    tcpserver_info_event(x, CLIENT_INFO);
+
+
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, sockfd);
     SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
@@ -235,6 +273,7 @@ static void tcpserver_info(t_tcpserver *x)
     }
   }
 
+  tcpserver_info_event(x, SERVER_INFO);
   iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
   SETFLOAT(output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
@@ -246,23 +285,7 @@ static void tcpserver_info_connection(t_tcpserver *x
     )
 {
   t_atom a[4];
-  switch(event) {
-  case CONNECT:
-    SETSYMBOL(a, gensym("connect"));
-    break;
-  case RECEIVE:
-    SETSYMBOL(a, gensym("receive"));
-    break;
-  case DISCONNECT:
-    SETSYMBOL(a, gensym("disconnect"));
-    break;
-  default:
-    SETFLOAT(a, 0);
-    break;
-  }
-  if(A_SYMBOL==a->a_type) {
-    outlet_anything(x->x_statusout, gensym("type"), 1, a);
-  }
+  tcpserver_info_event(x, event);
   SETFLOAT(a+0, y->sr_client + 1);
   SETFLOAT(a+1, y->sr_fd);
   SETSYMBOL(a+2, y->sr_hostname);
@@ -292,6 +315,7 @@ static void tcpserver_send_bytes_client(t_tcpserver*x,
       size = iemnet__sender_send(sender, chunk);
     }
 
+    tcpserver_info_event(x, SEND);
     SETFLOAT(&output_atom[0], client+1);
     SETFLOAT(&output_atom[1], size);
     SETFLOAT(&output_atom[2], sockfd);
@@ -587,11 +611,11 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 
   fd = accept(fd, (struct sockaddr*)&incomer_address, &sockaddrl);
 
-  if (fd < 0) {
+  tcpserver_info_event(x, CONNECT);
+    if (fd < 0) {
     post("%s: accept failed", objName);
   } else if(!x->x_accepting) {
     iemnet__closesocket(fd, 1);
-    return;
   } else {
     t_tcpserver_socketreceiver *y = NULL;
     if(x->x_nconnections >= x->x_maxconnections) {
@@ -611,7 +635,7 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
     x->x_sr[x->x_nconnections] = y;
     x->x_nconnections++;
 
-    tcpserver_info_connection(x, y, CONNECT);
+    tcpserver_info_connection(x, y, ILLEGAL);
   }
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
 }
@@ -625,6 +649,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
   int sockfd = x->x_connectsocket;
   int intarg;
   memset(&server, 0, sizeof(server));
+
+  tcpserver_info_event(x, SERVER_INFO);
 
   SETFLOAT(ap, -1);
   if(x->x_port == portno) {
