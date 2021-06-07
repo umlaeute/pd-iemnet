@@ -539,7 +539,6 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 {
   struct sockaddr_in incomer_address;
   socklen_t sockaddrl = sizeof( struct sockaddr );
-  int i;
   if(fd != x->x_connectsocket) {
     iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
     return;
@@ -564,9 +563,9 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
       iemnet__closesocket(fd, 1);
       return;
     }
+
+    x->x_sr[x->x_nconnections] = y;
     x->x_nconnections++;
-    i = x->x_nconnections - 1;
-    x->x_sr[i] = y;
 
     tcpserver_info_connection(x, y);
   }
