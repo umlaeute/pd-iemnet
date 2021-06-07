@@ -236,6 +236,13 @@ static void tcpserver_info_connection(t_tcpserver *x
     , t_tcpserver_socketreceiver*y
     )
 {
+  t_atom a[4];
+  SETFLOAT(a+0, y->sr_client + 1);
+  SETFLOAT(a+1, y->sr_fd);
+  SETSYMBOL(a+2, y->sr_hostname);
+  SETFLOAT(a+3, y->sr_port);
+  outlet_anything(x->x_statusout, gensym("client"), 4, a);
+
   iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
   outlet_float(x->x_sockout, y->sr_fd);
 }
