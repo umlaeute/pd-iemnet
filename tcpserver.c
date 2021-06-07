@@ -72,8 +72,9 @@ typedef struct _tcpserver {
   int x_serialize; /* whether we want to serialize the data or not (TRUE) */
   int x_accepting; /* whether we are accepting new connections (TRUE) */
 
-  t_tcpserver_socketreceiver*x_sr[MAX_CONNECT]; /* socket per connection */
+  t_tcpserver_socketreceiver**x_sr; /* socket per connection */
   unsigned int x_nconnections;
+  unsigned int x_maxconnections;
 
   int x_connectsocket; /* socket waiting for new connections */
   int x_port;
@@ -188,7 +189,7 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
     "bufsize <id> <insize> <outsize>"
   */
   static t_atom output_atom[4];
-  if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
+  if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port = x->x_sr[client]->sr_port;
 
@@ -303,11 +304,11 @@ static void tcpserver_send_bytes_client(t_tcpserver*x,
   }
 }
 
-static void tcpserver_send_bytes(t_tcpserver*x, int client,
+static void tcpserver_send_bytes(t_tcpserver*x, unsigned int client,
                                  t_iemnet_chunk*chunk)
 {
   t_tcpserver_socketreceiver*sr = NULL;
-  if(x&&client<MAX_CONNECT) {
+  if(x && client<x->x_maxconnections) {
     sr = x->x_sr[client];
   }
   DEBUG("send_bytes to %p[%d] -> %p", x, client, sr);
@@ -593,7 +594,7 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
     return;
   } else {
     t_tcpserver_socketreceiver *y = NULL;
-    if(x->x_nconnections >= MAX_CONNECT) {
+    if(x->x_nconnections >= x->x_maxconnections) {
       iemnet_log(x, IEMNET_ERROR,
                  "cannot handle more than %d connections, dropping!",
                  x->x_nconnections);
@@ -724,11 +725,37 @@ static void tcpserver_accept(t_tcpserver *x, t_floatarg doit)
 {
   x->x_accepting = doit;
 }
+static void tcpserver_maxconnections(t_tcpserver *x, t_floatarg maxconnf)
+{
+  unsigned int maxconn = (unsigned int)maxconnf;
+  t_tcpserver_socketreceiver**sr;
+  if(maxconnf<1) {
+    pd_error(x, "maximum number of connections must be > 0");
+    return;
+  }
+  if(maxconn < x->x_nconnections) {
+    pd_error(x, "maximum number of connections < number of currently connected clients [%d]", x->x_nconnections);
+    return;
+  }
+  if(maxconn == x->x_maxconnections)
+    return;
+
+  sr = resizebytes(x->x_sr
+      , sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections
+      , sizeof(t_tcpserver_socketreceiver) * maxconn
+      );
+  if(sr) {
+    x->x_sr = sr;
+    x->x_maxconnections = maxconn;
+  } else {
+    pd_error(x, "failed to set maximum number of connections");
+  }
+}
 
 static void *tcpserver_new(t_floatarg fportno)
 {
   t_tcpserver*x;
-  int i;
+  unsigned int i;
 
   x = (t_tcpserver *)pd_new(tcpserver_class);
 
@@ -746,8 +773,11 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_connectsocket = -1;
   x->x_port = -1;
   x->x_nconnections = 0;
+  x->x_maxconnections = MAX_CONNECT;
 
-  for(i = 0; i < MAX_CONNECT; i++) {
+  x->x_sr = (t_tcpserver_socketreceiver**)getbytes(sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections);
+
+  for(i = 0; i < x->x_maxconnections; i++) {
     x->x_sr[i] = NULL;
   }
 
@@ -761,15 +791,17 @@ static void *tcpserver_new(t_floatarg fportno)
 
 static void tcpserver_free(t_tcpserver *x)
 {
-  int i;
+  unsigned int i;
 
-  for(i = 0; i < MAX_CONNECT; i++) {
+  for(i = 0; i < x->x_maxconnections; i++) {
     if (NULL != x->x_sr[i]) {
       DEBUG("[%s] free %x", objName, x);
       tcpserver_socketreceiver_free(x->x_sr[i]);
       x->x_sr[i] = NULL;
     }
   }
+  freebytes(x->x_sr, sizeof(t_tcpserver_socketreceiver) * x->x_maxconnections);
+
   if (x->x_connectsocket >= 0) {
     sys_rmpollfn(x->x_connectsocket);
     iemnet__closesocket(x->x_connectsocket, 1);
@@ -814,6 +846,8 @@ IEMNET_EXTERN void tcpserver_setup(void)
                   gensym("serialize"), A_FLOAT, 0);
   class_addmethod(tcpserver_class, (t_method)tcpserver_accept,
                   gensym("accept"), A_FLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_maxconnections,
+                  gensym("maxconnections"), A_FLOAT, 0);
 
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"),
