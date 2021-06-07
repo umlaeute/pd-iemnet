@@ -347,6 +347,9 @@ static void udpserver_info(t_udpserver *x)
 
   SETFLOAT(output_atom+0, port);
   outlet_anything( x->x_statusout, gensym("port"), 1, output_atom);
+
+  SETFLOAT(output_atom+0, x->x_nconnections);
+  outlet_anything( x->x_statusout, gensym("connections"), 1, output_atom);
 }
 
 
