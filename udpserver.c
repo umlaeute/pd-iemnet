@@ -45,6 +45,7 @@ typedef struct _udpserver_sender {
 
   long sr_host;
   unsigned short sr_port;
+  t_symbol*sr_hostname;
   int sr_fd;
   t_iemnet_sender*sr_sender;
 } t_udpserver_sender;
@@ -90,12 +91,23 @@ static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
     return NULL;
   } else {
     int sockfd = owner->x_connectsocket;
+    char hostname[MAXPDSTRING];
+    /* yikes: IPv4 only for now */
+    snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
+             (unsigned char)((host & 0xFF000000)>>24),
+             (unsigned char)((host & 0x0FF0000)>>16),
+             (unsigned char)((host & 0x0FF00)>>8),
+             (unsigned char)((host & 0x0FF))
+      );
+    hostname[MAXPDSTRING-1] = 0;
+
     x->sr_owner = owner;
 
     x->sr_fd = sockfd;
 
     x->sr_host = host; //ntohl(addr->sin_addr.s_addr);
     x->sr_port = port; //ntohs(addr->sin_port);
+    x->sr_hostname = gensym(hostname);
 
     x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   }
@@ -286,23 +298,13 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port = x->x_sr[client]->sr_port;
-    long address = x->x_sr[client]->sr_host;
-    char hostname[MAXPDSTRING];
 
     int insize = iemnet__receiver_getsize(x->x_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
-    snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
-             (unsigned char)((address & 0xFF000000)>>24),
-             (unsigned char)((address & 0x0FF0000)>>16),
-             (unsigned char)((address & 0x0FF00)>>8),
-             (unsigned char)((address & 0x0FF))
-            );
-    hostname[MAXPDSTRING-1] = 0;
-
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, sockfd);
-    SETSYMBOL(output_atom+2, gensym(hostname));
+    SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
     SETFLOAT(output_atom+3, port);
 
     outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
