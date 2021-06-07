@@ -70,7 +70,7 @@ typedef struct _tcpserver {
   int x_port;
 
   /* the default connection to send to; 0 = broadcast; >0 use this client; <0 exclude this client */
-  int x_defaulttarget; 
+  int x_defaulttarget;
   t_iemnet_floatlist*x_floatlist;
 } t_tcpserver;
 
