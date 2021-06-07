@@ -265,7 +265,7 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
 }
 
 /* ---------------- udpserver info ---------------------------- */
-static void udpserver_info_client(t_udpserver *x, int client)
+static void udpserver_info_client(t_udpserver *x, unsigned int client)
 {
   /*
      "client <id> <socket> <IP> <port>"
@@ -792,7 +792,7 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
 static void *udpserver_new(t_floatarg fportno)
 {
   t_udpserver*x;
-  int i;
+  unsigned int i;
 
   x = (t_udpserver *)pd_new(udpserver_class);
 
@@ -824,7 +824,7 @@ static void *udpserver_new(t_floatarg fportno)
 
 static void udpserver_free(t_udpserver *x)
 {
-  int i;
+  unsigned int i;
   for(i = 0; i < MAX_CONNECT; i++) {
     if (NULL != x->x_sr[i]) {
       DEBUG("[%s] free %x", objName, x);
