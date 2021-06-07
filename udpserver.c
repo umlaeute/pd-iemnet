@@ -84,8 +84,7 @@ typedef struct _udpserver {
 static t_udpserver_sender *udpserver_sender_new(t_udpserver *owner,
     unsigned long host, unsigned short port)
 {
-  t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(
-                            t_udpserver_sender));
+  t_udpserver_sender *x = (t_udpserver_sender *)malloc(sizeof(*x));
   if(NULL == x) {
     iemnet_log(owner, IEMNET_FATAL, "unable to allocate %d bytes to create sender", (int)sizeof(*x));
     return NULL;
