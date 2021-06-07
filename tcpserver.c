@@ -69,7 +69,8 @@ typedef struct _tcpserver {
   t_outlet*x_addrout; /* legacy */
   t_outlet*x_statusout;
 
-  int x_serialize;
+  int x_serialize; /* whether we want to serialize the data or not (TRUE) */
+  int x_accepting; /* whether we are accepting new connections (TRUE) */
 
   t_tcpserver_socketreceiver*x_sr[MAX_CONNECT]; /* socket per connection */
   unsigned int x_nconnections;
@@ -587,6 +588,9 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 
   if (fd < 0) {
     post("%s: accept failed", objName);
+  } else if(!x->x_accepting) {
+    iemnet__closesocket(fd, 1);
+    return;
   } else {
     t_tcpserver_socketreceiver *y = NULL;
     if(x->x_nconnections >= MAX_CONNECT) {
@@ -716,7 +720,10 @@ static void tcpserver_serialize(t_tcpserver *x, t_floatarg doit)
 {
   x->x_serialize = doit;
 }
-
+static void tcpserver_accept(t_tcpserver *x, t_floatarg doit)
+{
+  x->x_accepting = doit;
+}
 
 static void *tcpserver_new(t_floatarg fportno)
 {
@@ -734,6 +741,7 @@ static void *tcpserver_new(t_floatarg fportno)
                             0);/* 5th outlet for everything else */
 
   x->x_serialize = 1;
+  x->x_accepting = 1;
 
   x->x_connectsocket = -1;
   x->x_port = -1;
@@ -804,6 +812,8 @@ IEMNET_EXTERN void tcpserver_setup(void)
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_serialize,
                   gensym("serialize"), A_FLOAT, 0);
+  class_addmethod(tcpserver_class, (t_method)tcpserver_accept,
+                  gensym("accept"), A_FLOAT, 0);
 
 
   class_addmethod(tcpserver_class, (t_method)tcpserver_port, gensym("port"),
