@@ -57,8 +57,9 @@ typedef struct _udpserver {
   t_outlet*x_addrout; /* legacy */
   t_outlet*x_statusout;
 
-  t_udpserver_sender*x_sr[MAX_CONNECT]; /* socket per connection */
+  t_udpserver_sender**x_sr; /* socket per connection */
   unsigned int x_nconnections;
+  unsigned int x_maxconnections;
 
   int x_connectsocket; /* socket waiting for new connections */
   unsigned short x_port; /* port we are bound to */
@@ -239,7 +240,7 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
      */
     id = x->x_nconnections;
     /* an unknown address! add it */
-    if(id<MAX_CONNECT) {
+    if(id < (int)x->x_maxconnections) {
       x->x_sr[id] = udpserver_sender_new(x, host, port);
       DEBUG("new sender[%d] = %x", id, x->x_sr[id]);
       x->x_nconnections++;
@@ -283,7 +284,7 @@ static void udpserver_info_client(t_udpserver *x, unsigned int client)
      "bufsize <id> <insize> <outsize>"
   */
   static t_atom output_atom[4];
-  if(x&&client<MAX_CONNECT&&x->x_sr[client]) {
+  if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
     unsigned short port = x->x_sr[client]->sr_port;
     long address = x->x_sr[client]->sr_host;
@@ -361,10 +362,10 @@ static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
                                  t_iemnet_chunk*chunk)
 {
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(client<MAX_CONNECT) {
+  if(client<x->x_maxconnections) {
     DEBUG("client %X", x->x_sr[client]);
   }
-  if(x && client<MAX_CONNECT && x->x_sr[client]) {
+  if(x && client<x->x_maxconnections && x->x_sr[client]) {
     t_atom output_atom[3];
     int size = 0;
 
@@ -802,6 +803,32 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
   }
 }
 
+static void udpserver_maxconnections(t_udpserver *x, t_floatarg maxconnf)
+{
+  unsigned int maxconn = (unsigned int)maxconnf;
+  t_udpserver_sender**sr;
+  if(maxconnf<1) {
+    pd_error(x, "maximum number of connections must be > 0");
+    return;
+  }
+  if(maxconn < x->x_nconnections) {
+    pd_error(x, "maximum number of connections < number of currently connected clients [%d]", x->x_nconnections);
+    return;
+  }
+  if(maxconn == x->x_maxconnections)
+    return;
+
+  sr = resizebytes(x->x_sr
+      , sizeof(*sr) * x->x_maxconnections
+      , sizeof(*sr) * maxconn
+      );
+  if(sr) {
+    x->x_sr = sr;
+    x->x_maxconnections = maxconn;
+  } else {
+    pd_error(x, "failed to set maximum number of connections");
+  }
+}
 
 static void *udpserver_new(t_floatarg fportno)
 {
@@ -821,8 +848,10 @@ static void *udpserver_new(t_floatarg fportno)
   x->x_connectsocket = -1;
   x->x_port = -1;
   x->x_nconnections = 0;
+  x->x_maxconnections = MAX_CONNECT;
+  x->x_sr = (t_udpserver_sender**)getbytes(sizeof(*x->x_sr) * x->x_maxconnections);
 
-  for(i = 0; i < MAX_CONNECT; i++) {
+  for(i = 0; i < x->x_maxconnections; i++) {
     x->x_sr[i] = NULL;
   }
 
@@ -839,13 +868,16 @@ static void *udpserver_new(t_floatarg fportno)
 static void udpserver_free(t_udpserver *x)
 {
   unsigned int i;
-  for(i = 0; i < MAX_CONNECT; i++) {
+  for(i = 0; i < x->x_maxconnections; i++) {
     if (NULL != x->x_sr[i]) {
       DEBUG("[%s] free %x", objName, x);
       udpserver_sender_free(x->x_sr[i]);
       x->x_sr[i] = NULL;
     }
   }
+  freebytes(x->x_sr, sizeof(*x->x_sr) * x->x_maxconnections);
+  x->x_sr = NULL;
+
   if(x->x_receiver) {
       iemnet__receiver_destroy(x->x_receiver, 0);
       x->x_receiver = NULL;
@@ -879,6 +911,8 @@ IEMNET_EXTERN void udpserver_setup(void)
 
   class_addmethod(udpserver_class, (t_method)udpserver_accept,
                   gensym("accept"), A_FLOAT, 0);
+  class_addmethod(udpserver_class, (t_method)udpserver_maxconnections,
+                  gensym("maxconnections"), A_FLOAT, 0);
 
   class_addmethod(udpserver_class, (t_method)udpserver_send_socket,
                   gensym("send"), A_GIMME, 0);
