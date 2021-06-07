@@ -56,13 +56,13 @@ static const char objName[] = "tcpserver";
 typedef struct _tcpserver_socketreceiver {
   struct _tcpserver *sr_owner;
 
-  long sr_host;
-  unsigned short sr_port;
+  struct sockaddr_storage sr_address;
   int sr_fd;
   unsigned int sr_client;
   t_iemnet_sender*sr_sender;
   t_iemnet_receiver*sr_receiver;
   t_symbol*sr_hostname;
+  int sr_port;
 } t_tcpserver_socketreceiver;
 
 typedef struct _tcpserver {
@@ -123,11 +123,9 @@ static t_tcpserver_event tcpserver_info_event(t_tcpserver *x, t_tcpserver_event 
 
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
-    t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
+    t_tcpserver *owner, int sockfd, struct sockaddr_storage*addr, unsigned int client)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
-  long address;
-  char hostname[MAXPDSTRING];
   if(NULL == x) {
     iemnet_log(x, IEMNET_FATAL, "unable to allocate %d bytes", (int)sizeof(*x));
     return NULL;
@@ -137,18 +135,8 @@ static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
   x->sr_fd = sockfd;
   x->sr_client = client;
 
-  x->sr_host = ntohl(addr->sin_addr.s_addr);
-  x->sr_port = ntohs(addr->sin_port);
-
-  /* yikes; IPv4 only... :-( */
-  address = x->sr_host;
-  snprintf(hostname, MAXPDSTRING-1, "%d.%d.%d.%d",
-      (unsigned char)((address & 0xFF000000)>>24),
-      (unsigned char)((address & 0x0FF0000)>>16),
-      (unsigned char)((address & 0x0FF00)>>8),
-      (unsigned char)((address & 0x0FF)));
-  hostname[MAXPDSTRING-1] = 0;
-  x->sr_hostname = gensym(hostname);
+  memcpy(&x->sr_address, addr, sizeof(*addr));
+  x->sr_hostname = iemnet__sockaddr2sym(&x->sr_address, &x->sr_port);;
 
   x->sr_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   x->sr_receiver = iemnet__receiver_create(sockfd, x,
@@ -225,20 +213,18 @@ static void tcpserver_info_client(t_tcpserver *x, unsigned int client)
   static t_atom output_atom[4];
   if(x && client<x->x_maxconnections && x->x_sr[client]) {
     int sockfd = x->x_sr[client]->sr_fd;
-    unsigned short port = x->x_sr[client]->sr_port;
 
     int insize = iemnet__receiver_getsize(x->x_sr[client]->sr_receiver);
     int outsize = iemnet__sender_getsize(x->x_sr[client]->sr_sender);
 
     tcpserver_info_event(x, CLIENT_INFO);
 
-
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, sockfd);
     SETSYMBOL(output_atom+2, x->x_sr[client]->sr_hostname);
-    SETFLOAT(output_atom+3, port);
+    SETFLOAT(output_atom+3, x->x_sr[client]->sr_port);
 
-    outlet_anything( x->x_statusout, gensym("client"), 4, output_atom);
+    outlet_anything( x->x_statusout, gensym("client"), x->x_sr[client]->sr_port, output_atom);
 
     SETFLOAT(output_atom+0, client+1);
     SETFLOAT(output_atom+1, insize);
@@ -295,7 +281,7 @@ static void tcpserver_info_connection(t_tcpserver *x
   SETFLOAT(a, y->sr_fd);
   outlet_anything(x->x_statusout, gensym("socket"), 1, a);
 
-  iemnet__addrout(x->x_statusout, x->x_addrout, y->sr_host, y->sr_port);
+  iemnet__addrout(x->x_statusout, x->x_addrout, &y->sr_address);
   outlet_float(x->x_sockout, y->sr_fd);
 }
 
@@ -601,8 +587,9 @@ static void tcpserver_receive_callback(void *y0,
 
 static void tcpserver_connectpoll(t_tcpserver *x, int fd)
 {
-  struct sockaddr_in incomer_address;
-  socklen_t sockaddrl = sizeof( struct sockaddr );
+  struct sockaddr_storage incomer_address;
+  socklen_t sockaddrl = sizeof( incomer_address );
+  int i;
   if(fd != x->x_connectsocket) {
     iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
     return;

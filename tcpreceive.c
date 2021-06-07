@@ -41,8 +41,7 @@ static t_class *tcpreceive_class;
 #define MAX_CONNECTIONS 128 /* this is going to cause trouble down the line...:( */
 
 typedef struct _tcpconnection {
-  long addr;
-  unsigned short port;
+  struct sockaddr_storage address;
   int socket;
   struct _tcpreceive*owner;
   t_iemnet_receiver*receiver;
@@ -54,8 +53,9 @@ typedef struct _tcpreceive {
   t_outlet*x_addrout;
   t_outlet*x_connectout;
   t_outlet*x_statusout;
-  int x_connectsocket;
+  int x_connectsocket[2];
   int x_port;
+  t_symbol*x_host;
 
   int x_serialize;
 
@@ -106,17 +106,15 @@ static void tcpreceive_read_callback(void *w, t_iemnet_chunk*c)
 
 /* tcpreceive_addconnection tries to add the socket fd to the list */
 /* returns 1 on success, else 0 */
-static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
-                                    unsigned short port)
+static int tcpreceive_addconnection(t_tcpreceive *x, int fd, const struct sockaddr_storage*address)
 {
   int i;
   for (i = 0; i < MAX_CONNECTIONS; ++i) {
     if (x->x_connection[i].socket == -1) {
       x->x_connection[i].socket = fd;
-      x->x_connection[i].addr = addr;
-      x->x_connection[i].port = port;
+      memcpy(&x->x_connection[i].address, address, sizeof(*address));
       x->x_connection[i].owner = x;
-      x->x_connection[i].receiver = 
+      x->x_connection[i].receiver =
         iemnet__receiver_create(fd,
                                 x->x_connection+i,
                                 tcpreceive_read_callback,
@@ -132,12 +130,10 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
 /* a new socket is assigned  */
 static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 {
-  struct sockaddr_in from;
+  struct sockaddr_storage from;
   socklen_t fromlen = sizeof(from);
-  long addr;
-  unsigned short port;
-  if(fd != x->x_connectsocket) {
-    iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d", fd, x->x_connectsocket);
+  if(fd != x->x_connectsocket[0] && fd != x->x_connectsocket[1]) {
+    iemnet_log(x, IEMNET_FATAL, "callback received for socket:%d on listener for socket:%d/%d", fd, x->x_connectsocket[0], x->x_connectsocket[1]);
     return;
   }
 
@@ -147,12 +143,10 @@ static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
     sys_sockerror("accept");
   } else {
     /* get the sender's ip */
-    addr = ntohl(from.sin_addr.s_addr);
-    port = ntohs(from.sin_port);
-    if (tcpreceive_addconnection(x, fd, addr, port)) {
+    if (tcpreceive_addconnection(x, fd, &from)) {
       x->x_nconnections++;
       iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
-      iemnet__addrout(x->x_statusout, x->x_addrout, addr, port);
+      iemnet__addrout(x->x_statusout, x->x_addrout, &from);
     } else {
       iemnet_log(x, IEMNET_ERROR, "too many connections");
       iemnet__closesocket(fd, 1);
@@ -162,15 +156,13 @@ static void tcpreceive_connectpoll(t_tcpreceive *x, int fd)
 
 static int tcpreceive_disconnect(t_tcpreceive *x, int id)
 {
-  if(id >= 0 && id < MAX_CONNECTIONS && x->x_connection[id].port>0) {
+  if(id >= 0 && id < MAX_CONNECTIONS && x->x_connection[id].address.ss_family>0) {
     iemnet__receiver_destroy(x->x_connection[id].receiver, 0);
     x->x_connection[id].receiver = NULL;
 
     iemnet__closesocket(x->x_connection[id].socket, 1);
     x->x_connection[id].socket = -1;
-
-    x->x_connection[id].addr = 0L;
-    x->x_connection[id].port = 0;
+    memset(&x->x_connection[id].address, 0, sizeof(x->x_connection[id].address));
     x->x_nconnections--;
     iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
     return 1;
@@ -203,103 +195,196 @@ static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
   return 0;
 }
 
-static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
+static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno)
 {
-  static t_atom ap[1];
-  int portno = fportno;
+  static t_atom ap[2];
   struct sockaddr_in server;
   socklen_t serversize = sizeof(server);
-  int sockfd = x->x_connectsocket;
-  int intarg;
-  memset(&server, 0, sizeof(server));
+  int sockfd[2];
+  struct addrinfo *ailist = NULL, *ai;
+  int err;
+  int i;
+
+  sockfd[0] = x->x_connectsocket[0];
+  sockfd[1] = x->x_connectsocket[1];
 
   SETFLOAT(ap, -1);
-  if(x->x_port == portno) {
+  memset(&server, 0, sizeof(server));
+
+
+  if((x->x_port == portno) && ((!hostname && !x->x_host) || (hostname && gensym(hostname) == x->x_host))) {
     return;
   }
 
   /* cleanup any open ports */
-  if(sockfd >= 0) {
-    sys_rmpollfn(sockfd);
-    iemnet__closesocket(sockfd, 1);
-    x->x_connectsocket = -1;
-    x->x_port = -1;
+  for(i=0; i<2; i++) {
+    sockfd[i] = x->x_connectsocket[i];
+    if(sockfd[i] >= 0) {
+      sys_rmpollfn(sockfd[i]);
+      iemnet__closesocket(sockfd[i], 1);
+      x->x_connectsocket[i] = -1;
+    }
   }
+  x->x_port = -1;
+  x->x_host = NULL;
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfd<0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to create socket");
-    sys_sockerror("socket");
+  err = iemnet__getaddrinfo(&ailist, hostname, portno, 0, SOCK_STREAM);
+  if (err) {
+    iemnet_log(x, IEMNET_ERROR, "%s (%d)\n\tbad host ('%s') or port (%d)?",
+               gai_strerror(err), err,
+               hostname?hostname:"*", portno);
     return;
   }
-
-  /* ask OS to allow another Pd to reopen this port after we close it. */
-#ifdef SO_REUSEADDR
-  intarg = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-                 (char *)&intarg, sizeof(intarg))
-      < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to enable address re-using");
-    sys_sockerror("setsockopt:SO_REUSEADDR");
+  if (hostname) {
+#warning FIXXME: IPv6 support lacks IPv4 fallbacks
+    /* TODO: if there are both IPv4 and IPv6 addresses, bind to both */
   }
+
+  for (ai = ailist; ai != NULL; ai = ai->ai_next) {
+    int multicast = 0;
+    char buf[MAXPDSTRING];
+    int fd = -1;
+    /* create a socket */
+    if (sockfd[AF_INET6 == ai->ai_family] >= 0)
+      continue;
+    iemnet__post_addrinfo(ai);
+    fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    if (fd < 0)
+      continue;
+
+    /* ask OS to allow another Pd to reopen this port after we close it. */
+#ifdef SO_REUSEADDR
+    if (iemnet__setsockopti(fd, SOL_SOCKET, SO_REUSEADDR, 1) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to enable address re-using");
+      sys_sockerror("setsockopt:SO_REUSEADDR");
+    }
 #endif /* SO_REUSEADDR */
 #ifdef SO_REUSEPORT
-  intarg = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
-                 (char *)&intarg, sizeof(intarg))
-      < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to enable port re-using");
-    sys_sockerror("setsockopt:SO_REUSEPORT");
-  }
+    if (iemnet__setsockopti(fd, SOL_SOCKET, SO_REUSEPORT, 1) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to enable port re-using");
+      sys_sockerror("setsockopt:SO_REUSEPORT");
+    }
 #endif /* SO_REUSEPORT */
 
-  /* Stream (TCP) sockets are set NODELAY */
-  intarg = 1;
-  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
-                 (char *)&intarg, sizeof(intarg)) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
-    sys_sockerror("setsockopt:TCP_NODELAY");
+    /* Stream (TCP) sockets are set NODELAY */
+    if (iemnet__setsockopti(fd, IPPROTO_TCP, TCP_NODELAY, 1) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+      sys_sockerror("setsockopt:TCP_NODELAY");
+    }
+
+    /* if this is the IPv6 "any" address, also listen to IPv4 adapters
+       (if not supported, fall back to IPv4) */
+    if (!hostname && ai->ai_family == AF_INET6 &&
+        iemnet__setsockopti(fd, IPPROTO_IPV6, IPV6_V6ONLY, 0) < 0)
+    {
+      /* post("netreceive: setsockopt (IPV6_V6ONLY) failed"); */
+      sys_closesocket(fd);
+      continue;
+    }
+
+    if (multicast) {
+      /* TODO: implement multicast (and check for multicast)
+       */
+    } else {
+      /* name the socket */
+      if (bind(fd, ai->ai_addr, ai->ai_addrlen) < 0)
+      {
+        sys_closesocket(fd);
+        continue;
+      }
+      if (hostname) {
+        iemnet_log(x, IEMNET_VERBOSE, "listening on %s:%d%s",
+                   iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
+                   portno, multicast?" (multicast)":"");
+      } else {
+        iemnet_log(x, IEMNET_VERBOSE, "listening on %d", portno);
+      }
+    }
+    sockfd[AF_INET6 == ai->ai_family] = fd;
+
+    if (sockfd[0]>=0 && sockfd[1]>=0)
+      break;
   }
+  freeaddrinfo(ailist);
 
-  server.sin_family = AF_INET;
-  server.sin_addr.s_addr = INADDR_ANY;
-  server.sin_port = htons((u_short)portno);
-
-  /* name the socket */
-  if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "couldn't bind socket");
-    sys_sockerror("bind");
-    iemnet__closesocket(sockfd, 1);
-    sockfd = -1;
+  if(sockfd[0]<0 && sockfd[1]<0) {
+    SETFLOAT(ap, -1);
+    iemnet_log(x, IEMNET_ERROR, "unable to create socket for %s:%d", hostname?hostname:"*", portno);
+    sys_sockerror("socket");
     outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   }
+
 
   /* streaming protocol */
-  if (listen(sockfd, 5) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to listen on socket");
-    sys_sockerror("listen");
-    iemnet__closesocket(sockfd, 1);
-    sockfd = -1;
+  err=1;
+  for (i=0; i<2; i++) {
+    if(sockfd[i]<0)
+      continue;
+    if (listen(sockfd[i], 5) < 0) {
+      SETFLOAT(ap, -1);
+      iemnet_log(x, IEMNET_ERROR, "unable to listen on socket");
+      sys_sockerror("listen");
+      iemnet__closesocket(sockfd[i], 1);
+      sockfd[i] = -1;
+    } else
+      err=0;
+  }
+  if(err) {
+    SETFLOAT(ap, -1);
     outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
-  } else {
-    /* wait for new connections */
-    sys_addpollfn(sockfd,
-                  (t_fdpollfn)tcpreceive_connectpoll,
-                  x);
   }
 
-  x->x_connectsocket = sockfd;
+
+  x->x_host = hostname?gensym(hostname):0;
   x->x_port = portno;
 
-  /* find out which port is actually used (useful when assigning "0") */
-  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
-    x->x_port = ntohs(server.sin_port);
+  /* wait for new connections */
+  for (i=0; i<2; i++) {
+    SETFLOAT(ap+i, 0);
+    if(sockfd[i]<0)
+      continue;
+    
+    sys_addpollfn(sockfd[i],
+                  (t_fdpollfn)tcpreceive_connectpoll,
+                  x);
+    x->x_connectsocket[i] = sockfd[i];
+    /* find out which port is actually used (useful when assigning "0") */
+    if(!getsockname(sockfd[i], (struct sockaddr *)&server, &serversize)) {
+      x->x_port = ntohs(server.sin_port);
+      SETFLOAT(ap+i, x->x_port);
+    }
   }
 
-  SETFLOAT(ap, x->x_port);
-  outlet_anything(x->x_statusout, gensym("port"), 1, ap);
+  outlet_anything(x->x_statusout, gensym("port"), 2, ap);
+}
+static void tcpreceive_listen(t_tcpreceive*x, t_symbol*s, int argc, t_atom*argv) {
+  const char*host=0;
+  t_symbol*shost=0;
+  int port = x->x_port;
+  switch(argc) {
+  default:
+    pd_error(x, "invalid arguments: use '%s <hostname> [<port>]'", s->s_name);
+    return;
+  case 2:
+    port = atom_getfloat(argv+1);
+    /* fallthrough */
+  case 1:
+    shost = atom_getsymbol(argv+0);
+    break;
+  }
+  if(shost && gensym("") != shost)
+    host = shost->s_name;
+  tcpreceive_do_listen(x, host, port);
+}
+static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
+{
+  int portno = fportno;
+  const char*host=NULL;
+  if(x->x_host && gensym("") != x->x_host)
+    host = x->x_host->s_name;
+  tcpreceive_do_listen(x, host, portno);
 }
 
 static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
@@ -310,9 +395,12 @@ static void tcpreceive_serialize(t_tcpreceive *x, t_floatarg doit)
 static void tcpreceive_free(t_tcpreceive *x)
 {
   /* is this ever called? */
-  if (x->x_connectsocket >= 0) {
-    sys_rmpollfn(x->x_connectsocket);
-    iemnet__closesocket(x->x_connectsocket, 1);
+  int i;
+  for(i=0; i<2; i++) {
+    if (x->x_connectsocket[i] >= 0) {
+      sys_rmpollfn(x->x_connectsocket[i]);
+      iemnet__closesocket(x->x_connectsocket[i], 1);
+    }
   }
   tcpreceive_disconnect_all(x);
   if(x->x_floatlist) {
@@ -335,15 +423,16 @@ static void *tcpreceive_new(t_floatarg fportno)
 
   x->x_serialize = 1;
 
-  x->x_connectsocket = -1;
+  x->x_connectsocket[0] = -1;
+  x->x_connectsocket[1] = -1;
   x->x_port = -1;
+  x->x_host = 0;
   x->x_nconnections = 0;
 
   /* clear the connection list */
   for (i = 0; i < MAX_CONNECTIONS; ++i) {
     x->x_connection[i].socket = -1;
-    x->x_connection[i].addr = 0L;
-    x->x_connection[i].port = 0;
+    memset(&x->x_connection[i].address, 0, sizeof(x->x_connection[i].address));
   }
 
   x->x_floatlist = iemnet__floatlist_create(1024);
@@ -367,6 +456,8 @@ IEMNET_EXTERN void tcpreceive_setup(void)
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port,
                   gensym("port"), A_DEFFLOAT, 0);
+  class_addmethod(tcpreceive_class, (t_method)tcpreceive_listen,
+                  gensym("listen"), A_GIMME, 0);
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_serialize,
                   gensym("serialize"), A_FLOAT, 0);

@@ -143,6 +143,20 @@ int iemnet__sender_getsize(t_iemnet_sender*);
  */
 int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, float timeout);
 
+/**
+ * resolve network addresses (wraps 'getaddrinfo')
+ * \param ailist (OUT) addrinfo-list
+ * \param hostname address-string you want to look up
+ * \param port port used for the lookup
+ * \param family either AF_INET or AF_INET6 (or 0, if you don't care)
+ * \param protocol either SOCK_STREAM or SOCK_DGRAM (or 0, if you don't care)
+ * \return success
+ */
+int iemnet__getaddrinfo(struct addrinfo **ailist,
+                        const char *hostname, int port,
+                        int family, int protocol);
+
+
 
 /* iemnet_receiver.c */
 
@@ -204,6 +218,76 @@ int iemnet__receiver_getsize(t_iemnet_receiver*);
 void iemnet__closesocket(int fd, int verbose);
 
 /**
+ * set socket option (integer)
+ *
+ * wrapper around setsockopt(2) for setting a single integer value
+ *
+ * \return success
+ */
+int iemnet__setsockopti(int sockfd, int level, int optname, int ival);
+
+/**
+ * calculate the length of an address based on it's type
+ * (some OSs require the exact size of the address, e,g, when calling sendto())
+ *
+ * https://github.com/SIPp/sipp/pull/251/files
+ */
+static inline socklen_t iemnet__socklen4addr(const struct sockaddr_storage* ss) {
+  switch(ss->ss_family) {
+  case AF_INET:
+    return sizeof(struct sockaddr_in);
+  case AF_INET6:
+    return sizeof(struct sockaddr_in6);
+#if 0 && (defined __unix__)
+  case AF_UNIX:
+    return sizeof(struct sockaddr_un);
+#endif
+  default:
+    break;
+  }
+  return 0;
+}
+
+/**
+ * print an addrinfo struct (for debugging)
+ */
+void iemnet__post_addrinfo(struct addrinfo *ai);
+
+
+/**
+ * compare to sockaddresses
+ *
+ * \param address1 a pointer to sockaddr_in/sockaddr_in6/... that holds an address
+ * \param address2 a pointer to sockaddr_in/sockaddr_in6/... that holds another address
+ *
+ * \return 1 if the two addresses are the same, 0 if they differ
+ */
+int iemnet__equaladdr(const struct sockaddr_storage*address1,
+                      const struct sockaddr_storage*address2);
+
+
+/**
+ * convert a sockaddr to string (e.g. for printing)
+ *
+ * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
+ * \param str string to output data into
+ * \param len length of <str> in bytes
+ *
+ * \return pointer to str
+ */
+char* iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len);
+
+/**
+ * convert a sockaddr to string (e.g. for printing)
+ *
+ * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
+ * \param port if non-NULL and address has a port, sets the port
+ *
+ * \return symbol holding e.g. the IP address
+ */
+t_symbol* iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port);
+
+/**
  * convert a sockaddr to an atom-list, that can be output
  *
  * \param address a pointer to sockaddr_in/sockaddr_in6/... that holds the address
@@ -241,14 +325,14 @@ void iemnet__socket2addressout(int sockfd,
  * and then as a list through the address_outlet
  *
  * \param status_outlet outlet for general status messages
- * \param address_outlet outlet for addresses only
- * \param address the host ip
- * \param port the host port
+ * \param address_outlet outlet for (IPv4) addresses only
+ * \param address the host address
  *
- * \note the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
+ * \note for IPv4 the address will be output as a 5 element list, with the 1st 4 elements denoting the quads of the IP address (as bytes) and the last element the port
+ * \note non-IPv4 addresses will only be output on the status_outlet
  */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
-                     uint32_t address, uint16_t port);
+                     const struct sockaddr_storage*address);
 
 /**
  * output the socket we received data from

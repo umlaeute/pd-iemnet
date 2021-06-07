@@ -30,6 +30,10 @@
 # include <sys/un.h>
 #endif
 
+#ifndef _WIN32
+# define HAVE_INET_NTOP
+#endif
+
 /* close a socket properly */
 void iemnet__closesocket(int sockfd, int verbose)
 {
@@ -46,6 +50,146 @@ void iemnet__closesocket(int sockfd, int verbose)
     sys_closesocket(sockfd);
   }
 }
+
+int iemnet__setsockopti(int sockfd, int level, int optname, int ival)
+{
+  return setsockopt(sockfd, level, optname, (char*)&ival, sizeof(ival));
+}
+
+static void*getaddr(const struct sockaddr_storage*address) {
+  switch (address->ss_family) {
+  case AF_INET:
+    return &((struct sockaddr_in*)address)->sin_addr;
+  case AF_INET6:
+    return &((struct sockaddr_in6*)address)->sin6_addr;
+  default:
+    break;
+  }
+  return 0;
+}
+
+#ifndef HAVE_INET_NTOP
+static const char *rpl_inet_ntop(int af, const void *src, char *dst, socklen_t size) {
+  switch (af) {
+  case AF_INET: {
+    struct sockaddr_in*addr = (struct sockaddr_in*)src;
+    uint32_t ipaddr = ntohl(addr->sin_addr.s_addr);
+    snprintf(dst, size, "%d.%d.%d.%d"
+             , (ipaddr & 0xFF000000)>>24
+             , (ipaddr & 0x0FF0000)>>16
+             , (ipaddr & 0x0FF00)>>8
+             , (ipaddr & 0x0FF)
+      );
+    return dst;
+  }
+  case AF_INET6: {
+    struct sockaddr_in6*addr = (struct sockaddr_in6*)src;
+    uint8_t*ipaddr = addr->sin6_addr.s6_addr;
+    snprintf(dst, size, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d"
+             , ipaddr[ 0], ipaddr[ 1], ipaddr[ 2], ipaddr[ 3]
+             , ipaddr[ 4], ipaddr[ 5], ipaddr[ 6], ipaddr[ 7]
+             , ipaddr[ 8], ipaddr[ 9], ipaddr[10], ipaddr[11]
+             , ipaddr[12], ipaddr[13], ipaddr[14], ipaddr[15]
+      );
+    return dst;
+  }
+  default:
+    break;
+  }
+  return NULL;
+}
+# define inet_ntop rpl_inet_ntop
+#endif
+
+/* returns 1 if addr1 == addr2, 0 otherwise */
+int iemnet__equaladdr(const struct sockaddr_storage*address1,
+                             const struct sockaddr_storage*address2)
+{
+  int len=0;
+  if(address1->ss_family!=address2->ss_family)
+    return 0;
+  switch (address1->ss_family) {
+  case AF_INET:
+    len = sizeof(struct sockaddr_in);
+    break;
+  case AF_INET6:
+    len = sizeof(struct sockaddr_in6);
+    break;
+#ifdef __unix__
+  case AF_UNIX: {
+    const struct sockaddr_un*addr1 = (const struct sockaddr_un*)&address1;
+    const struct sockaddr_un*addr2 = (const struct sockaddr_un*)&address2;
+    return(!strncmp(addr1->sun_path, addr2->sun_path, sizeof(addr1->sun_path)));
+  }
+    break;
+#endif
+
+  default:
+    len = sizeof(*address1);
+    break;
+  }
+  return (!(memcmp(address1, address2, len)));
+}
+
+
+
+char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len) {
+  switch (address->ss_family) {
+  case AF_INET: case AF_INET6: {
+    char s[MAXPDSTRING];
+    size_t l=MAXPDSTRING;
+    if (inet_ntop(address->ss_family, getaddr(address), s, l) == NULL)
+      snprintf(s, l, "<IPv%d>", (AF_INET==address->ss_family)?4:6);
+
+    if (AF_INET==address->ss_family)
+      snprintf(str, len, "%s:%d", s, ntohs(((struct sockaddr_in*)address)->sin_port));
+    else
+      snprintf(str, len, "[%s]:%d", s, ntohs(((struct sockaddr_in6*)address)->sin6_port));
+  }
+    break;
+#ifdef __unix__
+  case AF_UNIX: {
+    struct sockaddr_un*addr = (struct sockaddr_un*)&address;
+    snprintf(str, len, "unix:/%s", addr->sun_path);
+  }
+    break;
+#endif
+  default:
+    snprintf(str, len, "<unknown>");
+    break;
+  }
+  return str;
+}
+
+t_symbol*iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port) {
+  char str[MAXPDSTRING];
+  size_t len=MAXPDSTRING;
+  switch (address->ss_family) {
+  case AF_INET: case AF_INET6:
+    if(port) {
+      if (AF_INET==address->ss_family)
+        *port=ntohs(((struct sockaddr_in*)address)->sin_port);
+      else
+        *port=ntohs(((struct sockaddr_in6*)address)->sin6_port);
+    }
+    if (inet_ntop(address->ss_family, getaddr(address), str, len) == NULL)
+      snprintf(str, len, "<IPv%d>", (AF_INET==address->ss_family)?4:6);
+    break;
+#ifdef __unix__
+  case AF_UNIX: {
+    struct sockaddr_un*addr = (struct sockaddr_un*)&address;
+    snprintf(str, len, "unix:/%s", addr->sun_path);
+  }
+    break;
+#endif
+  default:
+    snprintf(str, len, "<unknown>");
+    break;
+  }
+  str[MAXPDSTRING-1] = 0;
+  return gensym(str);
+}
+
 
 int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]) {
   switch (address->ss_family) {
@@ -106,30 +250,24 @@ void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
 
 /* various functions to send data to output in a uniform way */
 void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
-                     uint32_t address, uint16_t port)
+                      const struct sockaddr_storage*address)
 {
-  static t_atom addr[5];
-  static int firsttime = 1;
+  t_atom alist[18];
+  int alen = iemnet__sockaddr2list(address, alist);
+  if(!alen)
+    return;
 
-  if(firsttime) {
-    int i = 0;
-    for(i = 0; i<5; i++) {
-      SETFLOAT(addr+i, 0);
+  if(AF_INET == address->ss_family) {
+    if(status_outlet ) {
+      outlet_anything(status_outlet, gensym("address"), alen-1, alist+1);
     }
-    firsttime = 0;
-  }
-
-  addr[0].a_w.w_float = (address & 0xFF000000)>>24;
-  addr[1].a_w.w_float = (address & 0x0FF0000)>>16;
-  addr[2].a_w.w_float = (address & 0x0FF00)>>8;
-  addr[3].a_w.w_float = (address & 0x0FF);
-  addr[4].a_w.w_float = port;
-
-  if(status_outlet ) {
-    outlet_anything(status_outlet , gensym("address"), 5, addr);
-  }
-  if(address_outlet) {
-    outlet_list(address_outlet, gensym("list"   ), 5, addr);
+    if(address_outlet) {
+      outlet_list(address_outlet, gensym("list"   ), alen-1, alist+1);
+    }
+  } else {
+    if(status_outlet ) {
+      outlet_anything(status_outlet, gensym("remote_address"), alen, alist);
+    }
   }
 }
 
@@ -332,4 +470,29 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
     pd_error(x, "[%s]: %s", name, buf);
   }
 #endif
+}
+
+static char* bnprintf(char *str, size_t size, const char *format, ...) {
+  int isize;
+  va_list ap;
+  va_start(ap, format);
+  isize = vsnprintf(str, size, format, ap);
+  va_end(ap);
+  if(isize < 0)
+    return NULL;
+
+  return str;
+}
+
+void iemnet__post_addrinfo(struct addrinfo *ai) {
+  char buf[MAXPDSTRING];
+  post("address info @ %p", ai);
+  if(!ai)
+    return;
+  if(ai->ai_canonname)post("\tname: %s", ai->ai_canonname);
+  post("\tfamily: %s", (AF_INET==ai->ai_family)?"IPv4":(AF_INET6==ai->ai_family)?"IPv6":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_family));
+  post("\tsocktype: %s", (SOCK_STREAM==ai->ai_socktype)?"STREAM":(SOCK_DGRAM==ai->ai_socktype)?"DGRAM":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_socktype));
+  post("\tprotocol: %s", (IPPROTO_TCP==ai->ai_protocol)?"TCP/IP":(IPPROTO_UDP==ai->ai_protocol)?"UDP":bnprintf(buf, MAXPDSTRING, "<%d>", ai->ai_protocol));
+  post("\taddress: %s", iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING));
+  post("\tflags: 0x%08X", ai->ai_flags);
 }

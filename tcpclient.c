@@ -27,6 +27,11 @@
 
 #include "iemnet.h"
 #include <string.h>
+#ifndef _WIN32
+/* needed for TCP_NODELAY */
+# include <netinet/tcp.h>
+#endif
+
 
 static t_class *tcpclient_class;
 static char objName[] = "tcpclient";
@@ -49,7 +54,6 @@ typedef struct _tcpclient {
   const char*x_hostname; /* address we want to connect to as text */
   int x_connectstate; /* 0 = not connected, 1 = connected */
   int x_port; /* port we're connected to */
-  long x_addr; /* address we're connected to as 32bit int */
 
   t_float x_timeout;
 
@@ -110,48 +114,76 @@ static int tcpclient_do_disconnect(int fd, t_iemnet_sender*sender,
 }
 static int tcpclient_do_connect(const char*host, unsigned short port,
                                 t_tcpclient*x,
-                                t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT, long*addrOUT)
+                                t_iemnet_sender**senderOUT, t_iemnet_receiver**receiverOUT)
 {
-  struct sockaddr_in server;
-  struct hostent*hp;
+  /* connect socket using hostname provided in command line */
+
+  int err;
+  struct addrinfo *ailist = NULL, *ai;
   int sockfd = -1;
   t_iemnet_sender*sender;
   t_iemnet_receiver*receiver;
 
-  /* connect socket using hostname provided in command line */
-  memset(&server, 0, sizeof(server));
-  server.sin_family = AF_INET;
-  hp = gethostbyname(host);
-  if (hp == 0) {
-    iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", host);
-    return (-1);
+  /* resolve hostname provided as argument */
+  err = iemnet__getaddrinfo(&ailist, host, port, 0, SOCK_STREAM);
+  if (err) {
+    iemnet_log(x, IEMNET_ERROR, "%s (%d)\n\tbad host ('%s') or port (%d)?",
+               gai_strerror(err), err,
+               host, port);
+    return -1;
   }
-  memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+  /* try each addr until we find one that works */
+  for (ai = ailist; ai != NULL; ai = ai->ai_next) {
+    char buf[MAXPDSTRING];
+    int intarg;
+
+    /* create a socket */
+    sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    DEBUG("send socket %d\n", sockfd);
+    if (sockfd < 0)
+      continue;
+
+    /* for stream (TCP) sockets, specify "nodelay" */
+    intarg = 1;
+    if (setsockopt(sockfd, ai->ai_protocol, TCP_NODELAY,
+                   (char *)&intarg, sizeof(intarg)) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to enable immediate sending");
+      sys_sockerror("setsockopt");
+    }
+    intarg = 0;
+    if (ai->ai_family == AF_INET6 &&
+        setsockopt(sockfd, ai->ai_protocol, IPV6_V6ONLY,
+                   (char *)&intarg, sizeof(intarg)) < 0) {
+      /* post("netreceive: setsockopt (IPV6_V6ONLY) failed"); */
+    }
+
+    iemnet_log(x, IEMNET_VERBOSE, "connecting to %s:%d",
+               iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
+               port);
+    /* try to connect. */
+    if (iemnet__connect(sockfd, ai->ai_addr, ai->ai_addrlen, x->x_timeout) < 0) {
+      iemnet_log(x, IEMNET_VERBOSE, "unable to initiate connection on socket %d", sockfd);
+      sys_sockerror("connect");
+      iemnet__closesocket(sockfd, 1);
+      sockfd=-1;
+      continue;
+    } else {
+      break;
+    }
+  }
+  freeaddrinfo(ailist);
+
   if (sockfd < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to open socket");
+    iemnet_log(x, IEMNET_ERROR, "unable to connect to %s : %d", host, port);
     sys_sockerror("socket");
-    return (sockfd);
-  }
-
-  /* assign client port number */
-  server.sin_port = htons((u_short)port);
-
-  /* try to connect */
-  if (iemnet__connect(sockfd, (struct sockaddr *) &server, sizeof (server), x->x_timeout) < 0) {
-    iemnet_log(x, IEMNET_ERROR, "unable to connect to stream socket");
-    sys_sockerror("connect");
-    iemnet__closesocket(sockfd, 1);
-    return (-1);
+    return -1;
   }
 
   sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
-  receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
-                                   0);
-  if(addrOUT) {
-    *addrOUT = ntohl(*(long *)hp->h_addr);
-  }
+  receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback, 0);
+
   if(senderOUT) {
     *senderOUT = sender;
   }
@@ -191,8 +223,7 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_port = fportno;
 
   state = tcpclient_do_connect(x->x_hostname, x->x_port, x,
-                             &x->x_sender, &x->x_receiver,
-                             &x->x_addr);
+                             &x->x_sender, &x->x_receiver);
   x->x_connectstate = (state>0);
   x->x_fd = state;
   tcpclient_info(x);
@@ -244,7 +275,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
   t_tcpclient *x = (t_tcpclient*)y;
 
   if(c) {
-    iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
+    iemnet__addrout(x->x_statusout, x->x_addrout, &c->address);
      /* get's destroyed in the dtor */
     x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
@@ -306,7 +337,6 @@ static void *tcpclient_new(void)
 
   x->x_fd = -1;
 
-  x->x_addr = 0L;
   x->x_port = 0;
 
   x->x_sender = NULL;
@@ -331,7 +361,8 @@ IEMNET_EXTERN void tcpclient_setup(void)
   }
   tcpclient_class = class_new(gensym(objName), (t_newmethod)tcpclient_new,
                               (t_method)tcpclient_free,
-                              sizeof(t_tcpclient), 0, A_DEFFLOAT, 0);
+                              sizeof(t_tcpclient), 0,
+                              0);
   class_addmethod(tcpclient_class, (t_method)tcpclient_connect,
                   gensym("connect")
                   , A_SYMBOL, A_FLOAT, 0);

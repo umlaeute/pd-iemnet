@@ -61,12 +61,9 @@ void iemnet__floatlist_destroy(t_iemnet_floatlist*cl);
  * for received data, this might additionally hold the originator (if available)
  */
 typedef struct _iemnet_chunk {
-  unsigned char* data;
+  struct sockaddr_storage address;
   size_t size;
-
-  long addr;
-  unsigned short port;
-  short family; /* AF_INET, AF_INET6 */
+  unsigned char* data;
 } t_iemnet_chunk;
 
 /**
@@ -101,10 +98,11 @@ t_iemnet_chunk*iemnet__chunk_create_data(int size, unsigned char*data);
  * \param size of data
  * \param data of size
  * \param addr originating address (can be NULL)
+ * \param addrlen sizeof the address  (in bytes)
  * \return a new chunk that holds a copy of data
  */
 t_iemnet_chunk*iemnet__chunk_create_dataaddr(int size, unsigned char*data,
-    struct sockaddr_in*addr);
+                                             struct sockaddr_storage*addr, socklen_t addrlen);
 /**
  * initialize a "chunk" (allocate memory,...) with given data
  * receiver address will be set to 0

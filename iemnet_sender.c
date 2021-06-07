@@ -46,6 +46,13 @@
 
 #include <pthread.h>
 
+#ifndef PERTHREAD
+# define PERTHREAD
+#endif
+static PERTHREAD char s_addrstr[MAXPDSTRING];
+#define addr2str(x) iemnet__sockaddr2str(x, s_addrstr, MAXPDSTRING)
+
+
 #if IEMNET_HAVE_DEBUG
 static int debug_lockcount = 0;
 # define LOCK(x) do {if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKing %p", x); pthread_mutex_lock(x);debug_lockcount++; if(iemnet_debug(DEBUGLEVEL, __FILE__, __LINE__, __FUNCTION__))post("  LOCKed  %p[%d]", x, debug_lockcount); } while(0)
@@ -83,9 +90,6 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 {
   int result = -1;
 
-  struct sockaddr_in to;
-  socklen_t tolen = sizeof(to);
-
   unsigned char*data = c->data;
   unsigned int size = c->size;
 
@@ -96,20 +100,16 @@ static int iemnet__sender_defaultsend(const void*x, int sockfd,
 
 
   //fprintf(stderr, "sending %d bytes at %x to %d\n", size, data, sockfd);
-  if(c->port) {
-    DEBUG("%p sending %d bytes to %x:%d @%d", x, size, c->addr, c->port, c->family);
-
-    to.sin_addr.s_addr = htonl(c->addr);
-    to.sin_port = htons(c->port);
-    to.sin_family = c->family;
+  if(c->address.ss_family) {
+    DEBUG("%p sending %d bytes to %s", x, size, addr2str(&c->address));
     result = sendto(sockfd,
-                    (void *)data, size, /* DATA */
+                    (const void*)data, size, /* DATA */
                     flags, /* FLAGS */
-                    (struct sockaddr *)&to, tolen); /* DESTADDR */
+                    (struct sockaddr *)&c->address, iemnet__socklen4addr(&c->address)); /* DESTADDR */
   } else {
     DEBUG("sending %d bytes", size);
     result = send(sockfd,
-                  (void *)data, size, /* DATA */
+                  (const void*)data, size, /* DATA */
                   flags); /* FLAGS */
   }
   if(result<0) {
@@ -386,4 +386,51 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
   // done, set blocking again
   sock_set_nonblocking(sockfd, 0);
   return 0;
+}
+
+
+int iemnet__getaddrinfo(struct addrinfo **ailist,
+                        const char *hostname, int port,
+                        int family, int protocol) {
+  struct addrinfo hints;
+  char portstr[10]; // largest port is 65535
+  memset(&hints, 0, sizeof hints);
+  hints.ai_flags = AI_PASSIVE; // listen to any addr if hostname is NULL
+  hints.ai_flags |= 0
+#ifdef AI_ALL
+    | AI_ALL        // both IPv4 and IPv6 addrs
+#else
+# warning AI_ALL not supported
+#endif
+#ifdef AI_V4MAPPED
+    | AI_V4MAPPED   // fallback to IPv4-mapped IPv6 addrs
+#else
+# warning AI_V4MAPPED not supported
+#endif
+    | 0;
+
+  switch(family) {
+  default:
+    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6, we don't care
+    break;
+  case AF_INET:
+  case AF_INET6:
+    hints.ai_family = family;
+  }
+
+  hints.ai_socktype = protocol;
+  switch(protocol) {
+  case SOCK_STREAM:
+    hints.ai_protocol = IPPROTO_TCP;
+    break;
+  case SOCK_DGRAM:
+    hints.ai_protocol = IPPROTO_UDP;
+    break;
+  default:
+    hints.ai_protocol = 0;
+  }
+
+  portstr[0] = '\0';
+  sprintf(portstr, "%d", port);
+  return getaddrinfo(hostname, portstr, &hints, ailist);
 }

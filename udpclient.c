@@ -233,7 +233,7 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
   t_udpclient *x = (t_udpclient*)y;
 
   if(c) {
-    iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
+    iemnet__addrout(x->x_statusout, x->x_addrout, &c->address);
     x->x_floatlist = iemnet__chunk2list(c,
                                       x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
