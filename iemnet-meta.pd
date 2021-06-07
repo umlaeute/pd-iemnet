@@ -3,7 +3,7 @@
 Music and Acoustics (IEM) \, University of Music and Performing Arts
 \, Graz \, Austria;
 #N canvas 25 49 420 300 META 0;
-#X text 10 10 VERSION 0.2.3;
+#X text 10 10 VERSION 0.3.0;
 #X text 10 30 AUTHOR IOhannes m zmoelnig <zmoelnig@iem.at>;
 #X text 10 50 NAME iemnet;
 #X text 10 70 LICENSE GPL-2;
