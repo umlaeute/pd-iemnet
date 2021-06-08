@@ -32,6 +32,25 @@
 static t_class *udpsocket_class;
 static const char objName[] = "udpsocket";
 
+
+static void MAYBE_UNUSED_FUNCTION(post_in6is)(struct sockaddr *address) {
+   struct in6_addr *addr=&((struct sockaddr_in6*)(address))->sin6_addr;
+  if(AF_INET6 != address->sa_family)
+    return;
+  post("IN6_IS_ADDR_UNSPECIFIED  : %d", IN6_IS_ADDR_UNSPECIFIED(addr));
+  post("IN6_IS_ADDR_LOOPBACK     : %d", IN6_IS_ADDR_LOOPBACK(addr));
+  post("IN6_IS_ADDR_MULTICAST    : %d", IN6_IS_ADDR_MULTICAST(addr));
+  post("IN6_IS_ADDR_LINKLOCAL    : %d", IN6_IS_ADDR_LINKLOCAL(addr));
+  post("IN6_IS_ADDR_SITELOCAL    : %d", IN6_IS_ADDR_SITELOCAL(addr));
+  post("IN6_IS_ADDR_V4MAPPED     : %d", IN6_IS_ADDR_V4MAPPED(addr));
+  post("IN6_IS_ADDR_V4COMPAT     : %d", IN6_IS_ADDR_V4COMPAT(addr));
+  post("IN6_IS_ADDR_MC_NODELOCAL : %d", IN6_IS_ADDR_MC_NODELOCAL(addr));
+  post("IN6_IS_ADDR_MC_LINKLOCAL : %d", IN6_IS_ADDR_MC_LINKLOCAL(addr));
+  post("IN6_IS_ADDR_MC_SITELOCAL : %d", IN6_IS_ADDR_MC_SITELOCAL(addr));
+  post("IN6_IS_ADDR_MC_ORGLOCAL  : %d", IN6_IS_ADDR_MC_ORGLOCAL(addr));
+  post("IN6_IS_ADDR_MC_GLOBAL    : %d", IN6_IS_ADDR_MC_GLOBAL(addr));
+}
+
 typedef struct _udpsocket {
   t_object x_obj;
   t_outlet*x_msgout;
@@ -121,6 +140,7 @@ static void udpsocket_send(t_udpsocket *x, t_symbol *s, int argc,
   (void)s; /* ignore unused variable */
   if(sender && chunk) {
     for (rp = x->x_addrinfo; rp != NULL; rp = rp->ai_next) {
+      //post_in6is(rp->ai_addr);
       memcpy(&chunk->address, rp->ai_addr, rp->ai_addrlen);
       size = iemnet__sender_send(sender, chunk);
       break;
@@ -140,6 +160,7 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
   if(c) {
     t_atom a[2];
     int port;
+    //post_in6is(&c->address);
     iemnet__unmap6to4(&c->address);
     SETSYMBOL(a+0, iemnet__sockaddr2sym(&c->address, &port));
     SETFLOAT(a+1, port);
@@ -201,6 +222,7 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
       return;
     }
     for(rp=addrinfo; rp != NULL; rp = rp->ai_next) {
+      //post_in6is(rp->ai_addr);
       if(!serversize || (AF_INET == server.ss_family && AF_INET6 == rp->ai_family)) {
         memcpy(&server, rp->ai_addr, sizeof(server));
         serversize = rp->ai_addrlen;
