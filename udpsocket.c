@@ -154,27 +154,15 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
 
 
 static void udpsocket_connect(t_udpsocket*x, t_symbol*s, t_float portf) {
-  char port[8];
+  int port = (int)portf;
   struct addrinfo hints;
   if(portf<1 || portf>=0xFFFF) {
     pd_error(x, "port out of range (1..65535)");
     return;
   }
-  snprintf(port, 7, "%d", (int)portf);
-  port[7]=0;
-  if(x->x_addrinfo) {
-    freeaddrinfo(x->x_addrinfo);
-  }
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-  hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-  hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
-  hints.ai_protocol = 0;          /* Any protocol */
-  hints.ai_canonname = NULL;
-  hints.ai_addr = NULL;
-  hints.ai_next = NULL;
 
-  if(getaddrinfo(s->s_name, port, &hints, &x->x_addrinfo) != 0 ) {
+  x->x_addrinfo = iemnet__freeaddrinfo(x->x_addrinfo);
+  if(iemnet__getaddrinfo(&x->x_addrinfo, s->s_name, port, 0, SOCK_DGRAM) != 0 ) {
     pd_error(x, "couldn't get address info for '%s:%s'", s->s_name, port);
   }
 }
@@ -352,10 +340,7 @@ static void udpsocket_free(t_udpsocket *x)
     iemnet__floatlist_destroy(x->x_floatlist);
   }
   x->x_floatlist = NULL;
-  if(x->x_addrinfo) {
-    freeaddrinfo(x->x_addrinfo);
-  }
-  x->x_addrinfo = NULL;
+  x->x_addrinfo = iemnet__freeaddrinfo(x->x_addrinfo);
 }
 
 IEMNET_EXTERN void udpsocket_setup(void)
