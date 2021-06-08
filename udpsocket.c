@@ -155,7 +155,6 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
 
 static void udpsocket_connect(t_udpsocket*x, t_symbol*s, t_float portf) {
   int port = (int)portf;
-  struct addrinfo hints;
   if(portf<1 || portf>=0xFFFF) {
     pd_error(x, "port out of range (1..65535)");
     return;
@@ -163,7 +162,7 @@ static void udpsocket_connect(t_udpsocket*x, t_symbol*s, t_float portf) {
 
   x->x_addrinfo = iemnet__freeaddrinfo(x->x_addrinfo);
   if(iemnet__getaddrinfo(&x->x_addrinfo, s->s_name, port, 0, SOCK_DGRAM) != 0 ) {
-    pd_error(x, "couldn't get address info for '%s:%s'", s->s_name, port);
+    pd_error(x, "couldn't get address info for '%s:%d'", s->s_name, port);
   }
 }
 
@@ -171,7 +170,7 @@ static void udpsocket_connect(t_udpsocket*x, t_symbol*s, t_float portf) {
 static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short portno)
 {
   static t_atom ap[1];
-  struct sockaddr_in server;
+  struct sockaddr_storage server;
   socklen_t serversize = sizeof(server);
   int sockfd = x->x_fd;
   int broadcast = 1;/* nonzero is true */
@@ -190,24 +189,35 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
     x->x_port = -1;
     x->x_ifaddr = 0;
   }
+  sockfd=-1;
 
-
-  server.sin_family = AF_INET;
-
+  server.ss_family = AF_INET;
   if (ifaddr) {
-    struct hostent *hp = gethostbyname(ifaddr->s_name);
-    if(!hp) {
+    struct addrinfo *rp, *addrinfo;
+    serversize=0;
+    if(iemnet__getaddrinfo(&addrinfo, ifaddr->s_name, portno, 0, SOCK_DGRAM)) {
       iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", ifaddr->s_name);
-      iemnet__closesocket(sockfd, 0);
       return;
     }
-    server.sin_family = hp->h_addrtype;
-    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
+    for(rp=addrinfo; rp != NULL; rp = rp->ai_next) {
+      memcpy(&server, rp->ai_addr, sizeof(server));
+      serversize = iemnet__socklen4addr(&server);
+      break;
+    }
+    iemnet__freeaddrinfo(addrinfo);
+    if(!serversize) {
+      iemnet_log(x, IEMNET_ERROR, "unknown host '%s'?", ifaddr->s_name);
+      return;
+    }
   } else {
-    server.sin_addr.s_addr = INADDR_ANY;
+    struct sockaddr_in*server4 = (struct sockaddr_in*)&server;
+
+    server4->sin_addr.s_addr = INADDR_ANY;
+    /* assign server port number */
+    server4->sin_port = htons((u_short)portno);
   }
 
-  sockfd = socket(server.sin_family, SOCK_DGRAM, 0);
+  sockfd = socket(server.ss_family, SOCK_DGRAM, 0);
   if(sockfd<0) {
     iemnet_log(x, IEMNET_ERROR, "unable to create socket");
     sys_sockerror("socket");
@@ -223,8 +233,6 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
   }
 #endif /* SO_BROADCAST */
 
-  /* assign server port number */
-  server.sin_port = htons((u_short)portno);
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
     iemnet_log(x, IEMNET_ERROR, "unable to bind socket to %s:%d", ifaddr?ifaddr->s_name:"*", portno);
@@ -240,14 +248,15 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
                                         0);
   x->x_sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
 
+  /* find out which port is actually used (useful when assigning "0") */
+  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
+    int port32;
+    x->x_ifaddr = iemnet__sockaddr2sym(&server, &port32);
+    portno = port32;
+  }
   x->x_fd = sockfd;
   x->x_port = portno;
   x->x_ifaddr = ifaddr;
-
-  /* find out which port is actually used (useful when assigning "0") */
-  if(!getsockname(sockfd, (struct sockaddr *)&server, &serversize)) {
-    x->x_port = ntohs(server.sin_port);
-  }
 
   iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
 
