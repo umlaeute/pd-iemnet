@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include <pthread.h>
+#include <errno.h>
 
 #ifdef __unix__
 # include <sys/un.h>
@@ -45,7 +46,12 @@ void iemnet__closesocket(int sockfd, int verbose)
      /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     int err = shutdown(sockfd, how);
     if(verbose && err) {
-      perror("iemnet:socket-shutdown");
+      switch (errno) {
+      case ENOTCONN: break;
+      default:
+        perror("iemnet:socket-shutdown");
+        break;
+      }
     }
     sys_closesocket(sockfd);
   }
