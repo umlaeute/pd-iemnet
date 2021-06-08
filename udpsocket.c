@@ -145,7 +145,6 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
     SETFLOAT(a+1, port);
     outlet_anything(x->x_statusout, gensym("address"), 2, a);
 
-    //iemnet__addrout(x->x_statusout, 0, &c->address);
     x->x_floatlist = iemnet__chunk2list(c,
                                       x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
@@ -185,7 +184,6 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
 
   /* cleanup any open ports */
   if(sockfd >= 0) {
-    //sys_rmpollfn(sockfd);
     iemnet__closesocket(sockfd, 0);
     x->x_fd = -1;
     x->x_port = -1;
