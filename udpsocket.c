@@ -121,7 +121,7 @@ static void udpsocket_send(t_udpsocket *x, t_symbol *s, int argc,
   (void)s; /* ignore unused variable */
   if(sender && chunk) {
     for (rp = x->x_addrinfo; rp != NULL; rp = rp->ai_next) {
-      memcpy(&chunk->address, rp->ai_addr, sizeof(&rp->ai_addr));
+      memcpy(&chunk->address, rp->ai_addr, rp->ai_addrlen);
       size = iemnet__sender_send(sender, chunk);
       break;
     }
