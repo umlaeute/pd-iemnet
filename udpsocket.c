@@ -174,6 +174,7 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
   socklen_t serversize = sizeof(server);
   int sockfd = x->x_fd;
   int broadcast = 1;/* nonzero is true */
+  int ipv6only = -1;
   memset(&server, 0, sizeof(server));
 
   SETFLOAT(ap, -1);
@@ -194,15 +195,23 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
   server.ss_family = AF_INET;
   if (ifaddr) {
     struct addrinfo *rp, *addrinfo;
+    int families = 0;
     serversize=0;
     if(iemnet__getaddrinfo(&addrinfo, ifaddr->s_name, portno, 0, SOCK_DGRAM)) {
       iemnet_log(x, IEMNET_ERROR, "bad host '%s'?", ifaddr->s_name);
       return;
     }
     for(rp=addrinfo; rp != NULL; rp = rp->ai_next) {
-      memcpy(&server, rp->ai_addr, sizeof(server));
-      serversize = iemnet__socklen4addr(&server);
-      break;
+      if(!serversize || (AF_INET == server.ss_family && AF_INET6 == rp->ai_family)) {
+        memcpy(&server, rp->ai_addr, sizeof(server));
+        serversize = rp->ai_addrlen;
+      }
+      families |= (AF_INET  == rp->ai_family) << 0;
+      families |= (AF_INET6 == rp->ai_family) << 1;
+      if(families == 3) {
+        ipv6only = 0;
+        break;
+      }
     }
     iemnet__freeaddrinfo(addrinfo);
     if(!serversize) {
@@ -210,11 +219,20 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
       return;
     }
   } else {
-    struct sockaddr_in*server4 = (struct sockaddr_in*)&server;
-
-    server4->sin_addr.s_addr = INADDR_ANY;
-    /* assign server port number */
-    server4->sin_port = htons((u_short)portno);
+    int ipv6=1;
+    if (ipv6) {
+      struct sockaddr_in6*serv = (struct sockaddr_in6*)&server;
+      serv->sin6_family = AF_INET6;
+      serv->sin6_addr = in6addr_any;
+      serv->sin6_port = htons((u_short)portno);
+      ipv6only = 0;
+    } else {
+      struct sockaddr_in*serv = (struct sockaddr_in*)&server;
+      serv->sin_family = AF_INET;
+      serv->sin_addr.s_addr = INADDR_ANY;
+      serv->sin_port = htons((u_short)portno);
+    }
+    serversize = iemnet__socklen4addr(&server);
   }
 
   sockfd = socket(server.ss_family, SOCK_DGRAM, 0);
@@ -232,6 +250,18 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
     sys_sockerror("setsockopt");
   }
 #endif /* SO_BROADCAST */
+
+  /* enable IPv6/IPv4 dual mode */
+  /* this works nicely if no interface is specified, but less so if it is
+   * (e.g. 'localhost' which maps to both 127.0.0.1 and ::1)
+   */
+  if (AF_INET6 == server.ss_family && ipv6only>=0) {
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY,
+                   (const void*)&ipv6only, sizeof(ipv6only)) < 0) {
+      iemnet_log(x, IEMNET_ERROR, "unable to switch mixed IPv6/IPv4 mode");
+      sys_sockerror("setsockopt");
+    }
+  }
 
   /* name the socket */
   if (bind(sockfd, (struct sockaddr *)&server, serversize) < 0) {
