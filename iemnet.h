@@ -155,6 +155,7 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
 int iemnet__getaddrinfo(struct addrinfo **ailist,
                         const char *hostname, int port,
                         int family, int protocol);
+struct addrinfo *iemnet__freeaddrinfo(struct addrinfo *ailist);
 
 
 

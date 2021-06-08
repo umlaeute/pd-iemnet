@@ -434,3 +434,8 @@ int iemnet__getaddrinfo(struct addrinfo **ailist,
   sprintf(portstr, "%d", port);
   return getaddrinfo(hostname, portstr, &hints, ailist);
 }
+struct addrinfo *iemnet__freeaddrinfo(struct addrinfo *ailist) {
+  if(ailist)
+    freeaddrinfo(ailist);
+  return NULL;
+}
