@@ -259,6 +259,15 @@ void iemnet__post_addrinfo(struct addrinfo *ai);
 
 
 /**
+ * converts an IPv6 address to an IPv4 address if possible
+ * the <address> is not an IPv6 address or an IPv6-address that is
+ * not compatible, nothing is done
+ * \param address: the address to be converted
+ */
+void iemnet__unmap6to4(struct sockaddr_storage *address);
+
+
+/**
  * compare to sockaddresses
  *
  * \param address1 a pointer to sockaddr_in/sockaddr_in6/... that holds an address

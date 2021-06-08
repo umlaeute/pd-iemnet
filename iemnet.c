@@ -137,6 +137,17 @@ int iemnet__equaladdr(const struct sockaddr_storage*address1,
   return (!(memcmp(address1, address2, len)));
 }
 
+void iemnet__unmap6to4(struct sockaddr_storage *address) {
+  struct sockaddr_in6 *addr6=(struct sockaddr_in6*)(address);
+  if(AF_INET6 == address->ss_family
+     && IN6_IS_ADDR_V4MAPPED (&addr6->sin6_addr)) {
+    struct sockaddr_in *addr4=(struct sockaddr_in*)(address);
+    uint32_t a = *((uint32_t*)(addr6->sin6_addr.s6_addr+12));
+    addr4->sin_port = addr6->sin6_port;
+    addr4->sin_addr.s_addr = a;
+    addr4->sin_family=AF_INET;
+  }
+}
 
 
 char*iemnet__sockaddr2str(const struct sockaddr_storage*address, char*str, size_t len) {
