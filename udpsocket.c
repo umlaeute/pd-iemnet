@@ -361,13 +361,16 @@ IEMNET_EXTERN void udpsocket_setup(void)
                               (t_method)udpsocket_free,
                               sizeof(t_udpsocket), 0, A_GIMME, 0);
   class_addmethod(udpsocket_class, (t_method)udpsocket_bind,
-                  gensym("bind"), A_GIMME, 0);
-  class_addmethod(udpsocket_class, (t_method)udpsocket_connect, gensym("to"),
-                  A_SYMBOL, A_FLOAT, 0);
+                  gensym("port"), A_GIMME, 0);
   class_addmethod(udpsocket_class, (t_method)udpsocket_send, gensym("send"),
                   A_GIMME, 0);
   class_addlist(udpsocket_class, (t_method)udpsocket_send);
   class_addbang(udpsocket_class, (t_method)udpsocket_info);
+
+  class_addmethod(udpsocket_class, (t_method)udpsocket_bind,
+                  gensym("bind"), A_GIMME, 0);
+  class_addmethod(udpsocket_class, (t_method)udpsocket_connect, gensym("to"),
+                  A_SYMBOL, A_FLOAT, 0);
 
   DEBUGMETHOD(udpsocket_class);
 }
