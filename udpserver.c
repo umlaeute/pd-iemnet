@@ -398,33 +398,34 @@ static void udpserver_disconnect(t_udpserver *x, unsigned int client);
 static void udpserver_send_bytes(t_udpserver*x, unsigned int client,
                                  t_iemnet_chunk*chunk)
 {
+  t_atom output_atom[3];
+  int size = 0;
+  t_iemnet_sender*sender;
+  int sockfd;
+
+  if(!x || client>=x->x_maxconnections || !x->x_sr[client])
+    return;
   DEBUG("send_bytes to %x -> %x[%d]", x, x->x_sr, client);
-  if(client<x->x_maxconnections) {
-    DEBUG("client %X", x->x_sr[client]);
+  DEBUG("client %X", x->x_sr[client]);
+
+  sender = x->x_sr[client]->sr_sender;
+  sockfd = x->x_sr[client]->sr_uniq;
+
+  memcpy(&chunk->address, &x->x_sr[client]->sr_address, sizeof(chunk->address));
+
+  if(sender) {
+    size = iemnet__sender_send(sender, chunk);
   }
-  if(x && client<x->x_maxconnections && x->x_sr[client]) {
-    t_atom output_atom[3];
-    int size = 0;
 
-    t_iemnet_sender*sender = x->x_sr[client]->sr_sender;
-    int sockfd = x->x_sr[client]->sr_uniq;
+  SETFLOAT(&output_atom[0], client+1);
+  SETFLOAT(&output_atom[1], size);
+  SETFLOAT(&output_atom[2], sockfd);
+  outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
 
-    memcpy(&chunk->address, &x->x_sr[client]->sr_address, sizeof(chunk->address));
-
-    if(sender) {
-      size = iemnet__sender_send(sender, chunk);
-    }
-
-    SETFLOAT(&output_atom[0], client+1);
-    SETFLOAT(&output_atom[1], size);
-    SETFLOAT(&output_atom[2], sockfd);
-    outlet_anything( x->x_statusout, gensym("sendbuffersize"), 3, output_atom);
-
-    if(size<0) {
-      /* disconnected! */
-      udpserver_disconnect(x, client);
-      iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
-    }
+  if(size<0) {
+    /* disconnected! */
+    udpserver_disconnect(x, client);
+    iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_nconnections);
   }
 }
 
