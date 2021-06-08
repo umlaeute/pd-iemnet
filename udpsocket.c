@@ -140,6 +140,7 @@ static void udpsocket_receive_callback(void*y, t_iemnet_chunk*c)
   if(c) {
     t_atom a[2];
     int port;
+    iemnet__unmap6to4(&c->address);
     SETSYMBOL(a+0, iemnet__sockaddr2sym(&c->address, &port));
     SETFLOAT(a+1, port);
     outlet_anything(x->x_statusout, gensym("address"), 2, a);
