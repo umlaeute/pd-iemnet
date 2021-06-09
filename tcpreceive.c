@@ -301,6 +301,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   }
   freeaddrinfo(ailist);
 
+
   if(sockfd[0]<0 && sockfd[1]<0) {
     SETFLOAT(ap, -1);
     iemnet_log(x, IEMNET_ERROR, "unable to create socket for %s:%d", hostname?hostname:"*", portno);
@@ -330,7 +331,6 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
     return;
   }
 
-
   x->x_host = hostname?gensym(hostname):0;
   x->x_port = portno;
 
@@ -339,7 +339,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
     SETFLOAT(ap+i, 0);
     if(sockfd[i]<0)
       continue;
-    
+
     sys_addpollfn(sockfd[i],
                   (t_fdpollfn)tcpreceive_connectpoll,
                   x);
