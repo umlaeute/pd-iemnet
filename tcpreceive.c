@@ -355,23 +355,14 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   outlet_anything(x->x_statusout, gensym("port"), 2, ap);
 }
 static void tcpreceive_listen(t_tcpreceive*x, t_symbol*s, int argc, t_atom*argv) {
-  const char*host=0;
   t_symbol*shost=0;
-  int port = x->x_port;
-  switch(argc) {
-  default:
+  unsigned short port = x->x_port;
+  if(!iemnet__atoms2hostport(argc, argv, &shost, &port)) {
     pd_error(x, "invalid arguments: use '%s <hostname> [<port>]'", s->s_name);
-    return;
-  case 2:
-    port = atom_getfloat(argv+1);
-    /* fallthrough */
-  case 1:
-    shost = atom_getsymbol(argv+0);
-    break;
   }
-  if(shost && gensym("") != shost)
-    host = shost->s_name;
-  tcpreceive_do_listen(x, host, port);
+  if (!port)
+    port = x->x_port;
+  tcpreceive_do_listen(x, shost?shost->s_name:0, port);
 }
 static void tcpreceive_port(t_tcpreceive*x, t_floatarg fportno)
 {
@@ -404,11 +395,18 @@ static void tcpreceive_free(t_tcpreceive *x)
   x->x_floatlist = NULL;
 }
 
-static void *tcpreceive_new(t_floatarg fportno)
+static void *tcpreceive_new(t_symbol*s, int argc, t_atom*argv)
 {
+  t_symbol*iface=0;
+  unsigned short port=0;
   t_tcpreceive*x;
-  int portno = fportno;
   int i;
+  if(argc) {
+    if(!iemnet__atoms2hostport(argc, argv, &iface, &port)) {
+      error("usage: %s [<uint16:port>] [<symbol:iface>]", s->s_name);
+      return 0;
+    }
+  }
 
   x = (t_tcpreceive *)pd_new(tcpreceive_class);
   x->x_msgout = outlet_new(&x->x_obj, 0);
@@ -432,8 +430,7 @@ static void *tcpreceive_new(t_floatarg fportno)
 
   x->x_floatlist = iemnet__floatlist_create(1024);
 
-  tcpreceive_port(x, portno);
-
+  tcpreceive_do_listen(x, iface?iface->s_name:0, port);
   return (x);
 }
 
@@ -447,7 +444,7 @@ IEMNET_EXTERN void tcpreceive_setup(void)
                                (t_newmethod)tcpreceive_new, (t_method)tcpreceive_free,
                                sizeof(t_tcpreceive),
                                0,
-                               A_DEFFLOAT, 0);
+                               A_GIMME, 0);
 
   class_addmethod(tcpreceive_class, (t_method)tcpreceive_port,
                   gensym("port"), A_DEFFLOAT, 0);
