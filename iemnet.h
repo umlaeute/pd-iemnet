@@ -57,6 +57,10 @@ EXTERN void sys_sockerror(char *s);
 EXTERN void sys_addpollfn(int fd, t_fdpollfn fn, void *ptr);
 EXTERN void sys_rmpollfn(int fd);
 
+/* older versions of Pd lack the PERTHREAD macro */
+#ifndef PERTHREAD
+# define PERTHREAD
+#endif
 
 
 #ifdef _WIN32
