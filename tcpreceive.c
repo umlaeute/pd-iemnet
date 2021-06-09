@@ -306,7 +306,8 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   }
 
     /* if we only have a socket for the IPv6 "any" address, try to also listen to IPv4 */
-  if (!hostname && sockfd[1]>=0
+  if (!hostname
+      && sockfd[1]>=0 && sockfd[0]<0
       && iemnet__setsockopti(sockfd[1], IPPROTO_IPV6, IPV6_V6ONLY, 0) < 0) {
     iemnet_log(x, IEMNET_ERROR, "could not enable IPv4 compat mode");
   }
