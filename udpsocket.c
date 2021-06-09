@@ -315,47 +315,11 @@ static void udpsocket_do_bind(t_udpsocket*x, t_symbol*ifaddr, unsigned short por
   outlet_anything(x->x_statusout, gensym("port"), 1, ap);
 }
 
-static int udpsocket_parse_bind(int argc, t_atom*argv, t_symbol**iface, unsigned short*port) {
-  t_float f=0;
-  switch(argc) {
-  default:
-    return 0;
-  case 2:
-    if(A_FLOAT == argv[0].a_type && A_SYMBOL == argv[1].a_type) {
-      f = atom_getfloat(argv+0);
-      if(f<0 || f>=0xFFFF)
-        return 0;
-      *port = (unsigned short)f;
-      *iface=atom_getsymbol(argv+1);
-      return 1;
-    }
-    return 0;
-  case 1:
-    switch(argv[0].a_type) {
-    case A_FLOAT:
-      f = atom_getfloat(argv+0);
-      if(f<0 || f>=0xFFFF)
-        return 0;
-      *port = (unsigned short)f;
-      *iface = 0;
-      break;
-    case A_SYMBOL:
-      *iface = atom_getsymbol(argv+1);
-      *port = 0;
-      break;
-    default:
-      return 0;
-    }
-
-  }
-  return 1;
-
-}
 static void udpsocket_bind(t_udpsocket*x, t_symbol*s, int argc, t_atom*argv) {
   t_symbol*iface;
   unsigned short port;
   (void)s;
-  if(udpsocket_parse_bind(argc, argv, &iface, &port)) {
+  if(iemnet__atoms2hostport(argc, argv, &iface, &port)) {
     udpsocket_do_bind(x, iface, port);
   } else {
     pd_error(x, "usage: bind [<uint16:port>] [<symbol:iface>]");
@@ -371,7 +335,7 @@ static void *udpsocket_new(t_symbol*s, int argc, t_atom*argv)
   t_udpsocket *x;
   (void)s;
   if(argc) {
-    if(!udpsocket_parse_bind(argc, argv, &iface, &port)) {
+    if(!iemnet__atoms2hostport(argc, argv, &iface, &port)) {
       error("usage: udpsocket [<uint16:port>] [<symbol:iface>]");
       return 0;
     }
