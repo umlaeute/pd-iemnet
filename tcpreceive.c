@@ -271,16 +271,6 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
       sys_sockerror("setsockopt:TCP_NODELAY");
     }
 
-    /* if this is the IPv6 "any" address, also listen to IPv4 adapters
-       (if not supported, fall back to IPv4) */
-    if (!hostname && ai->ai_family == AF_INET6 &&
-        iemnet__setsockopti(fd, IPPROTO_IPV6, IPV6_V6ONLY, 0) < 0)
-    {
-      /* post("netreceive: setsockopt (IPV6_V6ONLY) failed"); */
-      sys_closesocket(fd);
-      continue;
-    }
-
     /* name the socket */
     if (bind(fd, ai->ai_addr, ai->ai_addrlen) < 0)
     {
@@ -310,6 +300,11 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
     return;
   }
 
+    /* if we only have a socket for the IPv6 "any" address, try to also listen to IPv4 */
+  if (!hostname && sockfd[1]>=0
+      && iemnet__setsockopti(sockfd[1], IPPROTO_IPV6, IPV6_V6ONLY, 0) < 0) {
+    iemnet_log(x, IEMNET_ERROR, "could not enable IPv4 compat mode");
+  }
 
   /* streaming protocol */
   err=1;
