@@ -365,6 +365,49 @@ static int iemnet__nametaken(const char*namestring)
   return 0;
 }
 
+int iemnet__atoms2hostport(int argc, t_atom*argv, t_symbol**host, unsigned short*port) {
+  t_float f=0;
+  switch(argc) {
+  default:
+    return 0;
+  case 2:
+    if(A_FLOAT == argv[0].a_type && A_SYMBOL == argv[1].a_type) {
+      f = atom_getfloat(argv+0);
+      if(f<0 || f>=0xFFFF)
+        return 0;
+      *port = (unsigned short)f;
+      *host=atom_getsymbol(argv+1);
+      return 1;
+    }
+    if(A_FLOAT == argv[1].a_type && A_SYMBOL == argv[0].a_type) {
+      f = atom_getfloat(argv+1);
+      if(f<0 || f>=0xFFFF)
+        return 0;
+      *port = (unsigned short)f;
+      *host=atom_getsymbol(argv+0);
+      return 1;
+    }
+    return 0;
+  case 1:
+    switch(argv[0].a_type) {
+    case A_FLOAT:
+      f = atom_getfloat(argv+0);
+      if(f<0 || f>=0xFFFF)
+        return 0;
+      *port = (unsigned short)f;
+      *host = 0;
+      break;
+    case A_SYMBOL:
+      *host = atom_getsymbol(argv+1);
+      *port = 0;
+      break;
+    default:
+      return 0;
+    }
+  }
+  return 1;
+}
+
 #ifndef BUILD_DATE
 # define BUILD_DATE "on " __DATE__ " at " __TIME__
 #endif

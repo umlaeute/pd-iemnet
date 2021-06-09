@@ -315,6 +315,17 @@ t_symbol* iemnet__sockaddr2sym(const struct sockaddr_storage*address, int*port);
  */
 int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]);
 
+/** convert an atom-list to a host:port pair
+ * the list is only valid if it contains (host, port), (port, host), (host) or (port)
+ * if one of the 'host' or 'port' is missing, it will be set to 0.
+ * \param argc the length of the atom-list
+ * \param argv the atom list
+ * \param host (OUT) the address of a symbol to write the host to
+ * \param port (OUT) the address of an uint16 to write the port to
+ * \return 1 on success, 0 otherwise
+ */
+int iemnet__atoms2hostport(int argc, t_atom*argv, t_symbol**host, unsigned short*port);
+
 /**
  * output the address  (IP, port)
  * the address is obtained from the sockfd via getsockname().
