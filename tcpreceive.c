@@ -182,6 +182,7 @@ static void tcpreceive_disconnect_all(t_tcpreceive *x)
   }
 }
 
+#if 0
 /* tcpreceive_removeconnection tries to delete the socket fd from the list */
 /* returns 1 on success, else 0 */
 static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
@@ -194,7 +195,7 @@ static int tcpreceive_disconnect_socket(t_tcpreceive *x, int fd)
   }
   return 0;
 }
-
+#endif
 static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno)
 {
   static t_atom ap[2];
