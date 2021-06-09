@@ -270,21 +270,36 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
                       const struct sockaddr_storage*address)
 {
   t_atom alist[18];
-  int alen = iemnet__sockaddr2list(address, alist);
-  if(!alen)
+  int alen=2;
+  int port=-1;
+  if(!status_outlet)
     return;
 
-  if(AF_INET == address->ss_family) {
-    if(status_outlet ) {
-      outlet_anything(status_outlet, gensym("address"), alen-1, alist+1);
-    }
-    if(address_outlet) {
-      outlet_list(address_outlet, gensym("list"   ), alen-1, alist+1);
-    }
-  } else {
-    if(status_outlet ) {
-      outlet_anything(status_outlet, gensym("remote_address"), alen, alist);
-    }
+  switch(address->ss_family) {
+  case AF_INET:
+    SETSYMBOL(alist+0, gensym("IPv4"));
+    break;
+  case AF_INET6:
+    SETSYMBOL(alist+0, gensym("IPv6"));
+    break;
+#ifdef __unix__
+  case AF_UNIX:
+    SETSYMBOL(alist+0, gensym("unix"));
+    break;
+#endif
+  default:
+    return;
+  }
+  SETSYMBOL(alist+1, iemnet__sockaddr2sym(address, &port));
+  if(port>=0) {
+    SETFLOAT(alist+2, port);
+    alen++;
+  }
+
+  outlet_anything(status_outlet, gensym("remote_address"), alen, alist);
+  if(AF_INET == address->ss_family && address_outlet) {
+    alen = iemnet__sockaddr2list(address, alist);
+    outlet_list(address_outlet, gensym("list"   ), alen-1, alist+1);
   }
 }
 
