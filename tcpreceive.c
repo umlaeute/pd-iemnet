@@ -241,7 +241,6 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   }
 
   for (ai = ailist; ai != NULL; ai = ai->ai_next) {
-    int multicast = 0;
     char buf[MAXPDSTRING];
     int fd = -1;
     /* create a socket */
@@ -282,23 +281,18 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
       continue;
     }
 
-    if (multicast) {
-      /* TODO: implement multicast (and check for multicast)
-       */
+    /* name the socket */
+    if (bind(fd, ai->ai_addr, ai->ai_addrlen) < 0)
+    {
+      sys_closesocket(fd);
+      continue;
+    }
+    if (hostname) {
+      iemnet_log(x, IEMNET_VERBOSE, "listening on %s:%d",
+                 iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
+                 portno);
     } else {
-      /* name the socket */
-      if (bind(fd, ai->ai_addr, ai->ai_addrlen) < 0)
-      {
-        sys_closesocket(fd);
-        continue;
-      }
-      if (hostname) {
-        iemnet_log(x, IEMNET_VERBOSE, "listening on %s:%d%s",
-                   iemnet__sockaddr2str((struct sockaddr_storage*)ai->ai_addr, buf, MAXPDSTRING),
-                   portno, multicast?" (multicast)":"");
-      } else {
-        iemnet_log(x, IEMNET_VERBOSE, "listening on %d", portno);
-      }
+      iemnet_log(x, IEMNET_VERBOSE, "listening on %d", portno);
     }
     sockfd[AF_INET6 == ai->ai_family] = fd;
 
