@@ -223,7 +223,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
     if(sockfd[i] >= 0) {
       sys_rmpollfn(sockfd[i]);
       iemnet__closesocket(sockfd[i], 1);
-      x->x_connectsocket[i] = -1;
+      sockfd[i] = x->x_connectsocket[i] = -1;
     }
   }
   x->x_port = -1;
@@ -243,9 +243,14 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   for (ai = ailist; ai != NULL; ai = ai->ai_next) {
     char buf[MAXPDSTRING];
     int fd = -1;
-    /* create a socket */
+    /* check if we have sockets for both protocols; if so, we are done */
+    if (sockfd[0]>=0 && sockfd[1]>=0)
+      break;
+    /* check if we already have a socket for this protocol; if so, to to the next address */
     if (sockfd[AF_INET6 == ai->ai_family] >= 0)
       continue;
+
+    /* create a socket */
     iemnet__post_addrinfo(ai);
     fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
     if (fd < 0)
