@@ -229,8 +229,7 @@ static void tcpreceive_do_listen(t_tcpreceive*x, const char*hostname, int portno
   x->x_port = -1;
   x->x_host = NULL;
 
-  err = iemnet__getaddrinfo(&ailist, hostname, portno, 0, SOCK_STREAM);
-  if (err) {
+  if ((err=iemnet__getaddrinfo(&ailist, hostname, portno, 0, SOCK_STREAM)) {
     iemnet_log(x, IEMNET_ERROR, "%s (%d)\n\tbad host ('%s') or port (%d)?",
                gai_strerror(err), err,
                hostname?hostname:"*", portno);
