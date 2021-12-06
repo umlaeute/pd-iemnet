@@ -3,5 +3,5 @@ name: pd-lib-builder
 on: push
 
 jobs:
-  github:
+  pd-lib-builder:
     uses: pure-data/pure-data-ci/.github/workflows/pd-lib-builder.yml@main
