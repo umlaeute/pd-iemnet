@@ -1,4 +1,4 @@
-name: GitHub workflows
+name: pd-lib-builder
 
 on: push
 
