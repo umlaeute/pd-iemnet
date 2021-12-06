@@ -4,4 +4,4 @@ on: push
 
 jobs:
   github:
-    uses: pure-data/pure-data-ci/githu/workflows/pd-lib-builder.yml@main
+    uses: pure-data/pure-data-ci/.github/workflows/pd-lib-builder.yml@main
