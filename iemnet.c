@@ -38,7 +38,7 @@ void iemnet__closesocket(int sockfd, int verbose)
 # define SHUT_RDWR 2
 #endif
     int how = SHUT_RDWR;
-     /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
+    /* needed on linux, since the recv won't shutdown on sys_closesocket() alone */
     int err = shutdown(sockfd, how);
     if(verbose && err) {
       perror("iemnet:socket-shutdown");
@@ -47,7 +47,8 @@ void iemnet__closesocket(int sockfd, int verbose)
   }
 }
 
-int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18]) {
+int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18])
+{
   switch (address->ss_family) {
   case AF_INET: {
     struct sockaddr_in*addr = (struct sockaddr_in*)address;
@@ -66,8 +67,9 @@ int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18
     uint8_t*ipaddr = addr->sin6_addr.s6_addr;
     unsigned int i;
     SETSYMBOL(alist+0, gensym("IPv6"));
-    for(i = 0; i<16; i++)
+    for(i = 0; i<16; i++) {
       SETFLOAT(alist+i+1, ipaddr[i]);
+    }
     SETFLOAT(alist+17, ntohs(addr->sin6_port));
     return 18;
   }
@@ -88,7 +90,8 @@ int iemnet__sockaddr2list(const struct sockaddr_storage*address, t_atom alist[18
 }
 
 
-void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
+void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s)
+{
   struct sockaddr_storage address;
   socklen_t addresssize = sizeof(address);
   t_atom alist[18];
@@ -126,7 +129,7 @@ void iemnet__addrout(t_outlet*status_outlet, t_outlet*address_outlet,
   addr[4].a_w.w_float = port;
 
   if(status_outlet ) {
-    outlet_anything(status_outlet , gensym("address"), 5, addr);
+    outlet_anything(status_outlet, gensym("address"), 5, addr);
   }
   if(address_outlet) {
     outlet_list(address_outlet, gensym("list"   ), 5, addr);
@@ -140,7 +143,7 @@ void iemnet__numconnout(t_outlet*status_outlet, t_outlet*numcon_outlet,
   SETFLOAT(atom, numconnections);
 
   if(status_outlet) {
-    outlet_anything(status_outlet , gensym("connections"), 1, atom);
+    outlet_anything(status_outlet, gensym("connections"), 1, atom);
   }
   if(numcon_outlet) {
     outlet_float(numcon_outlet, numconnections);
@@ -154,7 +157,7 @@ void iemnet__socketout(t_outlet*status_outlet, t_outlet*socket_outlet,
   SETFLOAT(atom, socketfd);
 
   if(status_outlet) {
-    outlet_anything(status_outlet , gensym("socket"), 1, atom);
+    outlet_anything(status_outlet, gensym("socket"), 1, atom);
   }
   if(socket_outlet) {
     outlet_float(socket_outlet, socketfd);

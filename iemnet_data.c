@@ -520,10 +520,10 @@ t_iemnet_queue* queue_create(void)
   q->tail = NULL;
 
   memcpy(&q->cond, &cond, sizeof(pthread_cond_t));
-  memcpy(&q->mtx , &mtx, sizeof(pthread_mutex_t));
+  memcpy(&q->mtx, &mtx, sizeof(pthread_mutex_t));
 
   memcpy(&q->usedcond, &cond, sizeof(pthread_cond_t));
-  memcpy(&q->usedmtx , &mtx, sizeof(pthread_mutex_t));
+  memcpy(&q->usedmtx, &mtx, sizeof(pthread_mutex_t));
 
   q->done = 0;
   q->size = 0;

@@ -68,8 +68,10 @@ static void tcpclient_info(t_tcpclient *x)
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
-  if(sockfd >= 0)
-    iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
+  if(sockfd >= 0) {
+    iemnet__socket2addressout(sockfd, x->x_statusout,
+                              gensym("local_address"));
+  }
   iemnet__numconnout(x->x_statusout, x->x_connectout, connected);
   if(connected) {
     unsigned short port = x->x_port;
@@ -148,7 +150,7 @@ static int tcpclient_do_connect(const char*host, unsigned short port,
 
   sender = iemnet__sender_create(sockfd, NULL, NULL, 0);
   receiver = iemnet__receiver_create(sockfd, x, tcpclient_receive_callback,
-                                   0);
+                                     0);
   if(addrOUT) {
     *addrOUT = ntohl(*(long *)hp->h_addr);
   }
@@ -191,8 +193,8 @@ static void tcpclient_connect(t_tcpclient *x, t_symbol *hostname,
   x->x_port = fportno;
 
   state = tcpclient_do_connect(x->x_hostname, x->x_port, x,
-                             &x->x_sender, &x->x_receiver,
-                             &x->x_addr);
+                               &x->x_sender, &x->x_receiver,
+                               &x->x_addr);
   x->x_connectstate = (state>0);
   x->x_fd = state;
   tcpclient_info(x);
@@ -245,7 +247,7 @@ static void tcpclient_receive_callback(void*y, t_iemnet_chunk*c)
 
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
-     /* get's destroyed in the dtor */
+    /* get's destroyed in the dtor */
     x->x_floatlist = iemnet__chunk2list(c, x->x_floatlist);
     iemnet__streamout(x->x_msgout, x->x_floatlist->argc, x->x_floatlist->argv,
                       x->x_serialize);

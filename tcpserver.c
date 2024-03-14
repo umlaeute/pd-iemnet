@@ -123,7 +123,7 @@ static t_tcpserver_event tcpserver_info_event(t_tcpserver *x, t_tcpserver_event 
 
 
 static t_tcpserver_socketreceiver *tcpserver_socketreceiver_new(
-    t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
+  t_tcpserver *owner, int sockfd, struct sockaddr_in*addr, unsigned int client)
 {
   t_tcpserver_socketreceiver *x = (t_tcpserver_socketreceiver *)getbytes(sizeof(*x));
   long address;
@@ -611,7 +611,7 @@ static void tcpserver_connectpoll(t_tcpserver *x, int fd)
   fd = accept(fd, (struct sockaddr*)&incomer_address, &sockaddrl);
 
   tcpserver_info_event(x, CONNECT);
-    if (fd < 0) {
+  if (fd < 0) {
     post("%s: accept failed", objName);
   } else if(!x->x_accepting) {
     iemnet__closesocket(fd, 1);
@@ -724,8 +724,8 @@ static void tcpserver_port(t_tcpserver*x, t_floatarg fportno)
     outlet_anything(x->x_statusout, gensym("port"), 1, ap);
     return;
   } else {
-      /* wait for new connections */
-      sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x);
+    /* wait for new connections */
+    sys_addpollfn(sockfd, (t_fdpollfn)tcpserver_connectpoll, x);
   }
 
   x->x_connectsocket = sockfd;
@@ -762,8 +762,9 @@ static void tcpserver_maxconnections(t_tcpserver *x, t_floatarg maxconnf)
     pd_error(x, "maximum number of connections < number of currently connected clients [%d]", x->x_nconnections);
     return;
   }
-  if(maxconn == x->x_maxconnections)
+  if(maxconn == x->x_maxconnections) {
     return;
+  }
 
   sr = resizebytes(x->x_sr
       , sizeof(*sr) * x->x_maxconnections
@@ -789,7 +790,7 @@ static void *tcpserver_new(t_floatarg fportno)
   x->x_sockout = outlet_new(&x->x_obj, gensym("float"));
   x->x_addrout = outlet_new(&x->x_obj, gensym("list" ));
   x->x_statusout = outlet_new(&x->x_obj,
-                            0);/* 5th outlet for everything else */
+                              0);/* 5th outlet for everything else */
 
   x->x_serialize = 1;
   x->x_accepting = 1;

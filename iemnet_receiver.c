@@ -57,8 +57,10 @@ static void pollfun(void*z, int fd)
   recv_flags |= MSG_DONTWAIT;
 #endif
   errno = 0;
-  if(fd != rec->sockfd)
-    DEBUG("%s(%p, %d) receives from %d\n", __FUNCTION__, rec, fd, rec->sockfd);
+  if(fd != rec->sockfd) {
+    DEBUG("%s(%p, %d) receives from %d\n", __FUNCTION__, rec, fd,
+          rec->sockfd);
+  }
 
   result = recvfrom(rec->sockfd, (void *)data, size, recv_flags,
                     (struct sockaddr *)&from, &fromlen);

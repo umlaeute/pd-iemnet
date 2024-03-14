@@ -229,7 +229,7 @@ t_iemnet_sender*iemnet__sender_create(int sock,
 {
   static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
   t_iemnet_sender*result = (t_iemnet_sender*)calloc(1,
-                         sizeof(t_iemnet_sender));
+                           sizeof(t_iemnet_sender));
   int res = 0;
   DEBUG("create sender %x in%sthread", result,subthread?"sub":"main ");
   if(NULL == result) {
@@ -245,8 +245,9 @@ t_iemnet_sender*iemnet__sender_create(int sock,
   result->userdata = userdata;
   DEBUG("create_sender queue = %x", result->queue);
 
-  memcpy(&result->mtx , &mtx, sizeof(pthread_mutex_t));
-  res = pthread_create(&result->thread, 0, iemnet__sender_sendthread, result);
+  memcpy(&result->mtx, &mtx, sizeof(pthread_mutex_t));
+  res = pthread_create(&result->thread, 0, iemnet__sender_sendthread,
+                       result);
 
   if(0 == res) {
   } else {
@@ -277,7 +278,7 @@ int iemnet__sender_getsockopt(t_iemnet_sender*s, int level, int optname,
   int result = getsockopt(s->sockfd, level, optname, optval, optlen);
   if(result != 0) {
     pd_error(0, "iemnet::sender: getsockopt returned %d",
-         iemnet__sender_getlasterror(s));
+             iemnet__sender_getlasterror(s));
   }
   return result;
 }
@@ -287,7 +288,7 @@ int iemnet__sender_setsockopt(t_iemnet_sender*s, int level, int optname,
   int result = setsockopt(s->sockfd, level, optname, optval, optlen);
   if(result != 0) {
     pd_error(0, "iemnet::sender: setsockopt returned %d",
-         iemnet__sender_getlasterror(s));
+             iemnet__sender_getlasterror(s));
   }
   return result;
 }
@@ -309,22 +310,26 @@ int iemnet__sender_getsize(t_iemnet_sender*x)
 static int sock_set_nonblocking(int socket, int nonblocking)
 {
 #ifdef _WIN32
-    u_long modearg = nonblocking;
-    if (ioctlsocket(socket, FIONBIO, &modearg) != NO_ERROR)
-        return -1;
+  u_long modearg = nonblocking;
+  if (ioctlsocket(socket, FIONBIO, &modearg) != NO_ERROR) {
+    return -1;
+  }
 #else
-    int sockflags = fcntl(socket, F_GETFL, 0);
-    if (nonblocking)
-        sockflags |= O_NONBLOCK;
-    else
-        sockflags &= ~O_NONBLOCK;
-    if (fcntl(socket, F_SETFL, sockflags) < 0)
-        return -1;
+  int sockflags = fcntl(socket, F_GETFL, 0);
+  if (nonblocking) {
+    sockflags |= O_NONBLOCK;
+  } else {
+    sockflags &= ~O_NONBLOCK;
+  }
+  if (fcntl(socket, F_SETFL, sockflags) < 0) {
+    return -1;
+  }
 #endif
-    return 0;
+  return 0;
 }
 
-static int conn_in_progress() {
+static int conn_in_progress()
+{
 #ifdef _WIN32
   return (WSAGetLastError() == WSAEWOULDBLOCK);
 #else
@@ -333,7 +338,9 @@ static int conn_in_progress() {
 }
 
 
-int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, float timeout) {
+int iemnet__connect(int sockfd, const struct sockaddr *addr,
+                    socklen_t addrlen, float timeout)
+{
   if(timeout<0) {
     return connect(sockfd, addr, addrlen);
   }
@@ -342,11 +349,14 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
     int status;
     struct timeval timeoutval;
     fd_set writefds, errfds;
-    if (!conn_in_progress())
-        return -1; // break on "real" error
+    if (!conn_in_progress()) {
+      return -1;  // break on "real" error
+    }
 
     // block with select using timeout
-    if (timeout < 0) timeout = 0;
+    if (timeout < 0) {
+      timeout = 0;
+    }
     timeout *= 0.001; /* seconds -> ms */
     timeoutval.tv_sec = (int)timeout;
     timeoutval.tv_usec = (timeout - timeoutval.tv_sec) * 1000000;
@@ -356,13 +366,10 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
     FD_SET(sockfd, &errfds); // catch exceptions
 
     status = select(sockfd+1, NULL, &writefds, &errfds, &timeoutval);
-    if (status < 0) // select failed
-    {
+    if (status < 0) { // select failed
       fprintf(stderr, "socket_connect: select failed");
       return -1;
-    }
-    else if (status == 0) // connection timed out
-    {
+    } else if (status == 0) { // connection timed out
 #ifdef _WIN32
       WSASetLastError(WSAETIMEDOUT);
 #else
@@ -371,9 +378,9 @@ int iemnet__connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen, 
       return -1;
     }
 
-    if (FD_ISSET(sockfd, &errfds)) // connection failed
-    {
-      int err; socklen_t len = sizeof(err);
+    if (FD_ISSET(sockfd, &errfds)) { // connection failed
+      int err;
+      socklen_t len = sizeof(err);
       getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (void *)&err, &len);
 #ifdef _WIN32
       WSASetLastError(err);

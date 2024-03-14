@@ -236,10 +236,9 @@ static t_udpserver_sender* udpserver_sender_add(t_udpserver*x,
      * the following 3 lines assume, that there is only one client connected (the last we got data from
      */
     id = 0;
-    if (x->x_sr[id] == NULL)
+    if (x->x_sr[id] == NULL) {
       x->x_sr[id] = udpserver_sender_new(x, host, port);
-    else
-    {
+    } else {
       x->x_sr[id]->sr_port = port;
       x->x_sr[id]->sr_host = host;
     }
@@ -290,7 +289,8 @@ static void udpserver_sender_remove(t_udpserver*x, unsigned int id)
   }
 }
 
-static void udpserver_sender_autoremove(t_udpserver*x) {
+static void udpserver_sender_autoremove(t_udpserver*x)
+{
   /* remove all clients that have timedout */
   unsigned int id;
   t_udpserver_sender**sr=x->x_sr;
@@ -301,7 +301,7 @@ static void udpserver_sender_autoremove(t_udpserver*x) {
     return;
   }
   x->x_lastchecked = clock_getlogicaltime();
-  for(id=0; id<x->x_nconnections;id++) {
+  for(id=0; id<x->x_nconnections; id++) {
     if(!x->x_sr[id]) {
       continue;
     }
@@ -317,8 +317,9 @@ static void udpserver_sender_autoremove(t_udpserver*x) {
   }
   x->x_nconnections = 0;
   for(id=0; id<x->x_maxconnections; id++) {
-    if(!x->x_sr[id])
+    if(!x->x_sr[id]) {
       break;
+    }
     x->x_nconnections++;
   }
 }
@@ -572,7 +573,8 @@ static void udpserver_defaulttarget(t_udpserver *x, t_floatarg f)
 
   x->x_defaulttarget = sockfd;
 }
-static void udpserver_add_client(t_udpserver *x, t_symbol*s, t_float f) {
+static void udpserver_add_client(t_udpserver *x, t_symbol*s, t_float f)
+{
   struct hostent*hp;
   struct sockaddr_in server;
   unsigned int port = (unsigned int)f;
@@ -732,8 +734,9 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
       return;
     }
     memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-  } else
+  } else {
     server.sin_addr.s_addr = INADDR_ANY;
+  }
 
 
   /* assign server port number */
@@ -748,9 +751,9 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
   }
 
   x->x_receiver = iemnet__receiver_create(sockfd,
-                                        x,
-                                        udpserver_receive_callback,
-                                        0);
+                                          x,
+                                          udpserver_receive_callback,
+                                          0);
   x->x_connectsocket = sockfd;
   x->x_port = portno;
   x->x_ifaddr = ifaddr;
@@ -774,13 +777,14 @@ static void udpserver_port(t_udpserver*x, t_floatarg fportno)
   }
   udpserver_do_bind(x, 0, (unsigned short)fportno);
 }
-static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
+static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv)
+{
   unsigned short port = x->x_port;
   (void)s; /* ignore unused variable */
   switch (argc) {
   default:
     return;
-  case 2: /* address, port */ {
+  case 2: { /* address, port */
     t_float fportno = atom_getfloat(argv+1);
     if(fportno<0 || (int)fportno > 0xFFFF) {
       pd_error(x, "[%s] port %d out of range", objName, (int)fportno);
@@ -788,8 +792,8 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
     }
     port = (unsigned short)fportno;
   }
-    /* fall through */
-  case 1: /* address */ {
+  /* fall through */
+  case 1: { /* address */
     t_symbol*ifaddr = (A_FLOAT == argv->a_type)?0:atom_getsymbol(argv+0);
     udpserver_do_bind(x, ifaddr, port);
   }
@@ -809,8 +813,9 @@ static void udpserver_maxconnections(t_udpserver *x, t_floatarg maxconnf)
     pd_error(x, "maximum number of connections < number of currently connected clients [%d]", x->x_nconnections);
     return;
   }
-  if(maxconn == x->x_maxconnections)
+  if(maxconn == x->x_maxconnections) {
     return;
+  }
 
   sr = resizebytes(x->x_sr
       , sizeof(*sr) * x->x_maxconnections
@@ -873,8 +878,8 @@ static void udpserver_free(t_udpserver *x)
   x->x_sr = NULL;
 
   if(x->x_receiver) {
-      iemnet__receiver_destroy(x->x_receiver, 0);
-      x->x_receiver = NULL;
+    iemnet__receiver_destroy(x->x_receiver, 0);
+    x->x_receiver = NULL;
   }
   if (x->x_connectsocket >= 0) {
     iemnet__closesocket(x->x_connectsocket, 0);

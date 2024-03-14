@@ -116,7 +116,7 @@ static int tcpreceive_addconnection(t_tcpreceive *x, int fd, long addr,
       x->x_connection[i].addr = addr;
       x->x_connection[i].port = port;
       x->x_connection[i].owner = x;
-      x->x_connection[i].receiver = 
+      x->x_connection[i].receiver =
         iemnet__receiver_create(fd,
                                 x->x_connection+i,
                                 tcpreceive_read_callback,

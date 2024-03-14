@@ -68,8 +68,9 @@ static void udpclient_info(t_udpclient *x)
   static t_atom output_atom[3];
   int connected = x->x_connectstate;
   int sockfd = x->x_fd;
-  if(sockfd >= 0)
+  if(sockfd >= 0) {
     iemnet__socket2addressout(sockfd, x->x_statusout, gensym("local_address"));
+  }
   iemnet__numconnout(x->x_statusout, x->x_connectout, x->x_connectstate);
   if(connected) {
     unsigned short port = x->x_port;
@@ -157,7 +158,7 @@ static void *udpclient_doconnect(t_udpclient*x, int subthread)
 
   x->x_sender = iemnet__sender_create(sockfd, NULL, NULL, subthread);
   x->x_receiver = iemnet__receiver_create(sockfd, x,
-                                        udpclient_receive_callback, subthread);
+                                          udpclient_receive_callback, subthread);
 
   x->x_connectstate = 1;
   udpclient_info(x);
@@ -184,7 +185,8 @@ static int udpclient_do_disconnect(t_udpclient *x)
   x->x_fd = -1;
   return 1;
 }
-static void udpclient_disconnect(t_udpclient *x) {
+static void udpclient_disconnect(t_udpclient *x)
+{
   if(!udpclient_do_disconnect(x)) {
     iemnet_log(x, IEMNET_ERROR, "not connected");
   } else {
@@ -194,7 +196,7 @@ static void udpclient_disconnect(t_udpclient *x) {
 
 static void udpclient_connect(t_udpclient *x, t_symbol *hostname,
                               t_floatarg fportno,
-			      t_floatarg fsndportno)
+                              t_floatarg fsndportno)
 {
   if(x->x_fd >= 0) {
     udpclient_disconnect(x);
@@ -235,7 +237,7 @@ static void udpclient_receive_callback(void*y, t_iemnet_chunk*c)
   if(c) {
     iemnet__addrout(x->x_statusout, x->x_addrout, x->x_addr, x->x_port);
     x->x_floatlist = iemnet__chunk2list(c,
-                                      x->x_floatlist); /* gets destroyed in the dtor */
+                                        x->x_floatlist); /* gets destroyed in the dtor */
     outlet_list(x->x_msgout, gensym("list"),x->x_floatlist->argc,
                 x->x_floatlist->argv);
   } else {
