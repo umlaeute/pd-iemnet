@@ -221,7 +221,7 @@ int iemnet__register(const char*name)
 {
   static int firsttime = 1;
   if(iemnet__nametaken(name)) {
-    return 0;
+    return 1;
   }
   if(firsttime) {
     post("iemnet - networking with Pd");
