@@ -219,16 +219,22 @@ static int iemnet__nametaken(const char*namestring)
 
 int iemnet__register(const char*name)
 {
+  static int firsttime = 1;
   if(iemnet__nametaken(name)) {
     return 0;
   }
-  post("iemnet - networking with Pd: [%s]", name);
+  if(firsttime) {
+    post("iemnet - networking with Pd");
 #ifdef VERSION
-  post("        version "VERSION"");
+    post("        version "VERSION"");
 #endif
-  post("        compiled "BUILD_DATE"");
-  post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
-  post("        based on mrpeach/net, based on maxlib");
+    post("        compiled "BUILD_DATE"");
+    post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
+    post("        based on mrpeach/net, based on maxlib");
+  }
+  logpost(0, PD_DEBUG, "iemnet: loaded [%s]", name);
+
+  firsttime = 0;
   return 1;
 }
 
