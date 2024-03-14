@@ -769,7 +769,7 @@ static void udpserver_do_bind(t_udpserver*x, t_symbol*ifaddr, unsigned short por
 static void udpserver_port(t_udpserver*x, t_floatarg fportno)
 {
   if(fportno<0 || (int)fportno >= 0xFFFF) {
-    error("[%s] port %d out of range", objName, (int)fportno);
+    pd_error(x, "[%s] port %d out of range", objName, (int)fportno);
     return;
   }
   udpserver_do_bind(x, 0, (unsigned short)fportno);
@@ -783,7 +783,7 @@ static void udpserver_bind(t_udpserver*x, t_symbol*s, int argc, t_atom*argv) {
   case 2: /* address, port */ {
     t_float fportno = atom_getfloat(argv+1);
     if(fportno<0 || (int)fportno > 0xFFFF) {
-      error("[%s] port %d out of range", objName, (int)fportno);
+      pd_error(x, "[%s] port %d out of range", objName, (int)fportno);
       return;
     }
     port = (unsigned short)fportno;

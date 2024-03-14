@@ -94,13 +94,13 @@ void iemnet__socket2addressout(int sockfd, t_outlet*status_outlet, t_symbol*s) {
   t_atom alist[18];
   int alen;
   if (getsockname(sockfd, (struct sockaddr *) &address, &addresssize)) {
-    error("unable to get address from socket:%d", sockfd);
+    pd_error(0, "unable to get address from socket:%d", sockfd);
     return;
   }
   if ((alen = iemnet__sockaddr2list(&address, alist))) {
     outlet_anything(status_outlet, s, alen, alist);
   } else {
-    error("unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
+    pd_error(0, "unknown address-family:0x%02X on socket:%d", address.ss_family, sockfd);
   }
 }
 
@@ -262,7 +262,7 @@ void iemnet_debuglevel(void*x, t_float f)
   post("iemnet: setting debuglevel to %d", debuglevel);
 #else
   if(firsttime) {
-    error("iemnet compiled without debug!");
+    pd_error(x, "iemnet compiled without debug!");
   }
 #endif
   if(firsttime) {
