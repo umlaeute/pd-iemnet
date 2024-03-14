@@ -332,6 +332,8 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
 # define IEMNET_HAVE_DEBUG 1
 #endif
 
+#define IEMNET_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + ((c) > 255 ? 255 : (c)))
+
 void iemnet_debuglevel(void*,t_float);
 int iemnet_debug(int debuglevel, const char*file, unsigned int line,
                  const char*function);
