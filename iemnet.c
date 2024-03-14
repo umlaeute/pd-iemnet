@@ -30,6 +30,11 @@
 # include <sys/un.h>
 #endif
 
+
+#if IEMNET_VERSION(PD_MAJOR_VERSION, PD_MINOR_VERSION, PD_BUGFIX_VERSION) < IEMNET_VERSION(0, 52, 0)
+# define PD_DEBUG 3
+#endif
+
 /* close a socket properly */
 void iemnet__closesocket(int sockfd, int verbose)
 {
@@ -232,7 +237,11 @@ int iemnet__register(const char*name)
     post("        copyright © 2010-2015 IOhannes m zmoelnig, IEM");
     post("        based on mrpeach/net, based on maxlib");
   }
+#if IEMNET_VERSION(PD_MAJOR_VERSION, PD_MINOR_VERSION, PD_BUGFIX_VERSION) > IEMNET_VERSION(0, 43, 0)
   logpost(0, PD_DEBUG, "iemnet: loaded [%s]", name);
+#else
+  post("iemnet: loaded [%s]", name);
+#endif
 
   firsttime = 0;
   return 1;
@@ -305,7 +314,7 @@ void iemnet_log(const void *object, const t_iemnet_loglevel level, const char *f
   vsnprintf(buf, MAXPDSTRING-1, fmt, ap);
   va_end(ap);
   strcat(buf, "\0");
-#if (defined PD_MINOR_VERSION) && (PD_MINOR_VERSION >= 43)
+#if IEMNET_VERSION(PD_MAJOR_VERSION, PD_MINOR_VERSION, PD_BUGFIX_VERSION) > IEMNET_VERSION(0, 43, 0)
   logpost(x, level, "[%s]: %s", name, buf);
 #else
   if(level>1) {
