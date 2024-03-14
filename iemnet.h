@@ -304,15 +304,10 @@ int iemnet__register(const char*name);
 #if defined(_MSC_VER)
 # define snprintf _snprintf
 # define IEMNET_EXTERN __declspec(dllexport) extern
-# define CCALL __cdecl
-# define IEMNET_INITIALIZER(f) \
-   static void autoinit__ ## f(void) { f(); }
+# define IEMNET_INITIALIZER(f)
 #elif defined(__GNUC__)
 # define IEMNET_EXTERN extern
-# define CCALL
-# define IEMNET_INITIALIZER(f) \
-  static void autoinit__ ## f(void) __attribute__((constructor)); \
-  static void autoinit__ ## f(void) { f(); }
+# define IEMNET_INITIALIZER(f)
 #endif
 
 typedef enum {
