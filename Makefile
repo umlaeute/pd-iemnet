@@ -1,6 +1,7 @@
 # Makefile for iemnet
 
 lib.name = iemnet
+lib.setup.sources = iemnet_setup.c
 
 class.sources = \
         tcpserver.c \

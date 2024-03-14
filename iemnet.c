@@ -241,18 +241,6 @@ int iemnet__register(const char*name)
 
 
 
-#ifdef _MSC_VER
-void tcpclient_setup(void);
-void tcpreceive_setup(void);
-void tcpsend_setup(void);
-void tcpserver_setup(void);
-
-void udpclient_setup(void);
-void udpreceive_setup(void);
-void udpsend_setup(void);
-void udpserver_setup(void);
-#endif
-
 #ifdef IEMNET_HAVE_DEBUG
 static int iemnet_debuglevel_ = 0;
 static pthread_mutex_t debug_mtx = PTHREAD_MUTEX_INITIALIZER;
@@ -301,21 +289,6 @@ int iemnet_debug(int debuglevel, const char*file, unsigned int line,
   (void)function;
 #endif
   return 0;
-}
-
-IEMNET_EXTERN void iemnet_setup(void)
-{
-#ifdef _MSC_VER
-  tcpclient_setup();
-  tcpreceive_setup();
-  tcpsend_setup();
-  tcpserver_setup();
-
-  udpclient_setup();
-  udpreceive_setup();
-  udpsend_setup();
-  udpserver_setup();
-#endif
 }
 
 #include <stdarg.h>
